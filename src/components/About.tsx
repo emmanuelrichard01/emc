@@ -192,13 +192,13 @@ const TextReveal = ({ text, className }: { text: string; className?: string }) =
   );
 };
 
-// 6. Radar Animation (Location)
+// 6. Radar Animation (Fixed Centering)
 const Radar = () => (
-  <div className="relative flex items-center justify-center h-16 w-16">
-    <div className="absolute inset-0 animate-[ping_3s_linear_infinite] rounded-full border border-sky-500 opacity-20"></div>
-    <div className="absolute inset-2 animate-[ping_3s_linear_infinite_1s] rounded-full border border-sky-500 opacity-20"></div>
-    <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-sky-500/10 ring-1 ring-sky-500/50 backdrop-blur-sm">
-      <Globe className="h-4 w-4 text-sky-500" />
+  <div className="relative flex items-center justify-center h-20 w-20 mx-auto">
+    <div className="absolute inset-0 animate-[ping_2.5s_linear_infinite] rounded-full border border-sky-500/30 opacity-20"></div>
+    <div className="absolute inset-4 animate-[ping_2.5s_linear_infinite_1.2s] rounded-full border border-sky-500/30 opacity-20"></div>
+    <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 shadow-lg shadow-sky-500/20">
+      <Globe className="h-5 w-5 text-white" />
     </div>
   </div>
 );
@@ -293,8 +293,8 @@ const About: React.FC = () => {
             </div>
           </SpotlightCard>
 
-          {/* CARD 3: TECH STACK SCROLLER (Wide) */}
-          <SpotlightCard delay={0.2} className="md:col-span-3 flex flex-col justify-center py-10 gap-8 border-none bg-neutral-900 text--neutral-900 dark:bg-white dark:text-white !overflow-visible">
+          {/* CARD 3: TECH STACK SCROLLER (Wide) - Fixed Colors */}
+          <SpotlightCard delay={0.2} className="md:col-span-3 flex flex-col justify-center py-10 gap-8 !overflow-visible">
             <div className="text-center">
               <h3 className="text-xs font-bold uppercase tracking-[0.2em] opacity-60 mb-2 font-mono">Technical Arsenal</h3>
             </div>
@@ -302,32 +302,48 @@ const About: React.FC = () => {
           </SpotlightCard>
 
           {/* CARD 4: PHILOSOPHY (Terminal Style) */}
-          <SpotlightCard delay={0.3} className="md:col-span-2 !p-0 !bg-neutral-950 dark:!bg-black">
+          <SpotlightCard delay={0.3} className="md:col-span-2 !p-0 !bg-[#0d1117] !border-neutral-800">
             {/* Terminal Header */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
-              <div className="w-3 h-3 rounded-full bg-red-500/80" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-              <div className="w-3 h-3 rounded-full bg-green-500/80" />
-              <div className="ml-2 text-xs text-neutral-500 font-mono">philosophy.ts</div>
+            <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/5">
+              <div className="flex gap-2">
+                <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+              </div>
+              <div className="text-xs text-neutral-500 font-mono">philosophy.ts</div>
+              <div className="w-10" /> {/* Spacer for centering */}
             </div>
             {/* Terminal Content */}
-            <div className="p-6 font-mono text-sm text-neutral-400 leading-relaxed">
-              <div><span className="text-purple-400">const</span> <span className="text-blue-400">philosophy</span> = <span className="text-yellow-300">{"{"}</span></div>
-              <div className="pl-4">
-                <span className="text-neutral-500">// Simplicity is the ultimate sophistication</span>
+            <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
+              <div className="flex">
+                <span className="w-8 text-neutral-700 select-none text-right pr-4">1</span>
+                <span className="text-[#ff7b72]">const</span> <span className="text-[#d2a8ff] ml-2">philosophy</span> <span className="text-[#79c0ff]">=</span> <span className="text-[#a5d6ff]">{"{"}</span>
               </div>
-              <div className="pl-4">
-                principle: <span className="text-green-400">"Idempotency & Resilience"</span>,
+              <div className="flex">
+                <span className="w-8 text-neutral-700 select-none text-right pr-4">2</span>
+                <span className="ml-4 text-neutral-500 italic">// Simplicity is the ultimate sophistication</span>
               </div>
-              <div className="pl-4">
-                approach: <span className="text-green-400">"Fail gracefully, recover automatically"</span>
+              <div className="flex">
+                <span className="w-8 text-neutral-700 select-none text-right pr-4">3</span>
+                <span className="ml-4 text-[#79c0ff]">principle:</span> <span className="text-[#a5d6ff] ml-2">"Idempotency & Resilience"</span><span className="text-neutral-400">,</span>
               </div>
-              <div><span className="text-yellow-300">{"}"}</span>;</div>
+              <div className="flex">
+                <span className="w-8 text-neutral-700 select-none text-right pr-4">4</span>
+                <span className="ml-4 text-[#79c0ff]">approach:</span> <span className="text-[#a5d6ff] ml-2">"Fail gracefully, recover automatically"</span>
+              </div>
+              <div className="flex">
+                <span className="w-8 text-neutral-700 select-none text-right pr-4">5</span>
+                <span className="text-[#a5d6ff]">{"}"}</span><span className="text-neutral-400">;</span>
+              </div>
+              <div className="flex">
+                <span className="w-8 text-neutral-700 select-none text-right pr-4">6</span>
+                <span className="animate-pulse bg-[#79c0ff] w-2.5 h-4 inline-block align-middle ml-1"></span>
+              </div>
             </div>
           </SpotlightCard>
 
-          {/* CARD 5: LOCATION (Radar) */}
-          <SpotlightCard delay={0.4} className="flex flex-col items-center justify-center text-center gap-4">
+          {/* CARD 5: LOCATION (Radar) - Fixed Centering */}
+          <SpotlightCard delay={0.4} className="flex flex-col items-center justify-center text-center gap-5">
             <Radar />
             <div>
               <div className="font-bold text-lg">Abuja, Nigeria</div>
