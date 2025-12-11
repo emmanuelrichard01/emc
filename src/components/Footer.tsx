@@ -8,9 +8,9 @@ import {
   ArrowUp,
   ExternalLink,
   ArrowRight,
-  Clock
+  Clock,
+  Twitter
 } from "lucide-react";
-import { useTheme } from "@/components/ThemeProvider";
 
 /* -------------------------------------------------------------------------- */
 /* UTILS & CONSTANTS                                                          */
@@ -18,27 +18,34 @@ import { useTheme } from "@/components/ThemeProvider";
 
 const MAGNETIC_CONFIG = { stiffness: 150, damping: 15, mass: 0.1 };
 
-// Base64 Noise Texture
+// Base64 Noise Texture (Optimized)
 const NOISE_SVG = `data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E`;
 
-// Simple hook to detect theme changes (Read-Only)
+// Robust Theme Detector Hook (No external dependencies)
 const useThemeDetector = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
     const checkTheme = () => {
-      const isDark = document.documentElement.classList.contains('dark');
-      setTheme(isDark ? 'dark' : 'light');
+      // Check for 'dark' class on html/body or system preference
+      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isClassDark = document.documentElement.classList.contains('dark');
+      setTheme(isClassDark || isSystemDark ? 'dark' : 'light');
     };
 
-    // Initial check
     checkTheme();
 
-    // Observe changes to the <html> class attribute
     const observer = new MutationObserver(checkTheme);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
-    return () => observer.disconnect();
+    // Also listen to system changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', checkTheme);
+
+    return () => {
+      observer.disconnect();
+      mediaQuery.removeEventListener('change', checkTheme);
+    };
   }, []);
 
   return theme;
@@ -66,76 +73,55 @@ const useLocalTime = () => {
   return time;
 };
 
-// X (Twitter) Icon
-const XIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
-  </svg>
-);
-
 /* -------------------------------------------------------------------------- */
 /* SUB-COMPONENTS                                                             */
 /* -------------------------------------------------------------------------- */
 
-// 1. Inlined LogoAnimated Component
+// 1. Logo Animated Component (Refined Timing & Solid Fill)
 const LogoAnimated = () => {
-  const { theme } = useTheme();
+  const theme = useThemeDetector();
 
-  // Use style2 as the base logo
   const paths = [
     "M154.2,43.5v69.4c0,1.4,1,2.5,2.4,2.5h34.1c1.4,0,2.5-1.1,2.5-2.5v-37.1c0-.7-.3-1.3-.7-1.8L120.2.8c-.5-.5-1.1-.7-1.8-.7H22.6c-1.4,0-2.5,1.1-2.5,2.5v33.1c0,1.4,1.1,2.5,2.5,2.5h65.4c0,.1,61,.2,61,.2,2.9,0,5.2,2.3,5.1,5.2h0Z",
     "M76,76.1c-.5.5-.8,1.1-.8,1.8v35.1c0,1.4,1.1,2.5,2.5,2.5h34.6c1.4,0,2.5-1.1,2.5-2.5V38.9c0-.2-.3-.4-.4-.2l-38.4,37.4h0Z",
     "M39.6,112.9V38.9c0-.2-.3-.4-.5-.2L.8,76.1c-.5.5-.8,1.1-.8,1.8v35.1c0,1.4,1.1,2.5,2.5,2.5h34.6c1.4,0,2.5-1.1,2.5-2.5h0Z"
   ];
 
-  // Colors based on resolved theme
+  // Colors
   const strokeColor = theme === "dark" ? "#fefef5" : "#090908";
-  const gradientStart = strokeColor;
   const glowColor = theme === "dark" ? "#ffffff" : "#000000";
 
   return (
-    <div className="p-2 rounded-2xl bg-transparent cursor-pointer">
+    <div className="relative w-10 h-10 cursor-pointer">
       <motion.svg
-        width="42"
-        height="42"
+        width="100%"
+        height="100%"
         viewBox="0 0 200 200"
         xmlns="http://www.w3.org/2000/svg"
         whileHover={{ scale: 1.05, rotate: -2 }}
         whileTap={{ scale: 0.95 }}
       >
         <defs>
-          <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id="footer-neon-glow" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow
-              dx="0"
-              dy="0"
+              dx="0" dy="0"
               stdDeviation="4"
               floodColor={glowColor}
               floodOpacity={theme === 'dark' ? 0.6 : 0.3}
             />
           </filter>
-          <linearGradient id="gradient" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={gradientStart} stopOpacity="0.4" />
-            <stop offset="100%" stopColor={gradientStart} stopOpacity="0.1" />
-          </linearGradient>
         </defs>
 
         <motion.g
           fill={strokeColor}
           initial={{ fillOpacity: 0 }}
-          animate={{
-            fillOpacity: [0, 0, 1, 1, 0, 0], // Staggered opacity
-          }}
+          animate={{ fillOpacity: [0, 0, 1, 1, 0, 0] }} // Solid fill opacity animation
           transition={{
             duration: 8,
             ease: "easeInOut",
             repeat: Infinity,
             repeatDelay: 1,
-            // Timing Logic:
-            // 0 - 0.2:  Waiting/Drawing Stroke
-            // 0.2 - 0.35: Fill fades IN (delayed after stroke)
-            // 0.35 - 0.75: Fill stays visible
-            // 0.75 - 0.9: Fill fades OUT
-            times: [0, 0.2, 0.35, 0.75, 0.9, 1]
+            times: [0, 0.3, 0.4, 0.7, 0.8, 1] // Syncs with stroke
           }}
         >
           {paths.map((d, i) => (
@@ -146,23 +132,21 @@ const LogoAnimated = () => {
               strokeWidth="4"
               strokeLinecap="round"
               strokeLinejoin="round"
-              // Only apply glow in dark mode for cleaner UI in light mode
-              filter={theme === 'dark' ? "url(#neon-glow)" : undefined}
+              filter={theme === 'dark' ? "url(#footer-neon-glow)" : undefined}
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{
-                pathLength: [0, 1, 1, 0],
-                opacity: [0, 1, 1, 0]
+                pathLength: [0, 1, 1, 1, 0, 0], // Draw, Hold, Erase
+                opacity: [0, 1, 1, 1, 0, 0]
               }}
               transition={{
                 duration: 8,
                 ease: "easeInOut",
                 repeat: Infinity,
                 repeatDelay: 1,
-                // Timing Logic:
-                // 0 - 0.2: Draw Stroke (0 to 100%)
-                // 0.2 - 0.8: Hold Stroke
-                // 0.8 - 1: Erase Stroke
-                times: [0, 0.2, 0.8, 1]
+                // 0-30%: Draw Stroke
+                // 30-70%: Hold (Fill fades in here)
+                // 70-100%: Erase
+                times: [0, 0.3, 0.4, 0.7, 0.9, 1]
               }}
             />
           ))}
@@ -172,7 +156,7 @@ const LogoAnimated = () => {
   );
 };
 
-// 2. Magnetic Icon Wrapper
+// 2. Magnetic Icon
 const MagneticIcon = memo(({ children, href, label }: { children: React.ReactNode; href: string; label: string }) => {
   const ref = useRef<HTMLAnchorElement>(null);
   const x = useMotionValue(0);
@@ -213,7 +197,7 @@ const MagneticIcon = memo(({ children, href, label }: { children: React.ReactNod
 });
 MagneticIcon.displayName = "MagneticIcon";
 
-// 3. Fancy Link with Hover Slide Effect
+// 3. Footer Link
 const FooterLink = ({ href, label, external }: { href: string; label: string; external?: boolean }) => (
   <a
     href={href}
@@ -246,12 +230,10 @@ const Footer = () => {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const time = useLocalTime();
 
-  // Hydration-safe year
   useEffect(() => {
     setYear(new Date().getFullYear());
   }, []);
 
-  // Back to Top Logic
   useEffect(() => {
     const handleScroll = () => {
       setShowBackToTop(window.scrollY > 500);
@@ -275,24 +257,25 @@ const Footer = () => {
   const socialLinks = [
     { icon: Github, href: "https://github.com/emmanuelrichard01", label: "GitHub" },
     { icon: Linkedin, href: "https://www.linkedin.com/in/e-mc/", label: "LinkedIn" },
-    { icon: XIcon, href: "https://x.com/_mrebuka", label: "X (Twitter)" },
+    { icon: Twitter, href: "https://x.com/_mrebuka", label: "X (Twitter)" },
     { icon: Instagram, href: "https://www.instagram.com/officialemmanuelrichard/", label: "Instagram" },
     { icon: Mail, href: "mailto:emma.moghalu@gmail.com", label: "Email" },
   ];
 
   return (
     <footer className="relative border-t border-border/40 overflow-hidden bg-background">
-      {/* Visual Effects */}
+      {/* Background Decor */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
         style={{ backgroundImage: `url("${NOISE_SVG}")` }}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background z-0" />
       <div className="absolute -top-[200px] -left-[200px] w-[400px] h-[400px] bg-primary/5 rounded-full blur-[128px] pointer-events-none" />
       <div className="absolute -bottom-[200px] -right-[200px] w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[128px] pointer-events-none" />
+
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
 
-          {/* Column 1: Brand & Status */}
+          {/* Brand Column */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <LogoAnimated />
@@ -304,9 +287,9 @@ const Footer = () => {
               Architecting scalable systems and resilient data pipelines. Building the future, one commit at a time.
             </p>
 
-            {/* Live Status Indicators */}
+            {/* Status Widget */}
             <div className="flex flex-col gap-2 pt-2">
-              <div className="flex items-center gap-2 text-xs font-medium text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-full w-fit">
+              <div className="flex items-center gap-2 text-xs font-medium text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-full w-fit border border-emerald-500/20">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -322,7 +305,7 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Column 2: Navigation */}
+          {/* Navigation Column */}
           <div className="space-y-6">
             <h3 className="text-sm font-semibold tracking-wider uppercase text-foreground/80">
               Navigation
@@ -336,7 +319,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 3: Legal & Resources */}
+          {/* Legal Column */}
           <div className="space-y-6">
             <h3 className="text-sm font-semibold tracking-wider uppercase text-foreground/80">
               Legal
@@ -348,7 +331,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 4: Connect */}
+          {/* Connect Column */}
           <div className="space-y-6">
             <h3 className="text-sm font-semibold tracking-wider uppercase text-foreground/80">
               Connect
@@ -387,7 +370,7 @@ const Footer = () => {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={scrollToTop}
-            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            className="fixed bottom-8 right-8 z-50 hidden md:flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 border border-primary/20 backdrop-blur-sm"
             aria-label="Back to top"
           >
             <ArrowUp className="h-5 w-5" />
