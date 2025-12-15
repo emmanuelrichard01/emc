@@ -39,7 +39,15 @@ const StatusBadge = () => (
 );
 
 // Rolling Button Component for Text Cycling
-const RollingButton = ({ primary, label, reveal, icon: Icon, onClick }: any) => {
+interface RollingButtonProps {
+  primary?: boolean;
+  label: React.ReactNode;
+  reveal?: React.ReactNode;
+  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+}
+
+const RollingButton: React.FC<RollingButtonProps> = ({ primary = false, label, reveal, icon: Icon, onClick }) => {
   return (
     <button
       onClick={onClick}
@@ -116,7 +124,14 @@ const DataFlowLine = ({ delay = 0 }: { delay?: number }) => (
   </div>
 );
 
-const MetricItem = ({ label, value, icon: Icon, color }: any) => (
+interface MetricItemProps {
+  label: string;
+  value: React.ReactNode;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  color?: 'emerald' | 'blue';
+}
+
+const MetricItem: React.FC<MetricItemProps> = ({ label, value, icon: Icon, color = 'blue' }) => (
   <div className="flex items-start justify-between p-3 rounded-lg bg-neutral-100/50 dark:bg-white/5 border border-neutral-200 dark:border-white/5 transition-colors duration-300">
     <div>
       <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">{label}</div>
@@ -284,7 +299,7 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="relative min-h-[100vh] flex items-center pt-24 pb-12 overflow-hidden group/section"
+      className="relative min-h-[100vh] flex items-center pt-16 md:pt-24 pb-12 overflow-hidden group/section"
       onMouseMove={handleMouseMove}
     >
       <BackgroundGrid />

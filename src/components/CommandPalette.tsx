@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, ArrowRight, Home, User, Briefcase, Mail,
@@ -36,13 +36,13 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const { setTheme } = useTheme();
 
   // Scroll Helper
-  const scrollToSection = (id: string) => {
+  const scrollToSection = useCallback((id: string) => {
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
       onClose();
     }
-  };
+  }, [onClose]);
 
   // Command Definitions
   const commands: CommandItem[] = useMemo(() => [
@@ -130,7 +130,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       category: 'System',
       keywords: ['tech', 'stack', 'tools']
     }
-  ], [setTheme]);
+  ], [setTheme, onClose, scrollToSection]);
 
   // Filtering Logic
   const filteredCommands = useMemo(() => {

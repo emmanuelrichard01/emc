@@ -139,7 +139,14 @@ function useActiveSection(sectionIds: string[]) {
 /* 3. SUB-COMPONENTS                                                          */
 /* -------------------------------------------------------------------------- */
 
-const MagneticNavItem = ({ children, isActive, onClick, href }: any) => {
+interface MagneticNavItemProps {
+  children: React.ReactNode;
+  isActive?: boolean;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  href?: string;
+}
+
+const MagneticNavItem: React.FC<MagneticNavItemProps> = ({ children, isActive = false, onClick, href }) => {
   const ref = useRef<HTMLButtonElement>(null);
   const { x, y, handleMouseMove, handleMouseLeave, handleMouseEnter } = useMagnetic(ref);
 

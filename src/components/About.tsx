@@ -6,12 +6,12 @@ import {
   Command, ArrowRight, ShieldCheck, Activity,
   Cpu, Zap, GitCommit
 } from "lucide-react";
-
+import profile from "../assets/avatar.jpg";
 /* -------------------------------------------------------------------------- */
 /* 1. DATA & CONSTANTS                                                        */
 /* -------------------------------------------------------------------------- */
 
-const AVATAR_URL = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&auto=format&fit=crop";
+const AVATAR_URL = profile;
 
 const ROLES = ["Data Engineer", "Software Developer", "Cloud Architect"];
 
@@ -54,25 +54,30 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
 
   const words = text.split(" ");
 
+  // Child component so hooks (useTransform) are called in a component body rather than inside a callback
+  const Word = ({ word, index, total }: { word: string; index: number; total: number }) => {
+    const start = index / total;
+    const end = start + (1 / total);
+    const opacity = useTransform(scrollYProgress, [start, end], [0.15, 1]);
+    const blur = useTransform(scrollYProgress, [start, end], [3, 0]);
+    const y = useTransform(scrollYProgress, [start, end], [4, 0]);
+    const filter = useTransform(blur, (v) => `blur(${v}px)`);
+
+    return (
+      <motion.span
+        style={{ opacity, filter, y }}
+        className="relative will-change-transform"
+      >
+        {word}
+      </motion.span>
+    );
+  };
+
   return (
     <p ref={container} className={`flex flex-wrap gap-x-1.5 gap-y-1 ${className}`}>
-      {words.map((word, i) => {
-        const start = i / words.length;
-        const end = start + (1 / words.length);
-        const opacity = useTransform(scrollYProgress, [start, end], [0.15, 1]);
-        const blur = useTransform(scrollYProgress, [start, end], [3, 0]);
-        const y = useTransform(scrollYProgress, [start, end], [4, 0]);
-
-        return (
-          <motion.span
-            key={i}
-            style={{ opacity, filter: useTransform(blur, (v) => `blur(${v}px)`), y }}
-            className="relative will-change-transform"
-          >
-            {word}
-          </motion.span>
-        );
-      })}
+      {words.map((word, i) => (
+        <Word key={i} word={word} index={i} total={words.length} />
+      ))}
     </p>
   );
 };
