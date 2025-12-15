@@ -1,190 +1,75 @@
-import React, { useRef, useState, useEffect } from "react";
-import { motion, useMotionTemplate, useMotionValue, AnimatePresence } from "framer-motion";
+import React, { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import {
-  Code2,
-  Database,
-  Layout,
-  Terminal,
-  Cpu,
-  Globe,
-  GitBranch,
-  Zap,
-  Command,
-  Server,
-  Cloud,
-  Box,
-  Atom,
-  Triangle,
-  Wind,
-  Workflow,
-  Layers,
-  Container,
-  Hexagon
+  Code2, Database, Terminal, Globe,
+  Cloud, Workflow, Layers, Container,
+  Command, ArrowRight, ShieldCheck, Activity,
+  Cpu, Zap, GitCommit
 } from "lucide-react";
-import avatar from "../assets/avatar.jpg";
-// Fallback for missing local image
-const emmanuelAvatar = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&auto=format&fit=crop";
 
 /* -------------------------------------------------------------------------- */
-/* UTILS                                                                      */
+/* 1. DATA & CONSTANTS                                                        */
 /* -------------------------------------------------------------------------- */
 
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(' ');
-}
+const AVATAR_URL = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&auto=format&fit=crop";
 
-/* -------------------------------------------------------------------------- */
-/* DATA & CONSTANTS                                                           */
-/* -------------------------------------------------------------------------- */
+const ROLES = ["Data Engineer", "Software Developer", "Cloud Architect"];
 
-// Centralized Tech Stack Data with specific icons
 const TECH_STACK = [
-  { name: "React", icon: Atom },
-  { name: "Next.js", icon: Triangle },
-  { name: "TypeScript", icon: Code2 },
   { name: "Python", icon: Terminal },
-  { name: "Node.js", icon: Server },
+  { name: "TypeScript", icon: Code2 },
+  { name: "React", icon: Globe },
   { name: "PostgreSQL", icon: Database },
   { name: "AWS", icon: Cloud },
   { name: "Docker", icon: Container },
-  { name: "Kubernetes", icon: Hexagon },
-  { name: "Tailwind", icon: Wind },
   { name: "Kafka", icon: Workflow },
   { name: "Terraform", icon: Layers },
+  { name: "Next.js", icon: Zap },
+  { name: "Redis", icon: Database },
 ];
 
 /* -------------------------------------------------------------------------- */
-/* SUB-COMPONENTS                                                             */
+/* 2. UTILITY COMPONENTS                                                      */
 /* -------------------------------------------------------------------------- */
 
-// 1. Spotlight Card (The "Top 1%" Glow Effect)
-const SpotlightCard = ({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) => {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
-    const { left, top } = currentTarget.getBoundingClientRect();
-    mouseX.set(clientX - left);
-    mouseY.set(clientY - top);
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5, delay, ease: "easeOut" }}
-      onMouseMove={handleMouseMove}
-      className={classNames(
-        "group relative overflow-hidden rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/50 p-8",
-        className
-      )}
-    >
-      {/* Spotlight Gradient */}
-      <motion.div
-        className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition duration-300 group-hover:opacity-100"
-        style={{
-          background: useMotionTemplate`
-            radial-gradient(
-              650px circle at ${mouseX}px ${mouseY}px,
-              rgba(14, 165, 233, 0.15),
-              transparent 80%
-            )
-          `,
-        }}
-      />
-      <div className="relative h-full">{children}</div>
-    </motion.div>
-  );
-};
-
-// 2. Tech Badge (Refined)
-const TechBadge = ({ label, icon: Icon }: { label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }) => (
-  <div className="flex items-center gap-2 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white/50 dark:bg-neutral-800/50 px-3 py-1 text-xs font-mono font-medium text-neutral-600 dark:text-neutral-300 transition-colors hover:border-primary/50 hover:text-primary">
-    <Icon className="h-3.5 w-3.5" />
-    <span>{label}</span>
+// Consistent Background Grid (Matches Hero)
+const BackgroundGrid = () => (
+  <div className="absolute inset-0 -z-10 h-full w-full pointer-events-none overflow-hidden select-none">
+    <div className="absolute inset-0 bg-background transition-colors duration-300" />
+    <div className="absolute inset-0 bg-[radial-gradient(#00000015_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff10_1px,transparent_1px)] [background-size:20px_20px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]" />
+    {/* Ambient Glows positioned to continue the flow */}
+    <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-primary/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen" />
+    <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen" />
   </div>
 );
 
-// 3. Contribution Graph (Simulated)
-const ContributionGraph = () => {
-  // Generate random activity levels
-  const weeks = 14;
-  const days = 7;
-  const grid = Array.from({ length: weeks * days }, () => Math.random());
+// Enhanced Text Reveal
+const RevealText = ({ text, className = "" }: { text: string; className?: string }) => {
+  const container = useRef(null);
 
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex justify-between text-xs text-muted-foreground font-mono uppercase tracking-wider">
-        <span>Git Activity</span>
-        <span className="text-emerald-500">Live</span>
-      </div>
-      <div className="grid grid-cols-[repeat(14,1fr)] gap-1 w-full opacity-60 hover:opacity-100 transition-opacity duration-500">
-        {grid.map((val, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.005 }}
-            className={classNames(
-              "aspect-square rounded-[2px]",
-              val > 0.8 ? "bg-emerald-500" :
-                val > 0.5 ? "bg-emerald-500/60" :
-                  val > 0.2 ? "bg-emerald-500/30" :
-                    "bg-neutral-200 dark:bg-neutral-800"
-            )}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
+  const { scrollYProgress } = useScroll({
+    target: container,
+    offset: ["start 0.85", "end 0.6"]
+  });
 
-// 4. Infinite Marquee (Updated Visuals)
-const InfiniteMarquee = ({ items }: { items: typeof TECH_STACK }) => {
-  return (
-    <div className="flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-      <motion.div
-        animate={{ x: "-50%" }}
-        transition={{
-          duration: 40, // Slower, smoother
-          ease: "linear",
-          repeat: Infinity,
-        }}
-        className="flex flex-none gap-6 pr-6"
-      >
-        {[...items, ...items].map((item, i) => (
-          <div key={`${item.name}-${i}`} className="group flex items-center gap-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/50 px-5 py-2.5 shadow-sm backdrop-blur-sm transition-all hover:border-primary/30 hover:bg-primary/5">
-            <item.icon className="h-4 w-4 text-neutral-500 group-hover:text-primary transition-colors" />
-            <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">{item.name}</span>
-          </div>
-        ))}
-      </motion.div>
-    </div>
-  );
-};
-
-// 5. Text Reveal Component (Kept)
-const TextReveal = ({ text, className }: { text: string; className?: string }) => {
   const words = text.split(" ");
+
   return (
-    <p className={classNames("leading-relaxed text-foreground/90", className || "")}>
+    <p ref={container} className={`flex flex-wrap gap-x-1.5 gap-y-1 ${className}`}>
       {words.map((word, i) => {
-        const isBold = word.startsWith("*") && word.endsWith("*");
-        const cleanWord = isBold ? word.slice(1, -1) : word;
+        const start = i / words.length;
+        const end = start + (1 / words.length);
+        const opacity = useTransform(scrollYProgress, [start, end], [0.15, 1]);
+        const blur = useTransform(scrollYProgress, [start, end], [3, 0]);
+        const y = useTransform(scrollYProgress, [start, end], [4, 0]);
+
         return (
           <motion.span
             key={i}
-            initial={{ opacity: 0, filter: "blur(8px)", y: 5 }}
-            whileInView={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.02 + 0.1, ease: "easeOut" }}
-            viewport={{ once: true }}
-            className={classNames(
-              "inline-block mr-1.5",
-              isBold ? "font-semibold text-primary" : ""
-            )}
+            style={{ opacity, filter: useTransform(blur, (v) => `blur(${v}px)`), y }}
+            className="relative will-change-transform"
           >
-            {cleanWord}
+            {word}
           </motion.span>
         );
       })}
@@ -192,164 +77,328 @@ const TextReveal = ({ text, className }: { text: string; className?: string }) =
   );
 };
 
-// 6. Radar Animation (Fixed Centering)
-const Radar = () => (
-  <div className="relative flex items-center justify-center h-20 w-20 mx-auto">
-    <div className="absolute inset-0 animate-[ping_2.5s_linear_infinite] rounded-full border border-sky-500/30 opacity-20"></div>
-    <div className="absolute inset-4 animate-[ping_2.5s_linear_infinite_1.2s] rounded-full border border-sky-500/30 opacity-20"></div>
-    <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 shadow-lg shadow-sky-500/20">
-      <Globe className="h-5 w-5 text-white" />
+// Animated Marquee
+const TechMarquee = () => {
+  return (
+    <div className="relative flex overflow-hidden w-full mask-linear-fade">
+      <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-neutral-950 to-transparent z-10" />
+      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-neutral-950 to-transparent z-10" />
+
+      <motion.div
+        animate={{ x: "-50%" }}
+        transition={{ duration: 30, ease: "linear", repeat: Infinity }}
+        className="flex flex-none gap-4 pr-4 items-center"
+      >
+        {[...TECH_STACK, ...TECH_STACK].map((tech, i) => (
+          <div
+            key={`${tech.name}-${i}`}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-100/80 dark:bg-white/5 border border-neutral-200 dark:border-white/5 backdrop-blur-sm text-muted-foreground whitespace-nowrap transition-colors hover:border-primary/20 hover:text-primary"
+          >
+            <tech.icon className="w-3.5 h-3.5" />
+            <span className="text-xs font-mono font-medium">{tech.name}</span>
+          </div>
+        ))}
+      </motion.div>
     </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* 3. SYSTEM MODULES (RIGHT COLUMN)                                           */
+/* -------------------------------------------------------------------------- */
+
+const PhilosophyTerminal = () => (
+  <motion.div
+    whileHover={{ y: -2 }}
+    className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white/80 dark:bg-black/40 backdrop-blur-md overflow-hidden shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 group"
+  >
+    <div className="flex items-center justify-between px-4 py-3 bg-neutral-50/50 dark:bg-white/5 border-b border-neutral-200 dark:border-white/5">
+      <div className="flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+        <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+        <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
+        <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+      </div>
+      <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase flex items-center gap-2 opacity-70">
+        <Terminal className="w-3 h-3" />
+        system_values.ts
+      </div>
+      <div className="w-3" />
+    </div>
+    <div className="p-6 font-mono text-xs leading-relaxed text-muted-foreground selection:bg-primary/20 selection:text-primary">
+      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">1</span>
+        <span>
+          <span className="text-purple-600 dark:text-purple-400">const</span>{' '}
+          <span className="text-blue-600 dark:text-blue-400">Engineering</span>{' '}
+          ={' '}
+          <span className="text-amber-600 dark:text-yellow-200">{'{'}</span>
+        </span>
+      </div>
+      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">2</span>
+        <span className="pl-4">
+          <span className="text-blue-500 dark:text-blue-300">priority</span>:{' '}
+          <span className="text-emerald-600 dark:text-emerald-400">"Reliability {'>'} Features"</span>,
+        </span>
+      </div>
+      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">3</span>
+        <span className="pl-4">
+          <span className="text-blue-500 dark:text-blue-300">approach</span>:{' '}
+          <span className="text-emerald-600 dark:text-emerald-400">"System over Syntax"</span>,
+        </span>
+      </div>
+      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">4</span>
+        <span className="pl-4">
+          <span className="text-blue-500 dark:text-blue-300">goal</span>:{' '}
+          <span className="text-emerald-600 dark:text-emerald-400">"Predictable Scale"</span>
+        </span>
+      </div>
+      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">5</span>
+        <span className="text-amber-600 dark:text-yellow-200">{'}'}</span>;
+      </div>
+      <div className="flex mt-2 group/line hover:bg-white/5 -mx-4 px-4">
+        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">6</span>
+        <span className="text-neutral-400 dark:text-neutral-500 italic">// Optimization target: 99.9% Uptime</span>
+      </div>
+    </div>
+  </motion.div>
+);
+
+const MetricsModule = () => (
+  <div className="grid grid-cols-2 gap-4">
+    <motion.div
+      whileHover={{ y: -2 }}
+      className="p-5 rounded-xl border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm hover:border-primary/20 transition-all duration-300"
+    >
+      <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+        <Activity className="w-4 h-4" />
+        <span className="text-[10px] font-mono uppercase tracking-widest">Experience</span>
+      </div>
+      <div className="text-3xl font-bold tracking-tight text-foreground">
+        4+ <span className="text-sm font-normal text-muted-foreground">Years</span>
+      </div>
+    </motion.div>
+    <motion.div
+      whileHover={{ y: -2 }}
+      className="p-5 rounded-xl border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm hover:border-primary/20 transition-all duration-300"
+    >
+      <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+        <ShieldCheck className="w-4 h-4" />
+        <span className="text-[10px] font-mono uppercase tracking-widest">Projects</span>
+      </div>
+      <div className="text-3xl font-bold tracking-tight text-foreground">
+        20+ <span className="text-sm font-normal text-muted-foreground">Deployed</span>
+      </div>
+    </motion.div>
   </div>
 );
 
+const GitActivity = () => {
+  // Generate deterministic but random-looking data
+  const weeks = 20;
+  const days = 7;
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm p-5 hover:border-primary/20 transition-all duration-300"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <GitCommit className="w-4 h-4" />
+          <span className="text-[10px] font-mono uppercase tracking-widest">Commit Topology</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+          </span>
+          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Live</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1 overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+        <div className="flex gap-[3px]">
+          {Array.from({ length: weeks * days }).map((_, i) => {
+            const level = Math.sin(i * 0.5) * Math.cos(i * 0.2) + Math.random() * 0.5;
+            let bg = "bg-neutral-200 dark:bg-white/5";
+            if (level > 0.8) bg = "bg-emerald-500";
+            else if (level > 0.4) bg = "bg-emerald-500/60";
+            else if (level > 0) bg = "bg-emerald-500/30";
+
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.002 }}
+                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-[1px] ${bg}`}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const StackModule = () => (
+  <motion.div
+    whileHover={{ y: -2 }}
+    className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white/80 dark:bg-black/40 backdrop-blur-md p-6 transition-all duration-300 hover:border-primary/20"
+  >
+    <div className="mb-6 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </div>
+        <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          Active Dependencies
+        </span>
+      </div>
+      <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
+    </div>
+
+    <div className="-mx-6">
+      <TechMarquee />
+    </div>
+  </motion.div>
+);
+
 /* -------------------------------------------------------------------------- */
-/* MAIN COMPONENT                                                             */
+/* 4. MAIN COMPONENT                                                          */
 /* -------------------------------------------------------------------------- */
 
 const About: React.FC = () => {
   return (
-    <section id="about" className="py-24 relative overflow-hidden bg-background">
-      {/* Background Decor */}
-      <div className="absolute top-0 right-0 -z-10 h-[600px] w-[600px] bg-primary/5 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen" />
-      <div className="absolute bottom-0 left-0 -z-10 h-[500px] w-[500px] bg-purple-500/5 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen" />
+    <section id="about" className="py-24 md:py-32 relative bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
 
-      <div className="container px-4 md:px-6 max-w-6xl mx-auto">
+      <BackgroundGrid />
 
-        {/* Section Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-12 text-center md:text-left"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-            About <span className="text-primary">Me</span>
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl">
-            A snapshot of my technical world. I build systems that are as beautiful internally as they are externally.
-          </p>
-        </motion.div>
+      <div className="container px-4 md:px-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
 
-        {/* BENTO GRID LAYOUT */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 auto-rows-[minmax(180px,auto)]">
+          {/* LEFT COLUMN: THE MANIFESTO (Sticky on Desktop) */}
+          <div className="relative z-10 lg:sticky lg:top-24">
 
-          {/* CARD 1: BIO (Large, spans 2 cols) */}
-          <SpotlightCard className="md:col-span-2 md:row-span-1 flex flex-col justify-center gap-8">
-            <div className="flex items-center gap-4 pb-4">
-              <div className="relative h-16 w-16 shrink-0 rounded-full overflow-hidden ring-2 ring-primary/10">
-                <img src={avatar} alt="Emmanuel" className="h-full w-full object-cover" />
+            {/* Identity Header - Responsive Profile Image */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="flex items-center gap-5 mb-10"
+            >
+              <div className="relative group cursor-default">
+                <div className="absolute -inset-0.5 bg-gradient-to-br from-primary to-blue-500 rounded-full opacity-30 group-hover:opacity-60 blur transition duration-500"></div>
+                <img
+                  src={AVATAR_URL}
+                  alt="Emmanuel Moghalu"
+                  className="relative w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-2 border-background ring-2 ring-primary/10 transition-transform group-hover:scale-[1.02]"
+                />
               </div>
               <div>
-                <h3 className="font-bold text-xl">Emmanuel Richard</h3>
-                <p className="text-sm font-mono text-muted-foreground flex items-center gap-2">
-                  <Terminal className="w-3 h-3" /> Data & Software Engineer
-                </p>
+                <h3 className="text-xl font-bold tracking-tight text-foreground">Emmanuel (Richard) Moghalu</h3>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {ROLES.map((role) => (
+                    <span key={role} className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/10">
+                      {role}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="space-y-4">
-              <TextReveal
-                text="I build and operate data-driven products: *resilient* *ETL* *pipelines,* low-latency backends, and intuitive frontends that let teams act on data."
-                className="text-lg"
+            {/* Positioning Statement */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="flex items-center gap-2 text-primary font-mono text-xs tracking-widest mb-6 opacity-80">
+                <Terminal className="w-3.5 h-3.5" />
+                <span>IDENTITY_SIGNAL</span>
+              </div>
+
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-8 leading-[1.15] text-foreground/90">
+                I design and engineer systems that prioritize <span className="text-muted-foreground/60">reliability</span>, <span className="text-muted-foreground/60">performance</span>, and <span className="text-muted-foreground/60">long-term maintainability.</span>
+              </h2>
+            </motion.div>
+
+            {/* Scroll Reveal Manifesto */}
+            <div className="space-y-8 text-lg text-muted-foreground leading-relaxed">
+              <RevealText
+                text="I approach software as a system — optimizing not just for features, but for failure modes, scale, and developer experience. I value boring, predictable architectures over clever abstractions that collapse under real-world load."
+                className="font-light"
               />
-              <TextReveal
-                text="My focus is reliability, cost-efficient scaling, and shipping software that measurably improves outcomes. I don't just write code; I *architect* *solutions.*"
-                className="text-lg"
+
+              <RevealText
+                text="I care deeply about correctness, clarity, and building things that remain understandable years after launch. Currently focused on building resilient data infrastructure and scalable frontend systems."
+                className="font-light"
               />
             </div>
 
-            <div className="flex gap-2 flex-wrap pt-2">
-              <TechBadge label="System Architecture" icon={Cpu} />
-              <TechBadge label="Data Engineering" icon={Database} />
-              <TechBadge label="Full Stack" icon={Globe} />
-            </div>
-          </SpotlightCard>
+            {/* <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="mt-10"
+            >
+              <button
+                onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
+                className="group inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition-colors"
+              >
+                <span className="border-b border-foreground/30 group-hover:border-primary">View Selected Work</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </button>
+            </motion.div> */}
+          </div>
 
-          {/* CARD 2: GITHUB STATS (Tall) */}
-          <SpotlightCard delay={0.1} className="flex flex-col justify-between gap-6">
-            <div className="space-y-2">
-              <h4 className="font-bold flex items-center gap-2">
-                <GitBranch className="h-5 w-5 text-primary" />
-                Open Source
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                Consistent contribution and continuous learning.
-              </p>
-            </div>
+          {/* RIGHT COLUMN: THE SYSTEM MODULES */}
+          <div className="relative z-10 space-y-6 lg:pt-8">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <PhilosophyTerminal />
+            </motion.div>
 
-            {/* The GitHub Graph Simulation */}
-            <ContributionGraph />
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <MetricsModule />
+            </motion.div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
-              <div>
-                <div className="text-2xl font-bold tracking-tight">20+</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Projects</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold tracking-tight">4y</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Experience</div>
-              </div>
-            </div>
-          </SpotlightCard>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.35 }}
+            >
+              <GitActivity />
+            </motion.div>
 
-          {/* CARD 3: TECH STACK SCROLLER (Wide) - Fixed Colors */}
-          <SpotlightCard delay={0.2} className="md:col-span-3 flex flex-col justify-center py-10 gap-8 !overflow-visible">
-            <div className="text-center">
-              <h3 className="text-xs font-bold uppercase tracking-[0.2em] opacity-60 mb-2 font-mono">Technical Arsenal</h3>
-            </div>
-            <InfiniteMarquee items={TECH_STACK} />
-          </SpotlightCard>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <StackModule />
+            </motion.div>
+          </div>
 
-          {/* CARD 4: PHILOSOPHY (Terminal Style) */}
-          <SpotlightCard delay={0.3} className="md:col-span-2 !p-0 !bg-[#0d1117] !border-neutral-800">
-            {/* Terminal Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/5">
-              <div className="flex gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-              </div>
-              <div className="text-xs text-neutral-500 font-mono">philosophy.ts</div>
-              <div className="w-10" /> {/* Spacer for centering */}
-            </div>
-            {/* Terminal Content */}
-            <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
-              <div className="flex">
-                <span className="w-8 text-neutral-700 select-none text-right pr-4">1</span>
-                <span className="text-[#ff7b72]">const</span> <span className="text-[#d2a8ff] ml-2">philosophy</span> <span className="text-[#79c0ff]">=</span> <span className="text-[#a5d6ff]">{"{"}</span>
-              </div>
-              <div className="flex">
-                <span className="w-8 text-neutral-700 select-none text-right pr-4">2</span>
-                <span className="ml-4 text-neutral-500 italic">// Simplicity is the ultimate sophistication</span>
-              </div>
-              <div className="flex">
-                <span className="w-8 text-neutral-700 select-none text-right pr-4">3</span>
-                <span className="ml-4 text-[#79c0ff]">principle:</span> <span className="text-[#a5d6ff] ml-2">"Idempotency & Resilience"</span><span className="text-neutral-400">,</span>
-              </div>
-              <div className="flex">
-                <span className="w-8 text-neutral-700 select-none text-right pr-4">4</span>
-                <span className="ml-4 text-[#79c0ff]">approach:</span> <span className="text-[#a5d6ff] ml-2">"Fail gracefully, recover automatically"</span>
-              </div>
-              <div className="flex">
-                <span className="w-8 text-neutral-700 select-none text-right pr-4">5</span>
-                <span className="text-[#a5d6ff]">{"}"}</span><span className="text-neutral-400">;</span>
-              </div>
-              <div className="flex">
-                <span className="w-8 text-neutral-700 select-none text-right pr-4">6</span>
-                <span className="animate-pulse bg-[#79c0ff] w-2.5 h-4 inline-block align-middle ml-1"></span>
-              </div>
-            </div>
-          </SpotlightCard>
-
-          {/* CARD 5: LOCATION (Radar) - Fixed Centering */}
-          <SpotlightCard delay={0.4} className="flex flex-col items-center justify-center text-center gap-5">
-            <Radar />
-            <div>
-              <div className="font-bold text-lg">Abuja, Nigeria</div>
-              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mt-1">UTC+1 &middot; Remote Ready</div>
-            </div>
-          </SpotlightCard>
         </div>
       </div>
     </section>

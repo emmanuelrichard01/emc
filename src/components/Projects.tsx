@@ -1,532 +1,450 @@
-import React, { useState, useEffect, useMemo, forwardRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Github,
-  ExternalLink,
-  X,
-  Layers,
-  Cpu,
-  Globe,
-  Zap,
-  ArrowUpRight,
-  Database,
-  BarChart3,
-  Server
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  Database, Server, Globe, Cpu,
+  GitBranch, AlertTriangle, CheckCircle2,
+  ArrowRight, Terminal, Layers,
+  Layout, Activity, GitCommit, Lock, Zap,
+  MessageSquare, ShoppingCart, BarChart3
+} from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
-/* DATA & TYPES                                                               */
+/* 1. DATA: ENGINEERING CASE STUDIES                                          */
 /* -------------------------------------------------------------------------- */
 
-type ProjectMetric = {
-  label: string;
-  value: string;
-};
-
-type Project = {
-  id: number;
-  title: string;
-  tagline: string;
-  description: string;
-  image: string;
-  technologies: string[];
-  category: string;
-  github?: string;
-  demo?: string;
-  problemSolved?: string;
-  impact?: string;
-  year: string;
-  // Visual identity
-  color: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  // Quantitative stats for the "Metrics-First" approach
-  metrics: ProjectMetric[];
-};
-
-const PLACEHOLDERS = {
-  data: "https://images.unsplash.com/photo-1625296276703-3fbc924f07b5?q=80&w=870&auto=format&fit=crop",
-  ai: "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=1000&auto=format&fit=crop",
-  ecommerce: "https://images.unsplash.com/photo-1642132652860-471b4228023e?q=80&w=1460&auto=format&fit=crop",
-  iot: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop"
-};
-
-const PROJECTS_DATA: Project[] = [
+const PROJECTS = [
   {
-    id: 1,
-    title: 'DataFlow Analytics',
-    tagline: 'Real-time Stream Processing Engine',
-    description: 'A comprehensive data analytics platform that processes millions of records daily with real-time visualizations and anomaly detection.',
-    image: PLACEHOLDERS.data,
-    technologies: ['Kafka', 'React', 'Python', 'PostgreSQL', 'Docker'],
-    category: 'Data Engineering',
-    github: 'https://github.com/emmanuelmoghalu/dataflow-analytics',
-    demo: 'https://dataflow-demo.vercel.app',
-    year: "2024",
-    color: "from-blue-600 to-cyan-500",
-    icon: Database,
-    problemSolved: 'Fragmented data sources and 24h+ reporting delays made real-time decision making impossible for enterprise clients.',
-    impact: 'Unified 12+ data streams and reduced reporting latency from 24 hours to 300ms.',
-    metrics: [
-      { label: 'Daily Records', value: '10M+' },
-      { label: 'Latency', value: '<300ms' },
-      { label: 'Clients', value: '50+' }
-    ]
+    id: "helix",
+    title: "Helix",
+    subtitle: "Distributed Event Streaming Platform",
+    role: "Lead Data Engineer",
+    timeline: "Q3 2024",
+    // 1. Problem Framing
+    problem: "Financial clients experienced 400ms+ latency in trade execution due to monolithic REST API bottlenecks and database locks during high-volume events.",
+    // 2. System Overview
+    system: "Ingests 50k+ events/sec via WebSocket edge nodes, buffers in Redpanda (Kafka), processes stateful aggregations in Flink, and pushes updates to client dashboards via SSE.",
+    // 3. Architecture & Decisions
+    architecture: [
+      {
+        title: "Why Redpanda?",
+        detail: "Chosen over standard Kafka for its C++ architecture (no JVM pauses) and single-binary deployment, reducing tail latency by 40%."
+      },
+      {
+        title: "Pattern: CQRS",
+        detail: "Decoupled write (ingestion) and read (analytics) paths to ensure dashboard queries never block trade execution."
+      }
+    ],
+    // 4. Tradeoffs
+    tradeoffs: [
+      "Sacrificed immediate consistency for eventual consistency (max 100ms lag).",
+      "Increased operational complexity with Flink cluster management vs simple cron jobs."
+    ],
+    stack: ["Go", "Redpanda", "Flink", "TimescaleDB", "gRPC"],
+    // Visualization Data (Abstract Schema)
+    diagram: {
+      steps: [
+        { icon: Globe, label: "Edge Clients" },
+        { icon: Server, label: "Go Ingest" },
+        { icon: Layers, label: "Redpanda" },
+        { icon: Database, label: "Timescale" },
+      ]
+    }
   },
   {
-    id: 2,
-    title: 'Neural Code Reviewer',
-    tagline: 'AI-Powered Static Analysis',
-    description: 'Machine learning tool that automates code review processes, detecting bugs and suggesting optimizations using NLP.',
-    image: PLACEHOLDERS.ai,
-    technologies: ['TensorFlow', 'FastAPI', 'Python', 'AWS Lambda'],
-    category: 'Machine Learning',
-    github: '#',
-    demo: '#',
-    year: "2023",
-    color: "from-emerald-600 to-teal-500",
-    icon: Cpu,
-    problemSolved: 'Manual code reviews were creating bottlenecks, with inconsistent quality checks across distributed teams.',
-    impact: 'Automated 40% of trivial review tasks, freeing up senior engineer time by approx 15 hours/week.',
-    metrics: [
-      { label: 'Accuracy', value: '94%' },
-      { label: 'Time Saved', value: '60%' },
-      { label: 'Users', value: '500+' }
-    ]
+    id: "sentinel",
+    title: "Sentinel",
+    subtitle: "Infrastructure Observability Engine",
+    role: "Backend Architect",
+    timeline: "Q1 2025",
+    problem: "Production incidents took 45+ mins to diagnose because logs, metrics, and traces were scattered across three different disjointed tools.",
+    system: "A unified telemetry pipeline that correlates logs (Loki), metrics (Prometheus), and traces (Tempo) into a single 'Graph' view for instant root cause analysis.",
+    architecture: [
+      {
+        title: "Columnar Storage",
+        detail: "Utilized ClickHouse for log storage to enable sub-second aggregations over billions of rows, replacing expensive ElasticSearch clusters."
+      },
+      {
+        title: "Sampling Strategy",
+        detail: "Implemented dynamic tail-based sampling to capture 100% of error traces while discarding 95% of healthy traffic to manage costs."
+      }
+    ],
+    tradeoffs: [
+      "High storage requirements for raw trace data during peak hours.",
+      "Custom query language learning curve for team members used to SQL."
+    ],
+    stack: ["Rust", "ClickHouse", "Grafana", "Kubernetes", "OpenTelemetry"],
+    diagram: {
+      steps: [
+        { icon: Activity, label: "Services" },
+        { icon: Cpu, label: "O-Tel Col" },
+        { icon: GitBranch, label: "Router" },
+        { icon: Lock, label: "Storage" },
+      ]
+    }
   },
   {
-    id: 3,
-    title: 'Nebula E-commerce',
-    tagline: 'Headless High-Scale Retail',
-    description: 'Modern microservices-based e-commerce solution architected for high-traffic flash sales and inventory synchronization.',
-    image: PLACEHOLDERS.ecommerce,
-    technologies: ['Next.js', 'GraphQL', 'Redis', 'Kubernetes'],
-    category: 'Full-Stack',
-    github: '#',
-    demo: '#',
-    year: "2023",
-    color: "from-purple-600 to-pink-500",
-    icon: Globe,
-    problemSolved: 'Legacy monolithic architecture crashed during Black Friday spikes, resulting in $50k+ lost revenue per hour.',
-    impact: 'Achieved 99.99% uptime during peak traffic of 10k concurrent users.',
-    metrics: [
-      { label: 'Uptime', value: '99.99%' },
-      { label: 'Concurrent', value: '10k+' },
-      { label: 'Conversion', value: '+35%' }
-    ]
+    id: "dataflow",
+    title: "DataFlow Analytics",
+    subtitle: "Real-time Stream Processing Engine",
+    role: "Lead Data Engineer",
+    timeline: "2024",
+    // 1. Problem Framing
+    problem: "Enterprise clients struggled with fragmented data sources and 24-hour reporting delays, making real-time fraud detection and operational decision-making impossible.",
+    // 2. System Overview
+    system: "A hybrid Kappa-architecture pipeline. Ingests 10M+ daily records via Kafka, processes stateful anomalies in Flink, and serves sub-second analytics via a materialized PostgreSQL view.",
+    // 3. Architecture & Decisions
+    architecture: [
+      {
+        title: "Stream-First Design",
+        detail: "Moved from batch ETL to event-driven processing using Kafka Connect, reducing data latency from 24 hours to <300ms."
+      },
+      {
+        title: "Deduplication Strategy",
+        detail: "Implemented bloom filters within the ingestion layer to handle at-least-once delivery guarantees without corrupting downstream metrics."
+      }
+    ],
+    // 4. Tradeoffs
+    tradeoffs: [
+      "Higher infrastructure cost for always-on stream processors compared to ephemeral batch jobs.",
+      "Complexity in handling out-of-order events required strict watermark policies."
+    ],
+    stack: ["Kafka", "Python", "Flink", "PostgreSQL", "Docker"],
+    // Visualization Data (Abstract Schema)
+    diagram: {
+      steps: [
+        { icon: Globe, label: "Sources" },
+        { icon: Layers, label: "Kafka" },
+        { icon: Cpu, label: "Flink" },
+        { icon: Database, label: "Postgres" },
+      ]
+    }
   },
   {
-    id: 4,
-    title: 'Urban Pulse IoT',
-    tagline: 'Smart City Infrastructure',
-    description: 'Real-time monitoring system for urban infrastructure using distributed IoT sensors and predictive maintenance analytics.',
-    image: PLACEHOLDERS.iot,
-    technologies: ['Vue.js', 'InfluxDB', 'MQTT', 'Grafana'],
-    category: 'IoT',
-    github: '#',
-    demo: '#',
-    year: "2022",
-    color: "from-orange-600 to-amber-500",
-    icon: Server,
-    problemSolved: 'City planners lacked unified visibility into utility networks, leading to reactive and expensive maintenance.',
-    impact: 'Enabled predictive maintenance that reduced emergency repair costs by 40%.',
-    metrics: [
-      { label: 'Sensors', value: '1,200+' },
-      { label: 'Cost Cut', value: '40%' },
-      { label: 'Response', value: '-25%' }
-    ]
+    id: "nebula",
+    title: "Nebula E-commerce",
+    subtitle: "High-Scale Headless Retail Platform",
+    role: "System Architect",
+    timeline: "2023",
+    problem: "Legacy monolithic architecture suffered cascading failures during Black Friday traffic spikes (10k+ concurrent users), resulting in significant revenue loss.",
+    system: "A decomposed microservices architecture. Decoupled the storefront (Next.js) from the inventory engine using an event bus (Redis/BullMQ) to handle bursty write loads.",
+    architecture: [
+      {
+        title: "Async Inventory",
+        detail: "Optimistic UI updates combined with an eventual consistency model for inventory reservations prevented database locks during flash sales."
+      },
+      {
+        title: "Edge Caching",
+        detail: "Aggressive Stale-While-Revalidate caching strategy at the CDN edge reduced origin server load by 85%."
+      }
+    ],
+    tradeoffs: [
+      "Strict consistency sacrificed for availability (AP over CP in CAP theorem) during peak load.",
+      "Distributed tracing (OpenTelemetry) became mandatory to debug inter-service latency."
+    ],
+    stack: ["Next.js", "Redis", "Kubernetes", "GraphQL", "Node.js"],
+    diagram: {
+      steps: [
+        { icon: ShoppingCart, label: "Store" },
+        { icon: Globe, label: "CDN" },
+        { icon: Zap, label: "Queue" },
+        { icon: Server, label: "Inventory" },
+      ]
+    }
+  },
+  {
+    id: "neural-code",
+    title: "Neural Code Reviewer",
+    subtitle: "LLM-Powered Static Analysis",
+    role: "ML Engineer",
+    timeline: "2023",
+    problem: "Senior engineers spent 15+ hours/week on trivial code reviews. Existing linters caught syntax errors but missed semantic bugs and optimization opportunities.",
+    system: "An automated PR agent that combines AST parsing with a fine-tuned LLM. It generates context-aware suggestions and detects potential security vulnerabilities before human review.",
+    architecture: [
+      {
+        title: "Context Window Optimization",
+        detail: "Implemented RAG (Retrieval Augmented Generation) to fetch only relevant file dependencies, fitting large codebases into limited token windows."
+      },
+      {
+        title: "Hybrid Analysis",
+        detail: "Uses deterministic static analysis for syntax (FastAPI) and probabilistic models (TensorFlow) for logic, reducing hallucination rates."
+      }
+    ],
+    tradeoffs: [
+      "Inference latency (~5s) is higher than traditional linters.",
+      "Requires constant model fine-tuning to adapt to team-specific coding styles."
+    ],
+    stack: ["Python", "TensorFlow", "FastAPI", "AWS Lambda", "LangChain"],
+    diagram: {
+      steps: [
+        { icon: GitBranch, label: "Pull Req" },
+        { icon: Terminal, label: "Parser" },
+        { icon: Cpu, label: "LLM" },
+        { icon: MessageSquare, label: "Comment" },
+      ]
+    }
   }
 ];
 
-const CATEGORIES = ['All', 'Data Engineering', 'Machine Learning', 'Full-Stack', 'IoT'];
-
 /* -------------------------------------------------------------------------- */
-/* SUB-COMPONENTS                                                             */
+/* 2. UI COMPONENTS                                                           */
 /* -------------------------------------------------------------------------- */
 
-// 1. Border Beam Animation Component
-const BorderBeam = ({ duration = 12, borderWidth = 1.5 }: { duration?: number, borderWidth?: number }) => (
-  <div className="absolute inset-0 pointer-events-none rounded-[inherit] z-0 overflow-hidden">
-    <div
-      className="absolute inset-0 rounded-[inherit]"
-      style={{
-        padding: borderWidth,
-        mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-        maskComposite: 'exclude',
-        WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-        WebkitMaskComposite: 'xor',
-      }}
-    >
-      <div
-        className="absolute inset-[-100%] w-auto h-auto bg-[conic-gradient(from_0deg,transparent_0_340deg,theme(colors.primary.DEFAULT)_360deg)] animate-[spin_var(--duration)_linear_infinite] opacity-100"
-        style={{ '--duration': `${duration}s` } as React.CSSProperties}
-      />
-    </div>
-  </div>
-);
+// Refined Animated Schematic - SUBTLE VERSION
+const Schematic = ({ steps }: { steps: any[] }) => {
+  return (
+    <div className="relative flex items-center justify-between w-full h-36 px-6 md:px-10 bg-neutral-100/50 dark:bg-white/5 rounded-2xl border border-neutral-200 dark:border-white/10 overflow-hidden select-none group/schematic">
+      {/* Technical Grid Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_49%,rgba(0,0,0,0.03)_50%,transparent_51%)] dark:bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.03)_50%,transparent_51%)] bg-[size:20px_100%]" />
 
-// 2. Filter Tabs with "Gliding Pill" Effect
-const FilterTabs = ({
-  active,
-  onChange
-}: {
-  active: string;
-  onChange: (c: string) => void
-}) => (
-  <div className="flex flex-wrap justify-center gap-2 mb-12">
-    {CATEGORIES.map((category) => (
-      <button
-        key={category}
-        onClick={() => onChange(category)}
-        className={`relative px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300 z-10 ${active === category ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-          }`}
-      >
-        {active === category && (
-          <motion.div
-            layoutId="activeFilter"
-            className="absolute inset-0 bg-primary rounded-full -z-10"
-            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-          />
-        )}
-        {category}
-      </button>
-    ))}
-  </div>
-);
+      {/* Connecting Line Container */}
+      <div className="absolute top-1/2 left-10 right-10 h-px -translate-y-1/2 z-0">
+        {/* Static Path */}
+        <div className="absolute inset-0 border-t border-dashed border-muted-foreground/30" />
 
-// 3. Project Card (Refined with ForwardRef & Hybrid Design)
-const ProjectCard = forwardRef<HTMLDivElement, { project: Project; onClick: (p: Project) => void }>(
-  ({ project, onClick }, ref) => {
-    return (
-      <motion.div
-        ref={ref}
-        layout
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ duration: 0.3 }}
-        onClick={() => onClick(project)}
-        className="group relative cursor-pointer rounded-3xl bg-card border border-border/50 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500"
-      >
-        {/* Image Section with Gradient Overlay */}
-        <div className="relative h-72 sm:h-80 overflow-hidden">
-          {/* Dynamic Color Gradient Overlay */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${project.color} opacity-20 group-hover:opacity-30 transition-opacity duration-500 mix-blend-overlay z-10`} />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10 opacity-80" />
+        {/* Animated Data Packets - Refined for Subtlety */}
+        <motion.div
+          className="absolute top-1/2 -translate-y-1/2 h-[2px] w-12 bg-gradient-to-r from-transparent via-primary/60 to-transparent blur-[0.5px]"
+          animate={{ left: ["-10%", "110%"] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        />
+        <motion.div
+          className="absolute top-1/2 -translate-y-1/2 h-px w-6 bg-primary/30"
+          animate={{ left: ["-10%", "110%"] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "linear", delay: 2 }}
+        />
+      </div>
 
-          <motion.img
-            whileHover={{ scale: 1.05 }}
-            transition={{ duration: 0.6 }}
-            src={project.image}
-            alt={project.title}
-            className="w-full h-full object-cover"
-          />
-
-          {/* Top Badges */}
-          <div className="absolute top-4 left-4 z-20 flex gap-2">
-            <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-black/60 backdrop-blur-md text-white border border-white/10">
-              {project.category}
-            </span>
-          </div>
-
-          {/* Icon Watermark - Themed Button */}
-          <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-x-2 group-hover:translate-x-0">
-            <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center border border-primary/20">
-              <ArrowUpRight className="h-4 w-4" />
+      {/* Nodes */}
+      {steps.map((step, i) => (
+        <div key={i} className="relative z-10 flex flex-col items-center gap-3 group/node">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-xl bg-background border border-border flex items-center justify-center shadow-sm transition-all duration-500 group-hover/schematic:border-primary/30 group-hover/schematic:shadow-[0_0_15px_-3px_rgba(var(--primary-rgb),0.15)]">
+              <step.icon className="w-5 h-5 text-muted-foreground transition-colors duration-500 group-hover/schematic:text-primary" />
             </div>
           </div>
-
-          {/* Quick Metrics Overlay (The "Hybrid" Feature) */}
-          <div className="absolute bottom-4 left-4 right-4 z-20 flex gap-2">
-            {project.metrics.slice(0, 2).map((metric, idx) => (
-              <div key={idx} className="flex-1 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/10 shadow-lg">
-                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{metric.label}</div>
-                <div className="text-sm font-bold text-foreground">{metric.value}</div>
-              </div>
-            ))}
-          </div>
+          <span className="text-[10px] font-mono font-medium text-muted-foreground bg-background/80 px-2 py-0.5 rounded-full border border-transparent group-hover/schematic:border-border/50 transition-colors">
+            {step.label}
+          </span>
         </div>
+      ))}
+    </div>
+  );
+};
 
-        {/* Content Section */}
-        <div className="p-6 pt-4">
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="text-xl font-bold group-hover:text-primary transition-colors text-foreground">
-              {project.title}
-            </h3>
-            <span className="text-xs font-mono text-muted-foreground bg-secondary/50 px-2 py-1 rounded">
-              {project.year}
-            </span>
-          </div>
+/* -------------------------------------------------------------------------- */
+/* 3. PROJECT CARD COMPONENT                                                  */
+/* -------------------------------------------------------------------------- */
 
-          <p className="text-sm text-muted-foreground font-medium mb-3 opacity-90">
-            {project.tagline}
-          </p>
-
-          <p className="text-muted-foreground text-sm line-clamp-2 mb-5 leading-relaxed opacity-70">
-            {project.description}
-          </p>
-
-          {/* Tech Stack Mini */}
-          <div className="flex flex-wrap gap-2">
-            {project.technologies.slice(0, 3).map(tech => (
-              <span key={tech} className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground border border-border px-2 py-1 rounded-md">
-                {tech}
-              </span>
-            ))}
-            {project.technologies.length > 3 && (
-              <span className="text-[10px] px-2 py-1 text-muted-foreground bg-secondary/30 rounded-md">
-                +{project.technologies.length - 3}
-              </span>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-);
-
-ProjectCard.displayName = 'ProjectCard';
-
-// 4. Project Details Modal
-const ProjectModal = ({
-  project,
-  onClose
-}: {
-  project: Project;
-  onClose: () => void
-}) => {
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = 'unset'; };
-  }, []);
-
-  const Icon = project.icon;
+const ProjectCard = ({ project, index }: { project: typeof PROJECTS[0], index: number }) => {
+  const [activeTab, setActiveTab] = useState<"problem" | "architecture" | "tradeoffs">("problem");
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      className="group relative w-full grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 md:p-8 rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 backdrop-blur-sm overflow-hidden"
     >
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-md"
-        onClick={onClose}
-      />
+      {/* Spotlight Hover Effect */}
+      <div className="absolute -inset-px bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl" />
 
-      <motion.div
-        layoutId={`project-${project.id}`}
-        initial={{ y: 50, opacity: 0, scale: 0.95 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 50, opacity: 0, scale: 0.95 }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="relative w-full max-w-4xl max-h-[90vh] bg-background border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col"
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/20 backdrop-blur-md hover:bg-black/40 text-white transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="overflow-y-auto custom-scrollbar flex-1">
-          <div className="relative h-64 sm:h-80 w-full overflow-hidden">
-            <img
-              src={project.image}
-              alt={project.title}
-              className="w-full h-full object-cover"
-            />
-            <div className={`absolute inset-0 bg-gradient-to-br ${project.color} mix-blend-multiply opacity-60`} />
-            <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-
-            <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-white/20 backdrop-blur-md rounded-lg">
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-white bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-                    {project.category}
-                  </span>
-                </div>
-                <h2 className="text-3xl sm:text-5xl font-bold text-white mb-2">
-                  {project.title}
-                </h2>
-                <p className="text-white/80 text-lg font-medium">{project.tagline}</p>
-              </div>
-            </div>
+      {/* LEFT COLUMN: Metadata & Visual (Col Span 5) */}
+      <div className="lg:col-span-5 flex flex-col justify-between h-full gap-8">
+        <div>
+          <div className="flex items-center gap-3 mb-5">
+            <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-mono font-bold uppercase tracking-widest border border-primary/20">
+              {project.role}
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground border border-border px-2.5 py-1 rounded-md">
+              {project.timeline}
+            </span>
           </div>
+          <h3 className="text-3xl font-bold text-foreground mb-3 leading-tight">
+            {project.title}
+          </h3>
+          <p className="text-lg text-muted-foreground font-light leading-relaxed">
+            {project.subtitle}
+          </p>
+        </div>
 
-          <div className="p-6 sm:p-10 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-10">
-            <div className="space-y-10">
-              <div className="grid grid-cols-3 gap-4">
-                {project.metrics.map((metric, idx) => (
-                  <div key={idx} className="bg-secondary/20 border border-border/50 rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold text-primary mb-1">{metric.value}</div>
-                    <div className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">{metric.label}</div>
+        {/* Visual Artifact (Diagram) */}
+        <div className="mt-auto">
+          <div className="text-[10px] font-mono text-muted-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
+            <Activity className="w-3 h-3" /> System Architecture
+          </div>
+          <Schematic steps={project.diagram.steps} />
+        </div>
+
+        {/* Tech Stack Footer */}
+        <div className="flex flex-wrap gap-2 pt-6 border-t border-border/40">
+          {project.stack.map(tech => (
+            <span key={tech} className="text-[11px] font-mono text-muted-foreground bg-neutral-100/80 dark:bg-white/5 px-2.5 py-1 rounded cursor-default hover:text-primary hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20">
+              {tech}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Narrative Deep Dive (Col Span 7) */}
+      <div className="lg:col-span-7 flex flex-col bg-neutral-50/50 dark:bg-black/20 rounded-2xl border border-neutral-200 dark:border-white/5 overflow-hidden">
+
+        {/* Tabs */}
+        <div className="flex border-b border-neutral-200 dark:border-white/5 bg-neutral-50/80 dark:bg-white/5">
+          {[
+            { id: "problem", label: "01. Problem", icon: AlertTriangle },
+            { id: "architecture", label: "02. Architecture", icon: Layout },
+            { id: "tradeoffs", label: "03. Tradeoffs", icon: GitBranch },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-mono font-medium tracking-wide transition-all border-b-2
+                ${activeTab === tab.id
+                  ? "bg-white dark:bg-white/5 text-primary border-primary"
+                  : "text-muted-foreground hover:bg-white/50 dark:hover:bg-white/5 border-transparent"
+                }
+              `}
+            >
+              <tab.icon className={`w-3.5 h-3.5 ${activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'}`} />
+              <span className="hidden sm:inline">{tab.label.split(' ')[1]}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-6 md:p-8 flex-1 relative bg-white/40 dark:bg-transparent">
+          <AnimatePresence mode="wait">
+            {activeTab === "problem" && (
+              <motion.div
+                key="problem"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h4 className="text-sm font-bold text-foreground mb-4 uppercase tracking-widest flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  Context & Challenge
+                </h4>
+                <p className="text-base text-muted-foreground leading-relaxed mb-8">
+                  {project.problem}
+                </p>
+                <div className="pl-4 border-l-2 border-primary/30">
+                  <div className="text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">System Overview</div>
+                  <p className="text-sm text-foreground italic leading-relaxed">
+                    "{project.system}"
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "architecture" && (
+              <motion.div
+                key="architecture"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-8"
+              >
+                {project.architecture.map((item, i) => (
+                  <div key={i}>
+                    <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      {item.title}
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed pl-6 border-l border-border/50 ml-2">
+                      {item.detail}
+                    </p>
                   </div>
                 ))}
-              </div>
+              </motion.div>
+            )}
 
-              <section>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
-                  <Layers className="w-5 h-5 text-primary" /> Overview
-                </h3>
-                <p className="text-muted-foreground leading-relaxed text-lg">
-                  {project.description}
-                </p>
-              </section>
-
-              {project.problemSolved && (
-                <section>
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
-                    <Zap className="w-5 h-5 text-yellow-500" /> The Challenge
-                  </h3>
-                  <div className="p-5 rounded-2xl bg-secondary/10 border border-border/50">
-                    <p className="text-muted-foreground">
-                      {project.problemSolved}
-                    </p>
-                  </div>
-                </section>
-              )}
-
-              {project.impact && (
-                <section>
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
-                    <BarChart3 className="w-5 h-5 text-emerald-500" /> Business Impact
-                  </h3>
-                  <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                    <p className="text-emerald-700 dark:text-emerald-300 font-medium">
-                      {project.impact}
-                    </p>
-                  </div>
-                </section>
-              )}
-            </div>
-
-            <div className="space-y-8">
-              <div className="flex flex-col gap-3 sticky top-6">
-                {project.demo && (
-                  <Button className="w-full justify-between group h-12 text-base shadow-lg shadow-primary/20" asChild>
-                    <a href={project.demo} target="_blank" rel="noopener noreferrer">
-                      View Live Demo <ExternalLink className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </a>
-                  </Button>
-                )}
-                {project.github && (
-                  <Button variant="outline" className="w-full justify-between h-12 text-base hover:bg-secondary/80" asChild>
-                    <a href={project.github} target="_blank" rel="noopener noreferrer">
-                      Source Code <Github className="w-4 h-4" />
-                    </a>
-                  </Button>
-                )}
-
-                <div className="mt-8">
-                  <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-                    <Cpu className="w-4 h-4" /> Tech Stack
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {project.technologies.map((tech) => (
-                      <span
-                        key={tech}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-secondary/50 text-foreground border border-border/50 hover:border-primary/50 transition-colors cursor-default"
-                      >
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+            {activeTab === "tradeoffs" && (
+              <motion.div
+                key="tradeoffs"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h4 className="text-sm font-bold text-foreground mb-4 uppercase tracking-widest flex items-center gap-2">
+                  <GitBranch className="w-4 h-4 text-purple-500" />
+                  Constraints & Reality
+                </h4>
+                <ul className="space-y-4">
+                  {project.tradeoffs.map((item, i) => (
+                    <li key={i} className="flex gap-3 text-sm text-muted-foreground">
+                      <span className="text-purple-500 font-mono mt-0.5 opacity-70">0{i + 1}.</span>
+                      <span className="leading-relaxed">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/* MAIN COMPONENT                                                             */
+/* 4. MAIN COMPONENT                                                          */
 /* -------------------------------------------------------------------------- */
 
-const Projects = () => {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-
-  const filteredProjects = useMemo(() => {
-    if (activeCategory === 'All') return PROJECTS_DATA;
-    return PROJECTS_DATA.filter(p => p.category.includes(activeCategory) || (activeCategory === "Full-Stack" && p.category === "Full-Stack"));
-  }, [activeCategory]);
-
+const Projects: React.FC = () => {
   return (
-    <section id="projects" className="py-24 bg-background relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 right-0 -z-10 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+    <section id="projects" className="py-24 md:py-32 bg-neutral-50/50 dark:bg-black/20 relative">
+      {/* Background Noise */}
+      <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container px-4 md:px-6 max-w-7xl mx-auto">
 
-        {/* Header */}
+        {/* Section Header */}
+        <div className="mb-16 md:mb-24 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2 text-primary font-mono text-xs tracking-widest mb-4">
+              <Terminal className="w-4 h-4" />
+              <span>ENGINEERING_LOGS</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+              Selected <span className="text-muted-foreground">Systems</span>
+            </h2>
+          </div>
+          <p className="text-muted-foreground max-w-sm text-sm md:text-base leading-relaxed">
+            A look at how I solve problems. Focusing on architecture, tradeoffs, and system design over syntax.
+          </p>
+        </div>
+
+        {/* Projects Stack */}
+        <div className="flex flex-col gap-16 lg:gap-24">
+          {PROJECTS.map((project, index) => (
+            <ProjectCard key={project.id} project={project} index={index} />
+          ))}
+        </div>
+
+        {/* Footer Action */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16 space-y-4"
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-12 text-center"
         >
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-            Featured <span className="text-primary">Projects</span>
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            A selection of engineering challenges I've solved, from scalable data pipelines to AI-driven applications.
-          </p>
+          <a href="https://github.com/emmanuelrichard01">
+            <button
+              className="group inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span className="border-b border-foreground/0 group-hover:border-primary font-mono">View Full Archive on GitHub</span>
+              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
+            </button>
+          </a>
         </motion.div>
 
-        {/* Filter */}
-        <FilterTabs active={activeCategory} onChange={setActiveCategory} />
-
-        {/* Grid */}
-        <motion.div
-          layout
-          className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10"
-        >
-          <AnimatePresence mode='popLayout'>
-            {filteredProjects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onClick={setSelectedProject}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Show More Button (With Border Beam) */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="mt-16 text-center"
-        >
-          <Button
-            variant="outline"
-            size="lg" className="group rounded-full px-8 border-primary/20 hover:border-primary/50 hover:bg-primary/5"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              View All Projects
-              <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
-            </span>
-          </Button>
-        </motion.div>
       </div>
-
-      {/* Modal Overlay */}
-      <AnimatePresence>
-        {selectedProject && (
-          <ProjectModal
-            project={selectedProject}
-            onClose={() => setSelectedProject(null)}
-          />
-        )}
-      </AnimatePresence>
     </section>
   );
 };

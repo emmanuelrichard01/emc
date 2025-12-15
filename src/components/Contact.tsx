@@ -1,321 +1,200 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mail,
-  MapPin,
-  Phone,
-  Send,
-  Github,
-  Linkedin,
-  Check,
-  Copy,
-  ArrowRight,
-  Loader2,
-  Instagram,
-  Twitter
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+  Mail, Github, Linkedin, Twitter,
+  ArrowUpRight, Copy, CheckCircle2,
+  MapPin, Terminal, MessageSquare
+} from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
-/* UTILS                                                                      */
+/* 1. DATA: CONNECTION PROTOCOLS                                              */
 /* -------------------------------------------------------------------------- */
 
 const SOCIAL_LINKS = [
   {
-    name: 'GitHub',
-    icon: Github,
-    href: 'https://github.com/emmanuelrichard01',
-    color: 'hover:text-neutral-900 dark:hover:text-white'
+    id: "github",
+    label: "GitHub",
+    context: "Production Code & Systems",
+    href: "https://github.com/emmanuelrichard01",
+    icon: Github
   },
   {
-    name: 'LinkedIn',
-    icon: Linkedin,
-    href: 'https://www.linkedin.com/in/e-mc/',
-    color: 'hover:text-[#0077b5]'
+    id: "linkedin",
+    label: "LinkedIn",
+    context: "Professional Context & Roles",
+    href: "https://www.linkedin.com/in/e-mc/",
+    icon: Linkedin
   },
   {
-    name: 'X (Twitter)',
-    icon: Twitter,
-    href: 'https://x.com/_mrebuka',
-    color: 'hover:text-neutral-900 dark:hover:text-white'
-  },
-  {
-    name: 'Instagram',
-    icon: Instagram,
-    href: 'https://www.instagram.com/officialemmanuelrichard/',
-    color: 'hover:text-[#E1306C]'
+    id: "twitter",
+    label: "X / Twitter",
+    context: "Thoughts & Engineering",
+    href: "https://x.com/_mrebuka",
+    icon: Twitter
   }
 ];
 
-const CONTACT_INFO = [
-  {
-    icon: Mail,
-    label: 'Email',
-    value: 'emma.moghalu@gmail.com',
-    action: 'mailto:emma.moghalu@gmail.com',
-    copyable: true
-  },
-  {
-    icon: Phone,
-    label: 'Phone',
-    value: '+234 708 649 3145',
-    action: 'tel:+2347086493145',
-    copyable: true
-  },
-  {
-    icon: MapPin,
-    label: 'Location',
-    value: 'Abuja, Nigeria (Remote)',
-    action: null,
-    copyable: false
-  }
-];
+const EMAIL = "emma.moghalu@gmail.com";
 
 /* -------------------------------------------------------------------------- */
-/* SUB-COMPONENTS                                                             */
+/* 2. UI COMPONENTS                                                           */
 /* -------------------------------------------------------------------------- */
 
-// 1. Border Beam Animation (FAANG-Level Polish)
-const BorderBeam = ({ duration = 8, borderWidth = 1.5 }: { duration?: number, borderWidth?: number }) => (
-  <div className="absolute inset-0 pointer-events-none rounded-[inherit] z-0 overflow-hidden">
-    <div
-      className="absolute inset-0 rounded-[inherit]"
-      style={{
-        padding: borderWidth,
-        // Mask the center to show only the border area
-        mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-        maskComposite: 'exclude',
-        WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-        WebkitMaskComposite: 'xor',
-      }}
-    >
-      {/* The rotating gradient beam */}
-      <div
-        className="absolute inset-[-100%] w-auto h-auto bg-[conic-gradient(from_0deg,transparent_0_300deg,theme(colors.primary.DEFAULT)_360deg)] animate-[spin_var(--duration)_linear_infinite] opacity-100"
-        style={{ '--duration': `${duration}s` } as React.CSSProperties}
-      />
-    </div>
-  </div>
-);
-
-// 2. Copyable Contact Item
-const ContactItem = ({ item }: { item: typeof CONTACT_INFO[0] }) => {
+// Copyable Email Component
+const EmailDisplay = () => {
   const [copied, setCopied] = useState(false);
-  const { toast } = useToast();
 
-  const handleCopy = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!item.copyable) return;
-
-    navigator.clipboard.writeText(item.value);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(EMAIL);
     setCopied(true);
-    toast({
-      title: "Copied to clipboard",
-      description: `${item.label} has been copied.`,
-    });
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const Wrapper = item.action ? 'a' : 'div';
-
   return (
-    <Wrapper
-      href={item.action || undefined}
-      className="group flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-primary/20 transition-all duration-300"
-    >
-      <div className="flex items-center gap-4">
-        <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border shadow-sm group-hover:scale-110 transition-transform">
-          <item.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{item.label}</p>
-          <p className="text-sm font-semibold text-foreground">{item.value}</p>
-        </div>
+    <div className="group relative inline-flex flex-col items-start gap-3">
+      <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+        <Mail className="w-3.5 h-3.5" /> Primary Channel
       </div>
 
-      {item.copyable && (
-        <button
-          onClick={handleCopy}
-          className="p-2 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground transition-colors"
-          aria-label={`Copy ${item.label}`}
-        >
-          {copied ? (
-            <Check className="h-4 w-4 text-emerald-500" />
-          ) : (
-            <Copy className="h-4 w-4" />
+      <button
+        onClick={handleCopy}
+        className="relative flex items-center gap-4 text-2xl md:text-4xl font-bold text-foreground hover:text-primary transition-colors text-left"
+      >
+        <span className="border-b-2 border-transparent group-hover:border-primary/20 pb-1 transition-all">
+          {EMAIL}
+        </span>
+        <div className="relative p-2 rounded-full bg-secondary/30 text-muted-foreground group-hover:text-foreground group-hover:bg-secondary/60 transition-all">
+          <AnimatePresence mode="wait">
+            {copied ? (
+              <motion.div
+                key="check"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.5, opacity: 0 }}
+              >
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="copy"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.5, opacity: 0 }}
+              >
+                <Copy className="w-5 h-5" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Tooltip Feedback */}
+        <AnimatePresence>
+          {copied && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute left-full ml-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg whitespace-nowrap hidden sm:block"
+            >
+              Copied to Clipboard!
+            </motion.div>
           )}
-        </button>
-      )}
-    </Wrapper>
+        </AnimatePresence>
+      </button>
+
+      <p className="text-sm text-muted-foreground max-w-md">
+        Best for role inquiries, technical collaborations, and deep-dive engineering discussions.
+      </p>
+    </div>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/* MAIN COMPONENT                                                             */
+/* 3. MAIN COMPONENT                                                          */
 /* -------------------------------------------------------------------------- */
 
-const Contact = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-  const formRef = useRef<HTMLFormElement>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    // Simulate network request
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    toast({
-      title: "Message sent!",
-      description: "Thanks for reaching out. I'll get back to you within 24 hours.",
-    });
-
-    if (formRef.current) formRef.current.reset();
-    setIsSubmitting(false);
-  };
-
+const Contact: React.FC = () => {
   return (
-    <section id="contact" className="py-24 bg-background relative overflow-hidden">
-      {/* Decorative Background */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none">
-        <div className="absolute top-[20%] left-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px]" />
-      </div>
+    <section id="contact" className="py-24 md:py-32 bg-background relative overflow-hidden">
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-[radial-gradient(#00000010_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff05_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-16 space-y-4"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-            Let's Build Something <span className="text-primary">Great</span>
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            Have a project in mind or just want to chat? I'm currently available for freelance work and open to new opportunities.
-          </p>
-        </motion.div>
+      <div className="container px-4 md:px-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
 
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-24">
-
-          {/* Left Column: Info & Socials */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="space-y-8"
-          >
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold">Contact Details</h3>
-              <div className="space-y-4">
-                {CONTACT_INFO.map((item) => (
-                  <ContactItem key={item.label} item={item} />
-                ))}
+          {/* LEFT: INTENT FRAMING */}
+          <div className="space-y-12">
+            <div>
+              <div className="flex items-center gap-2 text-primary font-mono text-xs tracking-widest mb-6">
+                <MessageSquare className="w-4 h-4" />
+                <span>INITIATE_HANDSHAKE</span>
               </div>
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
+                Let's build something <br />
+                <span className="text-muted-foreground">solid.</span>
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
+                I'm interested in meaningful work—resilient systems, thoughtful teams, and problems worth solving. If you're building a serious product or engineering team, I'd love to hear from you.
+              </p>
             </div>
 
-            <div className="space-y-6 pt-8">
-              <h3 className="text-2xl font-bold">Connect on Social</h3>
-              <div className="flex flex-wrap gap-4">
-                {SOCIAL_LINKS.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`p-4 rounded-xl bg-muted/30 border border-border/50 text-muted-foreground transition-all duration-300 hover:scale-105 hover:bg-muted/50 hover:border-primary/20 ${link.color}`}
-                    aria-label={link.name}
-                  >
-                    <link.icon className="h-6 w-6" />
-                  </a>
-                ))}
+            <EmailDisplay />
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/20 w-fit px-4 py-2 rounded-full border border-border/50">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Available for Full-time Roles & Select Projects</span>
+            </div>
+          </div>
+
+          {/* RIGHT: CONTEXTUAL LINKS */}
+          <div className="lg:pl-12 flex flex-col justify-center space-y-8">
+            <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-2">
+              Additional Protocols
+            </div>
+
+            <div className="space-y-4">
+              {SOCIAL_LINKS.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-between p-5 rounded-xl border border-border/50 bg-secondary/5 hover:bg-secondary/20 hover:border-primary/20 transition-all duration-300"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 rounded-lg bg-background border border-border text-muted-foreground group-hover:text-primary group-hover:border-primary/30 transition-colors">
+                      <link.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {link.label}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {link.context}
+                      </div>
+                    </div>
+                  </div>
+                  <ArrowUpRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
+                </a>
+              ))}
+            </div>
+
+            {/* Location Signal */}
+            <div className="mt-8 pt-8 border-t border-border/50 flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span>Abuja, Nigeria (Remote Ready)</span>
+              </div>
+              <div className="font-mono text-xs opacity-50">
+                UTC+1
               </div>
             </div>
-          </motion.div>
-
-          {/* Right Column: Interactive Form with Border Beam */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.4 }}
-            className="relative bg-card rounded-3xl p-6 sm:p-8 shadow-2xl shadow-primary/5 overflow-hidden border border-border/50"
-          >
-            {/* The Animation Layer */}
-            <BorderBeam duration={8} borderWidth={1} />
-
-            <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 relative z-10">
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium">Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="John Doe"
-                    required
-                    className="bg-muted/50 border-border/50 focus:bg-background h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    required
-                    className="bg-muted/50 border-border/50 focus:bg-background h-12"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="subject" className="text-sm font-medium">Subject</Label>
-                <Input
-                  id="subject"
-                  placeholder="Project inquiry"
-                  required
-                  className="bg-muted/50 border-border/50 focus:bg-background h-12"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="message" className="text-sm font-medium">Message</Label>
-                <Textarea
-                  id="message"
-                  placeholder="Tell me about your project..."
-                  required
-                  className="bg-muted/50 border-border/50 focus:bg-background min-h-[150px] resize-none"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full h-12 text-base font-medium rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 shadow-lg shadow-primary/25"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    Send Message
-                    <Send className="ml-2 h-5 w-5" />
-                  </>
-                )}
-              </Button>
-            </form>
-          </motion.div>
+          </div>
 
         </div>
       </div>
