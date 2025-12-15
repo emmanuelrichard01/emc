@@ -77,9 +77,25 @@ const useLocalTime = () => {
 /* SUB-COMPONENTS                                                             */
 /* -------------------------------------------------------------------------- */
 
+// Navigation & Social links (moved outside component to avoid recreation)
+const NAV_LINKS = [
+  { label: "Home", href: "#home" },
+  { label: "About", href: "#about" },
+  { label: "Projects", href: "#projects" },
+  { label: "Experience", href: "#experience" },
+  { label: "Contact", href: "#contact" },
+];
+
+const SOCIAL_LINKS = [
+  { icon: Github, href: "https://github.com/emmanuelrichard01", label: "GitHub" },
+  { icon: Linkedin, href: "https://www.linkedin.com/in/e-mc/", label: "LinkedIn" },
+  { icon: Twitter, href: "https://x.com/_mrebuka", label: "X (Twitter)" },
+  { icon: Instagram, href: "https://www.instagram.com/officialemmanuelrichard/", label: "Instagram" },
+  { icon: Mail, href: "mailto:emma.moghalu@gmail.com", label: "Email" },
+];
+
 // 1. Logo Animated Component (Refined Timing & Solid Fill)
-const LogoAnimated = () => {
-  const theme = useThemeDetector();
+const LogoAnimated = memo(() => {
 
   const paths = [
     "M154.2,43.5v69.4c0,1.4,1,2.5,2.4,2.5h34.1c1.4,0,2.5-1.1,2.5-2.5v-37.1c0-.7-.3-1.3-.7-1.8L120.2.8c-.5-.5-1.1-.7-1.8-.7H22.6c-1.4,0-2.5,1.1-2.5,2.5v33.1c0,1.4,1.1,2.5,2.5,2.5h65.4c0,.1,61,.2,61,.2,2.9,0,5.2,2.3,5.1,5.2h0Z",
@@ -87,66 +103,65 @@ const LogoAnimated = () => {
     "M39.6,112.9V38.9c0-.2-.3-.4-.5-.2L.8,76.1c-.5.5-.8,1.1-.8,1.8v35.1c0,1.4,1.1,2.5,2.5,2.5h34.6c1.4,0,2.5-1.1,2.5-2.5h0Z"
   ];
 
-  // Colors
-  const strokeColor = theme === "dark" ? "#fefef5" : "#090908";
-  const glowColor = theme === "dark" ? "#ffffff" : "#000000";
-
   return (
-    <div className="relative w-10 h-10 cursor-pointer">
+    <div
+      className="
+        relative w-10 h-10 cursor-pointer
+        text-foreground
+        dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.25)]
+      "
+    >
       <motion.svg
-        width="100%"
-        height="100%"
         viewBox="0 0 200 200"
-        xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full"
         whileHover={{ scale: 1.05, rotate: -2 }}
         whileTap={{ scale: 0.95 }}
       >
         <defs>
-          <filter id="footer-neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+          {/* Enhancement-only glow */}
+          <filter id="logo-glow" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow
-              dx="0" dy="0"
-              stdDeviation="4"
-              floodColor={glowColor}
-              floodOpacity={theme === 'dark' ? 0.6 : 0.3}
+              dx="0"
+              dy="0"
+              stdDeviation="3"
+              floodColor="currentColor"
+              floodOpacity="0.35"
             />
           </filter>
         </defs>
 
         <motion.g
-          fill={strokeColor}
+          fill="currentColor"
           initial={{ fillOpacity: 0 }}
-          animate={{ fillOpacity: [0, 0, 1, 1, 0, 0] }} // Solid fill opacity animation
+          animate={{ fillOpacity: [0, 0, 1, 1, 0, 0] }}
           transition={{
             duration: 8,
             ease: "easeInOut",
             repeat: Infinity,
             repeatDelay: 1,
-            times: [0, 0.3, 0.4, 0.7, 0.8, 1] // Syncs with stroke
+            times: [0, 0.3, 0.4, 0.7, 0.85, 1],
           }}
         >
           {paths.map((d, i) => (
             <motion.path
               key={i}
               d={d}
-              stroke={strokeColor}
+              stroke="currentColor"
               strokeWidth="4"
               strokeLinecap="round"
               strokeLinejoin="round"
-              filter={theme === 'dark' ? "url(#footer-neon-glow)" : undefined}
+              filter="url(#logo-glow)"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{
-                pathLength: [0, 1, 1, 1, 0, 0], // Draw, Hold, Erase
-                opacity: [0, 1, 1, 1, 0, 0]
+                pathLength: [0, 1, 1, 1, 0, 0],
+                opacity: [0, 1, 1, 1, 0, 0],
               }}
               transition={{
                 duration: 8,
                 ease: "easeInOut",
                 repeat: Infinity,
                 repeatDelay: 1,
-                // 0-30%: Draw Stroke
-                // 30-70%: Hold (Fill fades in here)
-                // 70-100%: Erase
-                times: [0, 0.3, 0.4, 0.7, 0.9, 1]
+                times: [0, 0.3, 0.4, 0.7, 0.9, 1],
               }}
             />
           ))}
@@ -154,30 +169,53 @@ const LogoAnimated = () => {
       </motion.svg>
     </div>
   );
-};
+});
 
 // 2. Magnetic Icon
 const MagneticIcon = memo(({ children, href, label }: { children: React.ReactNode; href: string; label: string }) => {
-  const ref = useRef<HTMLAnchorElement>(null);
+  const ref = useRef<HTMLAnchorElement | null>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
   const springX = useSpring(x, MAGNETIC_CONFIG);
   const springY = useSpring(y, MAGNETIC_CONFIG);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const { clientX, clientY } = e;
-    const { height, width, left, top } = ref.current!.getBoundingClientRect();
-    const middleX = clientX - (left + width / 2);
-    const middleY = clientY - (top + height / 2);
-    x.set(middleX * 0.2);
-    y.set(middleY * 0.2);
+  // Use RAF to batch pointer updates and avoid flooding renders
+  const rafRef = useRef<number | null>(null);
+  const pendingRef = useRef<{ cx: number; cy: number } | null>(null);
+
+  const setFromPending = () => {
+    const p = pendingRef.current;
+    if (!p) return;
+    pendingRef.current = null;
+    x.set(p.cx);
+    y.set(p.cy);
+    rafRef.current = null;
   };
 
-  const handleMouseLeave = () => {
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!ref.current) return;
+    const { clientX, clientY } = e;
+    const r = ref.current.getBoundingClientRect();
+    const middleX = clientX - (r.left + r.width / 2);
+    const middleY = clientY - (r.top + r.height / 2);
+    pendingRef.current = { cx: middleX * 0.2, cy: middleY * 0.2 };
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(setFromPending);
+  };
+
+  const handlePointerLeave = () => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      pendingRef.current = null;
+    }
     x.set(0);
     y.set(0);
   };
+
+  useEffect(() => () => {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return (
     <motion.a
@@ -186,8 +224,8 @@ const MagneticIcon = memo(({ children, href, label }: { children: React.ReactNod
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
       style={{ x: springX, y: springY }}
       className="group relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/50 text-muted-foreground transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background"
     >
@@ -246,21 +284,7 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const navLinks = [
-    { label: "Home", href: "#home" },
-    { label: "About", href: "#about" },
-    { label: "Projects", href: "#projects" },
-    { label: "Experience", href: "#experience" },
-    { label: "Contact", href: "#contact" },
-  ];
-
-  const socialLinks = [
-    { icon: Github, href: "https://github.com/emmanuelrichard01", label: "GitHub" },
-    { icon: Linkedin, href: "https://www.linkedin.com/in/e-mc/", label: "LinkedIn" },
-    { icon: Twitter, href: "https://x.com/_mrebuka", label: "X (Twitter)" },
-    { icon: Instagram, href: "https://www.instagram.com/officialemmanuelrichard/", label: "Instagram" },
-    { icon: Mail, href: "mailto:emma.moghalu@gmail.com", label: "Email" },
-  ];
+  // Use pre-defined NAV_LINKS and SOCIAL_LINKS to avoid re-creating arrays on each render
 
   return (
     <footer className="relative border-t border-border/40 overflow-hidden bg-background">
@@ -280,7 +304,7 @@ const Footer = () => {
             <div className="flex items-center gap-3">
               <LogoAnimated />
               <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                Emmanuel C.
+                Emmanuel M.
               </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
@@ -311,7 +335,7 @@ const Footer = () => {
               Navigation
             </h3>
             <ul className="space-y-3">
-              {navLinks.map((link) => (
+              {NAV_LINKS.map((link) => (
                 <li key={link.label}>
                   <FooterLink href={link.href} label={link.label} />
                 </li>
@@ -337,7 +361,7 @@ const Footer = () => {
               Connect
             </h3>
             <div className="flex flex-wrap gap-3">
-              {socialLinks.map((link) => (
+              {SOCIAL_LINKS.map((link) => (
                 <MagneticIcon key={link.label} href={link.href} label={link.label}>
                   <link.icon className="h-4 w-4" />
                 </MagneticIcon>
