@@ -5,7 +5,8 @@ import {
   GitBranch, AlertTriangle, CheckCircle2,
   ArrowRight, Terminal, Layers,
   Layout, Activity, Lock, Zap,
-  MessageSquare, ShoppingCart, BarChart3
+  MessageSquare, ShoppingCart, BarChart3,
+  Container, BookOpen, Brain, ExternalLink, Github
 } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
@@ -14,11 +15,154 @@ import {
 
 const PROJECTS = [
   {
+    id: "crypto-pipeline",
+    title: "Crypto Data Pipeline",
+    subtitle: "End-to-End Market Analytics Engine",
+    role: "Data Engineer",
+    timeline: "Q3 2025",
+    github: "https://github.com/emmanuelrichard01/crypto-data-pipeline",
+    demo: null,
+    problem: "Cryptocurrency market data is notoriously noisy and fragmented. Traders and analysts lacked a unified, trustworthy source of truth that combined real-time ingestion with rigorous data quality checks.",
+    system: "A containerized ETL pipeline orchestrated via Make/Docker. Ingests raw API data from CoinGecko, validates schema in PostgreSQL, transforms logic via dbt, and serves insights through Streamlit and Grafana.",
+    architecture: [
+      {
+        title: "Resilient Extraction",
+        detail: "Implemented an asynchronous extractor service with exponential backoff retry logic to handle flaky public APIs without pipeline failure."
+      },
+      {
+        title: "Quality as Code",
+        detail: "Leveraged dbt for in-pipeline testing (schema validation, null checks) to ensure downstream dashboards only ever display trusted data."
+      }
+    ],
+    tradeoffs: [
+      "Chose batch extraction (hourly) over streaming to respect free-tier API rate limits while maintaining sufficient granularity for trend analysis.",
+      "Self-hosted PostgreSQL reduces costs but requires manual maintenance of storage scaling compared to managed cloud warehouses."
+    ],
+    stack: ["Python", "dbt", "PostgreSQL", "Docker", "Streamlit", "Grafana"],
+    diagram: {
+      steps: [
+        { icon: Globe, label: "CoinGecko" },
+        { icon: Container, label: "Extractor" },
+        { icon: Database, label: "Postgres" },
+        { icon: Layers, label: "dbt" },
+        { icon: BarChart3, label: "Grafana" },
+      ]
+    }
+  },
+  {
+    id: "caritas-scholar",
+    title: "CARITAS AI Scholar",
+    subtitle: "Intelligent Academic Intelligence Platform",
+    role: "Full Stack Engineer",
+    timeline: "Q2 2025",
+    github: "https://github.com/emmanuelrichard01/caritas-ai-scholar",
+    demo: "https://caritas-ai-scholar.vercel.app/",
+    problem: "Students struggle with disjointed study tools and 'hallucinating' generic AI. They needed a unified platform that could provide instant, context-aware assistance grounded in their actual course materials.",
+    system: "A holistic React/Supabase platform. Combines a dynamic study scheduler, RAG-based document analysis (PDF to Quiz), and multi-model AI tutoring into a single responsive interface.",
+    architecture: [
+      {
+        title: "Edge-First AI",
+        detail: "Offloaded heavy LLM processing (summaries, quiz generation) to Supabase Edge Functions (Deno) to maintain UI responsiveness and secure API keys."
+      },
+      {
+        title: "Vector Context (RAG)",
+        detail: "Implemented a RAG pipeline using pgvector. Course documents are chunked, embedded, and stored, allowing the AI to 'read' and cite user-uploaded textbooks."
+      }
+    ],
+    tradeoffs: [
+      "Optimized for real-time interactivity using Supabase subscriptions, creating a strict dependency on WebSocket stability.",
+      "Balancing token costs vs context window size required complex text chunking strategies for large PDF uploads."
+    ],
+    stack: ["TypeScript", "React", "Supabase", "OpenAI", "Tailwind", "RAG"],
+    diagram: {
+      steps: [
+        { icon: BookOpen, label: "Docs" },
+        { icon: Zap, label: "Edge Fn" },
+        { icon: Database, label: "Vectors" },
+        { icon: Brain, label: "LLM" },
+        { icon: MessageSquare, label: "Chat" },
+      ]
+    }
+  },
+  {
+    id: "nebula",
+    title: "Nebula E-commerce",
+    subtitle: "High-Scale Headless Retail Platform",
+    role: "System Architect",
+    timeline: "Q2 2023",
+    // Placeholder link for demo purposes (replace with actual if available)
+    github: "https://github.com/emmanuelrichard01",
+    demo: null,
+    problem: "Legacy monolithic architecture suffered cascading failures during Black Friday traffic spikes (10k+ concurrent users), resulting in significant revenue loss.",
+    system: "A decomposed microservices architecture. Decoupled the storefront (Next.js) from the inventory engine using an event bus (Redis/BullMQ) to handle bursty write loads.",
+    architecture: [
+      {
+        title: "Async Inventory",
+        detail: "Optimistic UI updates combined with an eventual consistency model for inventory reservations prevented database locks during flash sales."
+      },
+      {
+        title: "Edge Caching",
+        detail: "Aggressive Stale-While-Revalidate caching strategy at the CDN edge reduced origin server load by 85%."
+      }
+    ],
+    tradeoffs: [
+      "Strict consistency sacrificed for availability (AP over CP in CAP theorem) during peak load.",
+      "Distributed tracing (OpenTelemetry) became mandatory to debug inter-service latency."
+    ],
+    stack: ["Next.js", "Redis", "Kubernetes", "GraphQL", "Node.js"],
+    diagram: {
+      steps: [
+        { icon: ShoppingCart, label: "Store" },
+        { icon: Globe, label: "CDN" },
+        { icon: Zap, label: "Queue" },
+        { icon: Server, label: "Inventory" },
+      ]
+    }
+  },
+  {
+    id: "neural-code",
+    title: "Neural Code Reviewer",
+    subtitle: "LLM-Powered Static Analysis",
+    role: "ML Engineer",
+    timeline: "2023",
+    // Placeholder link for demo purposes
+    github: "https://github.com/emmanuelrichard01",
+    demo: null,
+    problem: "Senior engineers spent 15+ hours/week on trivial code reviews. Existing linters caught syntax errors but missed semantic bugs and optimization opportunities.",
+    system: "An automated PR agent that combines AST parsing with a fine-tuned LLM. It generates context-aware suggestions and detects potential security vulnerabilities before human review.",
+    architecture: [
+      {
+        title: "Context Window Optimization",
+        detail: "Implemented RAG (Retrieval Augmented Generation) to fetch only relevant file dependencies, fitting large codebases into limited token windows."
+      },
+      {
+        title: "Hybrid Analysis",
+        detail: "Uses deterministic static analysis for syntax (FastAPI) and probabilistic models (TensorFlow) for logic, reducing hallucination rates."
+      }
+    ],
+    tradeoffs: [
+      "Inference latency (~5s) is higher than traditional linters.",
+      "Requires constant model fine-tuning to adapt to team-specific coding styles."
+    ],
+    stack: ["Python", "TensorFlow", "FastAPI", "AWS Lambda", "LangChain"],
+    diagram: {
+      steps: [
+        { icon: GitBranch, label: "Pull Req" },
+        { icon: Terminal, label: "Parser" },
+        { icon: Cpu, label: "LLM" },
+        { icon: MessageSquare, label: "Comment" },
+      ]
+    }
+  },
+  {
     id: "helix",
     title: "Helix",
     subtitle: "Distributed Event Streaming Platform",
     role: "Lead Data Engineer",
     timeline: "Q3 2024",
+    // Placeholder link for demo purposes (replace with actual if available)
+    github: "https://github.com/emmanuelrichard01",
+    demo: null,
     // 1. Problem Framing
     problem: "Financial clients experienced 400ms+ latency in trade execution due to monolithic REST API bottlenecks and database locks during high-volume events.",
     // 2. System Overview
@@ -56,6 +200,9 @@ const PROJECTS = [
     subtitle: "Infrastructure Observability Engine",
     role: "Backend Architect",
     timeline: "Q1 2025",
+    // Placeholder link for demo purposes (replace with actual if available)
+    github: "https://github.com/emmanuelrichard01",
+    demo: null,
     problem: "Production incidents took 45+ mins to diagnose because logs, metrics, and traces were scattered across three different disjointed tools.",
     system: "A unified telemetry pipeline that correlates logs (Loki), metrics (Prometheus), and traces (Tempo) into a single 'Graph' view for instant root cause analysis.",
     architecture: [
@@ -82,107 +229,6 @@ const PROJECTS = [
       ]
     }
   },
-  {
-    id: "dataflow",
-    title: "DataFlow Analytics",
-    subtitle: "Real-time Stream Processing Engine",
-    role: "Lead Data Engineer",
-    timeline: "2024",
-    // 1. Problem Framing
-    problem: "Enterprise clients struggled with fragmented data sources and 24-hour reporting delays, making real-time fraud detection and operational decision-making impossible.",
-    // 2. System Overview
-    system: "A hybrid Kappa-architecture pipeline. Ingests 10M+ daily records via Kafka, processes stateful anomalies in Flink, and serves sub-second analytics via a materialized PostgreSQL view.",
-    // 3. Architecture & Decisions
-    architecture: [
-      {
-        title: "Stream-First Design",
-        detail: "Moved from batch ETL to event-driven processing using Kafka Connect, reducing data latency from 24 hours to <300ms."
-      },
-      {
-        title: "Deduplication Strategy",
-        detail: "Implemented bloom filters within the ingestion layer to handle at-least-once delivery guarantees without corrupting downstream metrics."
-      }
-    ],
-    // 4. Tradeoffs
-    tradeoffs: [
-      "Higher infrastructure cost for always-on stream processors compared to ephemeral batch jobs.",
-      "Complexity in handling out-of-order events required strict watermark policies."
-    ],
-    stack: ["Kafka", "Python", "Flink", "PostgreSQL", "Docker"],
-    // Visualization Data (Abstract Schema)
-    diagram: {
-      steps: [
-        { icon: Globe, label: "Sources" },
-        { icon: Layers, label: "Kafka" },
-        { icon: Cpu, label: "Flink" },
-        { icon: Database, label: "Postgres" },
-      ]
-    }
-  },
-  {
-    id: "nebula",
-    title: "Nebula E-commerce",
-    subtitle: "High-Scale Headless Retail Platform",
-    role: "System Architect",
-    timeline: "2023",
-    problem: "Legacy monolithic architecture suffered cascading failures during Black Friday traffic spikes (10k+ concurrent users), resulting in significant revenue loss.",
-    system: "A decomposed microservices architecture. Decoupled the storefront (Next.js) from the inventory engine using an event bus (Redis/BullMQ) to handle bursty write loads.",
-    architecture: [
-      {
-        title: "Async Inventory",
-        detail: "Optimistic UI updates combined with an eventual consistency model for inventory reservations prevented database locks during flash sales."
-      },
-      {
-        title: "Edge Caching",
-        detail: "Aggressive Stale-While-Revalidate caching strategy at the CDN edge reduced origin server load by 85%."
-      }
-    ],
-    tradeoffs: [
-      "Strict consistency sacrificed for availability (AP over CP in CAP theorem) during peak load.",
-      "Distributed tracing (OpenTelemetry) became mandatory to debug inter-service latency."
-    ],
-    stack: ["Next.js", "Redis", "Kubernetes", "GraphQL", "Node.js"],
-    diagram: {
-      steps: [
-        { icon: ShoppingCart, label: "Store" },
-        { icon: Globe, label: "CDN" },
-        { icon: Zap, label: "Queue" },
-        { icon: Server, label: "Inventory" },
-      ]
-    }
-  },
-  {
-    id: "neural-code",
-    title: "Neural Code Reviewer",
-    subtitle: "LLM-Powered Static Analysis",
-    role: "ML Engineer",
-    timeline: "2023",
-    problem: "Senior engineers spent 15+ hours/week on trivial code reviews. Existing linters caught syntax errors but missed semantic bugs and optimization opportunities.",
-    system: "An automated PR agent that combines AST parsing with a fine-tuned LLM. It generates context-aware suggestions and detects potential security vulnerabilities before human review.",
-    architecture: [
-      {
-        title: "Context Window Optimization",
-        detail: "Implemented RAG (Retrieval Augmented Generation) to fetch only relevant file dependencies, fitting large codebases into limited token windows."
-      },
-      {
-        title: "Hybrid Analysis",
-        detail: "Uses deterministic static analysis for syntax (FastAPI) and probabilistic models (TensorFlow) for logic, reducing hallucination rates."
-      }
-    ],
-    tradeoffs: [
-      "Inference latency (~5s) is higher than traditional linters.",
-      "Requires constant model fine-tuning to adapt to team-specific coding styles."
-    ],
-    stack: ["Python", "TensorFlow", "FastAPI", "AWS Lambda", "LangChain"],
-    diagram: {
-      steps: [
-        { icon: GitBranch, label: "Pull Req" },
-        { icon: Terminal, label: "Parser" },
-        { icon: Cpu, label: "LLM" },
-        { icon: MessageSquare, label: "Comment" },
-      ]
-    }
-  }
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -194,7 +240,7 @@ type SchematicStep = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
 };
-const Schematic = ({ steps }: { steps: SchematicStep[] }) => {
+const Schematic: React.FC<{ steps: SchematicStep[] }> = ({ steps }) => {
   return (
     <div className="relative flex items-center justify-between w-full h-24 md:h-32 px-4 md:px-8 bg-neutral-100/50 dark:bg-white/5 rounded-xl border border-neutral-200 dark:border-white/10 overflow-hidden select-none group/schematic">
       {/* Technical Grid Background */}
@@ -221,7 +267,7 @@ const Schematic = ({ steps }: { steps: SchematicStep[] }) => {
               <step.icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground transition-colors duration-500 group-hover/schematic:text-primary" />
             </div>
           </div>
-          <span className="hidden md:block text-[9px] font-mono font-medium text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded border border-transparent group-hover/schematic:border-border/30 transition-colors">
+          <span className="hidden md:block text-[9px] font-mono font-medium text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded border border-transparent group-hover/schematic:border-border/30 transition-colors whitespace-nowrap">
             {step.label}
           </span>
         </div>
@@ -265,6 +311,34 @@ const ProjectCard = ({ project, index }: { project: typeof PROJECTS[0], index: n
           <p className="text-base md:text-lg text-muted-foreground font-light leading-relaxed">
             {project.subtitle}
           </p>
+
+          {/* GitHub Link Action */}
+          {/* Action Links */}
+          <div className="flex flex-wrap gap-4 mt-4">
+            {project.github && (
+              <a
+                href={project.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors group/link"
+              >
+                <Github className="w-4 h-4 transition-transform group-hover/link:-translate-y-0.5" />
+                <span>Source</span>
+              </a>
+            )}
+
+            {project.demo && (
+              <a
+                href={project.demo}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors group/link"
+              >
+                <ExternalLink className="w-4 h-4 transition-transform group-hover/link:-translate-y-0.5" />
+                <span>Live Demo</span>
+              </a>
+            )}
+          </div>
         </div>
 
         {/* Visual Artifact (Diagram) */}
@@ -290,30 +364,26 @@ const ProjectCard = ({ project, index }: { project: typeof PROJECTS[0], index: n
 
         {/* Tabs - Scrollable on mobile */}
         <div className="flex border-b border-neutral-200 dark:border-white/5 bg-neutral-50/80 dark:bg-white/5 overflow-x-auto scrollbar-hide">
-          {(() => {
-            const tabs = [
-              { id: "problem", label: "01. Problem", icon: AlertTriangle },
-              { id: "architecture", label: "02. Architecture", icon: Layout },
-              { id: "tradeoffs", label: "03. Tradeoffs", icon: GitBranch },
-            ] as const;
-
-            return tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3 md:py-3.5 text-xs font-mono font-medium tracking-wide transition-all border-b-2
-                  ${activeTab === tab.id
-                    ? "bg-white dark:bg-white/5 text-primary border-primary"
-                    : "text-muted-foreground hover:bg-white/50 dark:hover:bg-white/5 border-transparent"
-                  }
-                `}
-              >
-                <tab.icon className={`w-3.5 h-3.5 ${activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'}`} />
-                <span className="hidden sm:inline">{tab.label.split(' ')[1]}</span>
-                <span className="sm:hidden">{tab.label.split(' ')[1]}</span> {/* Show label on mobile too for clarity */}
-              </button>
-            ));
-          })()}
+          {[
+            { id: "problem", label: "01. Problem", icon: AlertTriangle },
+            { id: "architecture", label: "02. Architecture", icon: Layout },
+            { id: "tradeoffs", label: "03. Tradeoffs", icon: GitBranch },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as "problem" | "architecture" | "tradeoffs")}
+              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3 md:py-3.5 text-xs font-mono font-medium tracking-wide transition-all border-b-2
+                ${activeTab === tab.id
+                  ? "bg-white dark:bg-white/5 text-primary border-primary"
+                  : "text-muted-foreground hover:bg-white/50 dark:hover:bg-white/5 border-transparent"
+                }
+              `}
+            >
+              <tab.icon className={`w-3.5 h-3.5 ${activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'}`} />
+              <span className="hidden sm:inline">{tab.label.split(' ')[1]}</span>
+              <span className="sm:hidden">{tab.label.split(' ')[1]}</span> {/* Show label on mobile too for clarity */}
+            </button>
+          ))}
         </div>
 
         {/* Tab Content */}
