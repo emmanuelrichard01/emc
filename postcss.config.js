@@ -1,7 +1,7 @@
 export default {
   plugins: {
-    // Use the official plugin names so Tailwind and PostCSS features (like @apply) work as expected
-    tailwindcss: {},
+    // The Tailwind PostCSS plugin is now provided by @tailwindcss/postcss
+    '@tailwindcss/postcss': {},
     autoprefixer: {},
   },
 };
