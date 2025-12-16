@@ -17,7 +17,7 @@ import CommandPalette from "./components/CommandPalette";
 // Lazy Load Pages for Performance
 const Index = lazy(() => import("./pages/Index"));
 // const ProjectsArchive = lazy(() => import("./pages/ProjectsArchive"));
-const Blog = lazy(() => import("./pages/Blog"));
+// const Blog = lazy(() => import("./pages/Blog"));
 // const BlogPost = lazy(() => import("./pages/BlogPost"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
