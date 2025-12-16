@@ -54,17 +54,25 @@ const Index = () => {
 
   // 2026-Ready Metadata
   const seoMetadata: SEOMetadata = {
-    title: "Emmanuel C. Moghalu | System Architect & Data Engineer",
+    title: "Emmanuel Moghalu | Data Engineer &System Architect",
     description: "Engineering resilient data pipelines and scalable software systems. Focusing on architecture, tradeoffs, and operational excellence.",
     keywords: [
       "Data Engineer",
       "System Architect",
       "Software Engineer",
       "Distributed Systems",
+      "Pipeline Design",
       "React",
+      "Next.js",
       "TypeScript",
       "Python",
       "Kafka",
+      "AWS",
+      "Apache Spark",
+      "Docker",
+      "Kubernetes",
+      "Azure",
+      "GCP",
       "Emmanuel Moghalu"
     ],
     canonical: typeof window !== 'undefined' ? window.location.href : undefined,

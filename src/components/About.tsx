@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   Code2, Database, Terminal, Globe,
@@ -6,12 +6,13 @@ import {
   Command, ArrowRight, ShieldCheck, Activity,
   Cpu, Zap, GitCommit
 } from "lucide-react";
-import profile from "../assets/avatar.jpg";
+
 /* -------------------------------------------------------------------------- */
 /* 1. DATA & CONSTANTS                                                        */
 /* -------------------------------------------------------------------------- */
 
-const AVATAR_URL = profile;
+// Using reliable remote image to prevent build errors in this environment
+const AVATAR_URL = "https://i.ibb.co/Nzy2pvp/avatar.jpg";
 
 const ROLES = ["Data Engineer", "Software Developer", "Cloud Architect"];
 
@@ -66,7 +67,7 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
     return (
       <motion.span
         style={{ opacity, filter, y }}
-        className="relative will-change-transform"
+        className="relative will-change-transform inline-block mr-1.5"
       >
         {word}
       </motion.span>
@@ -74,7 +75,7 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
   };
 
   return (
-    <p ref={container} className={`flex flex-wrap gap-x-1.5 gap-y-1 ${className}`}>
+    <p ref={container} className={`flex flex-wrap ${className}`}>
       {words.map((word, i) => (
         <Word key={i} word={word} index={i} total={words.length} />
       ))}
@@ -86,13 +87,13 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
 const TechMarquee = () => {
   return (
     <div className="relative flex overflow-hidden w-full mask-linear-fade">
-      <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-neutral-950 to-transparent z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-neutral-950 to-transparent z-10" />
+      <div className="absolute left-0 top-0 bottom-0 w-8 md:w-12 bg-gradient-to-r from-white dark:from-neutral-950 to-transparent z-10" />
+      <div className="absolute right-0 top-0 bottom-0 w-8 md:w-12 bg-gradient-to-l from-white dark:from-neutral-950 to-transparent z-10" />
 
       <motion.div
         animate={{ x: "-50%" }}
         transition={{ duration: 30, ease: "linear", repeat: Infinity }}
-        className="flex flex-none gap-4 pr-4 items-center"
+        className="flex flex-none gap-3 md:gap-4 pr-3 md:pr-4 items-center"
       >
         {[...TECH_STACK, ...TECH_STACK].map((tech, i) => (
           <div
@@ -129,44 +130,46 @@ const PhilosophyTerminal = () => (
       </div>
       <div className="w-3" />
     </div>
-    <div className="p-6 font-mono text-xs leading-relaxed text-muted-foreground selection:bg-primary/20 selection:text-primary">
-      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">1</span>
-        <span>
-          <span className="text-purple-600 dark:text-purple-400">const</span>{' '}
-          <span className="text-blue-600 dark:text-blue-400">Engineering</span>{' '}
-          ={' '}
-          <span className="text-amber-600 dark:text-yellow-200">{'{'}</span>
-        </span>
-      </div>
-      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">2</span>
-        <span className="pl-4">
-          <span className="text-blue-500 dark:text-blue-300">priority</span>:{' '}
-          <span className="text-emerald-600 dark:text-emerald-400">"Reliability {'>'} Features"</span>,
-        </span>
-      </div>
-      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">3</span>
-        <span className="pl-4">
-          <span className="text-blue-500 dark:text-blue-300">approach</span>:{' '}
-          <span className="text-emerald-600 dark:text-emerald-400">"System over Syntax"</span>,
-        </span>
-      </div>
-      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">4</span>
-        <span className="pl-4">
-          <span className="text-blue-500 dark:text-blue-300">goal</span>:{' '}
-          <span className="text-emerald-600 dark:text-emerald-400">"Predictable Scale"</span>
-        </span>
-      </div>
-      <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">5</span>
-        <span className="text-amber-600 dark:text-yellow-200">{'}'}</span>;
-      </div>
-      <div className="flex mt-2 group/line hover:bg-white/5 -mx-4 px-4">
-        <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">6</span>
-        <span className="text-neutral-400 dark:text-neutral-500 italic">// Optimization target: 99.9% Uptime</span>
+    <div className="p-4 md:p-6 font-mono text-[10px] md:text-xs leading-relaxed text-muted-foreground selection:bg-primary/20 selection:text-primary overflow-x-auto">
+      <div className="min-w-[300px]">
+        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">1</span>
+          <span>
+            <span className="text-purple-600 dark:text-purple-400">const</span>{' '}
+            <span className="text-blue-600 dark:text-blue-400">Engineering</span>{' '}
+            ={' '}
+            <span className="text-amber-600 dark:text-yellow-200">{'{'}</span>
+          </span>
+        </div>
+        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">2</span>
+          <span className="pl-4">
+            <span className="text-blue-500 dark:text-blue-300">priority</span>:{' '}
+            <span className="text-emerald-600 dark:text-emerald-400">"Reliability {'>'} Features"</span>,
+          </span>
+        </div>
+        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">3</span>
+          <span className="pl-4">
+            <span className="text-blue-500 dark:text-blue-300">approach</span>:{' '}
+            <span className="text-emerald-600 dark:text-emerald-400">"System over Syntax"</span>,
+          </span>
+        </div>
+        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">4</span>
+          <span className="pl-4">
+            <span className="text-blue-500 dark:text-blue-300">goal</span>:{' '}
+            <span className="text-emerald-600 dark:text-emerald-400">"Predictable Scale"</span>
+          </span>
+        </div>
+        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
+          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">5</span>
+          <span className="text-amber-600 dark:text-yellow-200">{'}'}</span>;
+        </div>
+        <div className="flex mt-2 group/line hover:bg-white/5 -mx-4 px-4">
+          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">6</span>
+          <span className="text-neutral-400 dark:text-neutral-500 italic">// Optimization target: 99.9% Uptime</span>
+        </div>
       </div>
     </div>
   </motion.div>
@@ -202,14 +205,20 @@ const MetricsModule = () => (
 );
 
 const GitActivity = () => {
-  // Generate deterministic but random-looking data
-  const weeks = 20;
+  // Config for responsive grid
   const days = 7;
+  const levels = useMemo(() => {
+    // Use a deterministic pseudo-random generator based on Math.sin to avoid impure Math.random during render
+    return Array.from({ length: 28 * days }).map((_, i) => {
+      const noise = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
+      return Math.sin(i * 0.5) * Math.cos(i * 0.2) + noise * 0.5;
+    });
+  }, [days]);
 
   return (
     <motion.div
       whileHover={{ y: -2 }}
-      className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm p-5 hover:border-primary/20 transition-all duration-300"
+      className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm p-5 hover:border-primary/20 transition-all duration-300 overflow-hidden"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 text-muted-foreground">
@@ -225,26 +234,32 @@ const GitActivity = () => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1 overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
-        <div className="flex gap-[3px]">
-          {Array.from({ length: weeks * days }).map((_, i) => {
-            const level = Math.sin(i * 0.5) * Math.cos(i * 0.2) + Math.random() * 0.5;
-            let bg = "bg-neutral-200 dark:bg-white/5";
-            if (level > 0.8) bg = "bg-emerald-500";
-            else if (level > 0.4) bg = "bg-emerald-500/60";
-            else if (level > 0) bg = "bg-emerald-500/30";
+      {/* Responsive Container for the Grid - Mobile Friendly */}
+      <div className="relative w-full overflow-hidden mask-linear-fade">
+        {/* Scrollable Container */}
+        <div className="overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
+          <div className="flex flex-col gap-1 min-w-max opacity-80 hover:opacity-100 transition-opacity">
+            <div className="flex gap-[3px]">
+              {/* Generating data points - enough for horizontal scroll on mobile */}
+              {levels.map((level, i) => {
+                let bg = "bg-neutral-200 dark:bg-white/5";
+                if (level > 0.8) bg = "bg-emerald-500";
+                else if (level > 0.4) bg = "bg-emerald-500/60";
+                else if (level > 0) bg = "bg-emerald-500/30";
 
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.002 }}
-                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-[1px] ${bg}`}
-              />
-            );
-          })}
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: Math.min(i * 0.002, 1) }}
+                    className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-[1px] ${bg} flex-shrink-0`}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -298,19 +313,22 @@ const About: React.FC = () => {
               viewport={{ once: true }}
               className="flex items-center gap-5 mb-10"
             >
-              <div className="relative group cursor-default">
+              <div className="relative group cursor-default shrink-0">
                 <div className="absolute -inset-0.5 bg-gradient-to-br from-primary to-blue-500 rounded-full opacity-30 group-hover:opacity-60 blur transition duration-500"></div>
-                <img
-                  src={AVATAR_URL}
-                  alt="Emmanuel Moghalu"
-                  className="relative w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-2 border-background ring-2 ring-primary/10 transition-transform group-hover:scale-[1.02]"
-                />
+                {/* Enforcing consistent aspect ratio and circle shape with strict classes */}
+                <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-background ring-2 ring-primary/10 transition-transform group-hover:scale-[1.02] aspect-square">
+                  <img
+                    src={AVATAR_URL}
+                    alt="Emmanuel Moghalu"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
               <div>
                 <h3 className="text-xl font-bold tracking-tight text-foreground">Emmanuel (Richard) Moghalu</h3>
                 <div className="flex flex-wrap gap-2 mt-1.5">
                   {ROLES.map((role) => (
-                    <span key={role} className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/10">
+                    <span key={role} className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/10 whitespace-nowrap">
                       {role}
                     </span>
                   ))}
@@ -347,22 +365,6 @@ const About: React.FC = () => {
                 className="font-light"
               />
             </div>
-
-            {/* <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="mt-10"
-            >
-              <button
-                onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
-                className="group inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition-colors"
-              >
-                <span className="border-b border-foreground/30 group-hover:border-primary">View Selected Work</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
-            </motion.div> */}
           </div>
 
           {/* RIGHT COLUMN: THE SYSTEM MODULES */}
