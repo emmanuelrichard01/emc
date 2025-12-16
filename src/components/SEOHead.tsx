@@ -63,7 +63,9 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
       {openGraph?.image && <meta name="twitter:image" content={openGraph.image} />}
 
       {/* 7. Favicons & Manifest */}
+      <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
       <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      <link rel="shortcut icon" href="/favicon.ico" />
       <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/site.webmanifest" />
 

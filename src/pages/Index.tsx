@@ -54,7 +54,7 @@ const Index = () => {
 
   // 2026-Ready Metadata
   const seoMetadata: SEOMetadata = {
-    title: "Emmanuel Moghalu | Data Engineer &System Architect",
+    title: "Emmanuel Moghalu | Data Engineer & System Architect",
     description: "Engineering resilient data pipelines and scalable software systems. Focusing on architecture, tradeoffs, and operational excellence.",
     keywords: [
       "Data Engineer",

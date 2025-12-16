@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Terminal, Activity } from "lucide-react";
 import { motion } from "framer-motion";
 
 const NotFound = () => {
   const location = useLocation();
+  const [id] = useState(() => Math.random().toString(36).substring(2, 9));
 
   useEffect(() => {
     console.error(
@@ -14,7 +15,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-background p-6 font-mono selection:bg-red-500/20">
+    <div className="min-h-[80vh] flex items-center justify-center bg-background p-6 pt-20 font-mono selection:bg-red-500/20">
       <div className="max-w-xl w-full border border-neutral-200 dark:border-white/10 rounded-2xl bg-neutral-50/50 dark:bg-black/40 backdrop-blur-xl p-8 shadow-2xl relative overflow-hidden">
 
         {/* Decorative Noise */}
@@ -85,8 +86,8 @@ const NotFound = () => {
 
         {/* Footer */}
         <div className="mt-8 pt-4 flex justify-between items-center text-[10px] text-muted-foreground border-t border-neutral-200 dark:border-white/5">
-          <span>ID: {Math.random().toString(36).substr(2, 9)}</span>
-          <span>Sys_Err_V2</span>
+          <span>ID: {id}</span>
+          <span>Sys_Err</span>
         </div>
 
       </div>

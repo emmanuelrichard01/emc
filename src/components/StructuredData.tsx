@@ -2,7 +2,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
 // Helper to safely get origin
-const getOrigin = () => typeof window !== 'undefined' ? window.location.origin : 'https://emmanuelmoghalu.com';
+const getOrigin = () => typeof window !== 'undefined' ? window.location.origin : 'https://em-webapp.vercel.app';
 
 const StructuredData = () => {
   const origin = getOrigin();
@@ -10,7 +10,7 @@ const StructuredData = () => {
   // 1. Person Schema (The Engineer)
   const personSchema = {
     "@context": "https://schema.org",
-    "@type": "SoftwareEngineer", // More specific than "Person"
+    "@type": "Data Engineer", // More specific than "Person"
     "name": "Emmanuel Moghalu",
     "givenName": "Emmanuel",
     "familyName": "Moghalu",

@@ -1,197 +1,104 @@
-# Emmanuel Moghalu -- Portfolio v2.0 🚀
+# **🚀 Emmanuel Moghalu — System Interface Portfolio**
 
-A **production-grade, FAANG-level developer portfolio** engineered for
-performance, accessibility, and visual storytelling.\
-Built with a focus on **micro-interactions**, **responsive design**, and
-**clean architecture**.
+**"The portfolio is not just a gallery; it is the first system you ship to a recruiter."**
 
-------------------------------------------------------------------------
+This project represents a shift from traditional "About Me" sites to a **System Interface** philosophy. It treats the user as an operator navigating a dashboard of engineering logs, rather than a passive reader of a resume.
 
-## ✨ Key Features
+[**Live System**](https://www.google.com/search?q=https://emmanuelmoghalu.com) • [**Architecture Docs**](https://www.google.com/search?q=%23-architecture) • [**Performance**](https://www.google.com/search?q=%23-performance)
 
-### 🏗 Architecture & Design
+## **⚡ The Core Philosophy**
 
-- **Magnetic UI Physics** --- Custom hook-based magnetic pull effects
-    on buttons and nav items.\
-- **Bento Grid Layout** --- Apple-style modular grid powering the
-    About section.\
-- **Dynamic Island Navigation** --- Glassmorphic top-bar on desktop,
-    floating island on mobile.\
-- **Theme Awareness** --- Auto-detects system theme with local storage
-    persistence and smooth transitions.
+This portfolio was engineered to solve three specific problems in personal branding for senior engineers:
 
-------------------------------------------------------------------------
+1. **Trust over Content:** Instead of listing skills, we demonstrate **judgment** through "Engineering Case Studies" (Problem → Architecture → Tradeoffs).  
+2. **Signal over Noise:** A high-contrast, "Dark Mode" aesthetic that minimizes distractions and focuses purely on the signal (code, decisions, impact).  
+3. **Performance as a Feature:** Zero-layout shift, instant interactions, and a touch-first mobile experience that respects the user's time.
 
-## 🧩 Components
+## **🏗️ Architecture**
 
-- **Hero Section**:\
-    3D avatar tilt • typing effect • physics-based scroll cues.
+The application is built as a **Single Page Application (SPA)** using React 18, orchestrated for maximum performance and maintainability.
 
-- **Experience Timeline**:\
-    "Spine" layout • metric-centric entries • expandable detail views.
+### **Key Components**
 
-- **Project Showcase**:\
-    Filterable grid • framer-motion layout animations • modal
-    deep-dives.
+* **The Kernel (App.tsx)**: Acts as the layout wrapper, managing global state (Theme, Command Palette) and handling route-based code splitting via Suspense.  
+* **The Dashboard (Hero.tsx)**: A data-visualization-heavy landing section that serves as a "System Monitor," replacing the traditional hero image.  
+* **The Credibility Graph (Experience.tsx)**: A timeline component that structures career history as a series of system upgrades and architectural decisions.  
+* **The Case Studies (Projects.tsx)**: Interactive cards that allow deep-diving into specific engineering challenges without leaving the context of the page.
 
-- **Contact Form**:\
-    Split interface • real-time validation • animated "Border Beam"
-    effect.
+### **Data Model**
 
-- **Easter Egg**:\
-    Hidden **Konami Code** (↑ ↑ ↓ ↓ ← → ← → B A) triggering
-    particle-physics confetti.
+Experience and Projects are treated as structured data entities, not just HTML content. This allows for:
 
-------------------------------------------------------------------------
+* **Semantic SEO:** Generating JSON-LD structured data for Google Rich Results.  
+* **Portability:** Easy migration to a headless CMS in the future.  
+* **Consistency:** Enforcing a rigorous schema (e.g., every project *must* list "Tradeoffs").
 
-## ⚡ Performance
+## **🛠️ Tech Stack**
 
-- **Zero Layout Shift** --- Fixed-height containers & placeholders
-    prevent CLS.\
-- **Hardware-Accelerated Animations** --- Uses `transform` and
-    `opacity` for smooth 60FPS.\
-- **Optimized Assets** --- No heavy images; CSS noise & SVG animations
-    keep the bundle lean.
+* **Framework:** React 18 \+ Vite (for HMR and optimized builds)  
+* **Language:** TypeScript (Strict Mode enabled)  
+* **Styling:** Tailwind CSS (Utility-first architecture)  
+* **Animation:** Framer Motion (Orchestrated layout transitions and physics-based interactions)  
+* **Icons:** Lucide React (Consistent, tree-shakeable icon system)  
+* **State Management:** React Context (for Theme) \+ Local Component State  
+* **Deployment:** Vercel (CI/CD pipeline)
 
-------------------------------------------------------------------------
+## **🚀 Key Features**
 
-## 🛠 Tech Stack
+### **1\. Interactive Command Palette (Cmd+K)**
 
-  Category    Tools
-  ----------- --------------------------
-  Framework   **React (Vite)**
-  Language    **TypeScript**
-  Styling     **Tailwind CSS**
-  Animation   **Framer Motion**
-  Icons       **Lucide React**
-  Utilities   `clsx`, `tailwind-merge`
+A keyboard-first navigation interface that allows power users (recruiters/engineers) to jump instantly to relevant sections (e.g., "View My Work", "Read Resume").
 
-------------------------------------------------------------------------
+### **2\. The "System Monitor" Hero**
 
-## 🚀 Getting Started
+Instead of a static image, the hero section features a live-simulated dashboard showing "Uptime," "Latency," and "Data Flow," reinforcing the Data Engineering persona immediately.
+
+### **3\. Scroll-Linked Narratives**
+
+Text elements in the **About** section utilize a "Scrub-to-Reveal" interaction, where opacity and blur are linked to scroll position, creating a cinematic reading experience that guides focus.
+
+### **4\. Easter Eggs**
+
+Integrated useKonamiCode hook. Try entering the classic Konami code (↑ ↑ ↓ ↓ ← → ← → B A) to unlock "Developer Mode."
+
+## **📦 Getting Started**
 
 ### **Prerequisites**
 
-- Node.js **18+**
-- npm or pnpm
-
-------------------------------------------------------------------------
+* Node.js 18+  
+* npm or yarn
 
 ### **Installation**
 
-``` bash
-# Clone repository
-git clone https://github.com/emmanuelrichard01/portfolio-v2.git
-cd portfolio-v2
+1. **Clone the repository:**  
+   git clone \[<https://github.com/emmanuelrichard01/emc.git\>](<https://github.com/emmanuelrichard01/emc.git>)  
+   cd emc
 
-# Install dependencies
-npm install
-# or
-pnpm install
-```
+2. **Install dependencies:**  
+   npm install
 
-------------------------------------------------------------------------
+3. **Start the development server:**  
+   npm run dev
 
-### **Run Development Server**
+4. **Build for production:**  
+   npm run build
 
-``` bash
-npm run dev
-```
+## **🎯 Performance & Accessibility**
 
-### **Build for Production**
+* **Lighthouse Score:** Consistently scoring 95+ across Performance, Accessibility, Best Practices, and SEO.  
+* **Reduced Motion:** Animations respect the user's prefers-reduced-motion system setting.  
+* **Semantic HTML:** Heavy use of \<section\>, \<article\>, and \<nav\> tags for screen reader compatibility.  
+* **Lazy Loading:** Route-based code splitting ensures the initial bundle size remains minimal.
 
-``` bash
-npm run build
-```
+## **🤝 Contributing**
 
-------------------------------------------------------------------------
+While this is a personal portfolio, I welcome code reviews or suggestions on the architecture\!
 
-## 📂 Project Structure
-
-    src/
-    ├── assets/               # Static images and textures
-    ├── components/           # Reusable UI components
-    │   ├── ui/               # Shadcn-like primitives (Button, Input, etc.)
-    │   ├── Navbar.tsx        # Dynamic navigation system
-    │   ├── Hero.tsx          # Hero section
-    │   ├── About.tsx         # Bento grid "About" section
-    │   ├── Projects.tsx      # Filterable project gallery
-    │   ├── Experience.tsx    # Timeline component
-    │   ├── Contact.tsx       # Contact form & logic
-    │   └── EasterEgg.tsx     # Hidden achievement system
-    ├── hooks/                # Custom React hooks
-    │   ├── useKonamiCode.ts  # Easter egg logic
-    │   └── use-toast.ts      # Toast notifications
-    ├── lib/                  # Utility functions
-    └── App.tsx               # Main entry point
-
-------------------------------------------------------------------------
-
-## 🔧 Configuration
-
-### **Update Content**
-
-- **Projects:** edit `PROJECTS_DATA` in\
-    `src/components/Projects.tsx`
-
-- **Experience:** edit `EXPERIENCE_DATA` in\
-    `src/components/Experience.tsx`
-
-- **Navigation:** update links inside\
-    `src/components/Navbar.tsx`
-
-------------------------------------------------------------------------
-
-### **Customize the Easter Egg**
-
-In `src/hooks/useKonamiCode.ts`:
-
-``` ts
-const KONAMI_CODE = ["ArrowUp", "ArrowUp", ...]; 
-// Modify the sequence here
-```
-
-------------------------------------------------------------------------
-
-## 🤝 Contributing
-
-1. Fork the project\
-
-2. Create a feature branch
-
-    ``` bash
-    git checkout -b feature/AmazingFeature
-    ```
-
-3. Commit changes
-
-    ``` bash
-    git commit -m "Add some AmazingFeature"
-    ```
-
-4. Push your branch
-
-    ``` bash
-    git push origin feature/AmazingFeature
-    ```
-
+1. Fork the repo  
+2. Create your feature branch (git checkout \-b feature/amazing-feature)  
+3. Commit your changes (git commit \-m 'Add some amazing feature')  
+4. Push to the branch (git push origin feature/amazing-feature)  
 5. Open a Pull Request
 
-------------------------------------------------------------------------
-
-## 📄 License
-
-Distributed under the **MIT License**.\
-See the `LICENSE` file for more information.
-
-------------------------------------------------------------------------
-
-```{=html}
-<p align="center">
-```
-
-Built with ❤️ by `<strong>`{=html}Emmanuel Moghalu`</strong>`{=html}
-
-```{=html}
-</p>
-```
+© 2025 Emmanuel C. Moghalu.  
+Engineered in Abuja, Nigeria.
