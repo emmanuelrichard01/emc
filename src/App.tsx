@@ -79,7 +79,7 @@ const App = () => (
                     <Route path="/" element={<Index />} />
                     {/* <Route path="/work" element={<ProjectsArchive />} />
                     <Route path="/projects" element={<ProjectsArchive />} /> Redirect/Alias */}
-                    <Route path="/blog" element={<Blog />} />
+                    {/* <Route path="/blog" element={<Blog />} /> */}
                     {/* <Route path="/blog/:slug" element={<BlogPost />} /> */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
