@@ -207,13 +207,6 @@ const MetricsModule = () => (
 const GitActivity = () => {
   // Config for responsive grid
   const days = 7;
-  const levels = useMemo(() => {
-    // Use a deterministic pseudo-random generator based on Math.sin to avoid impure Math.random during render
-    return Array.from({ length: 28 * days }).map((_, i) => {
-      const noise = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
-      return Math.sin(i * 0.5) * Math.cos(i * 0.2) + noise * 0.5;
-    });
-  }, [days]);
 
   return (
     <motion.div
@@ -241,7 +234,11 @@ const GitActivity = () => {
           <div className="flex flex-col gap-1 min-w-max opacity-80 hover:opacity-100 transition-opacity">
             <div className="flex gap-[3px]">
               {/* Generating data points - enough for horizontal scroll on mobile */}
-              {levels.map((level, i) => {
+              {Array.from({ length: 28 * days }).map((_, i) => {
+                // deterministic pseudo-random based on index to avoid Math.random during render
+                const pseudo = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+                const rand = pseudo - Math.floor(pseudo);
+                const level = Math.sin(i * 0.5) * Math.cos(i * 0.2) + rand * 0.5;
                 let bg = "bg-neutral-200 dark:bg-white/5";
                 if (level > 0.8) bg = "bg-emerald-500";
                 else if (level > 0.4) bg = "bg-emerald-500/60";
