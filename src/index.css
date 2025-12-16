@@ -206,39 +206,84 @@
 @layer components {
   /* Enhanced Button Variants */
   .btn-hero {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 
-           px-8 py-4 rounded-xl font-semibold text-lg
-           transition-all duration-300 
-           shadow-md hover:shadow-glow
-           transform hover:scale-105;
+    /* Use direct CSS for design tokens to avoid @apply on custom utilities */
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding-left: 2rem; /* px-8 */
+    padding-right: 2rem;
+    padding-top: 1rem; /* py-4 */
+    padding-bottom: 1rem;
+    border-radius: 0.75rem; /* rounded-xl */
+    font-weight: 600; /* font-semibold */
+    font-size: 1.125rem; /* text-lg */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-md);
+    transform-origin: center;
+  }
+  .btn-hero:hover {
+    background-color: hsl(var(--primary) / 0.9);
+    box-shadow: var(--shadow-glow);
+    transform: scale(1.05);
   }
 
   .btn-ghost-hero {
-    @apply border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground
-           px-8 py-4 rounded-xl font-semibold text-lg
-           transition-all duration-300
-           transform hover:scale-105;
+    border-width: 2px;
+    border-style: solid;
+    border-color: hsl(var(--primary));
+    color: hsl(var(--primary));
+    padding-left: 2rem; /* px-8 */
+    padding-right: 2rem;
+    padding-top: 1rem; /* py-4 */
+    padding-bottom: 1rem;
+    border-radius: 0.75rem; /* rounded-xl */
+    font-weight: 600; /* font-semibold */
+    font-size: 1.125rem; /* text-lg */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-ghost-hero:hover {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    transform: scale(1.05);
   }
 
   /* Card Variants */
   .card-elegant {
-    @apply bg-card border border-border rounded-2xl p-6
-           shadow-md hover:shadow-lg
-           transition-all duration-300
-           hover:border-primary/20;
+    background-color: hsl(var(--card));
+    border-width: 1px;
+    border-style: solid;
+    border-color: hsl(var(--border));
+    border-radius: 1rem; /* rounded-2xl */
+    padding: 1.5rem; /* p-6 */
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card-elegant:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: color-mix(in srgb, hsl(var(--primary)) 20%, transparent);
   }
 
   .card-feature {
-    @apply bg-gradient-to-br from-card to-accent
-           border border-border rounded-2xl p-8
-           shadow-lg hover:shadow-glow
-           transition-all duration-500
-           hover:scale-[1.02] hover:border-primary/30;
+    background-image: var(--gradient-card);
+    border-width: 1px;
+    border-style: solid;
+    border-color: hsl(var(--border));
+    border-radius: 1rem; /* rounded-2xl */
+    padding: 2rem; /* p-8 */
+    box-shadow: var(--shadow-lg);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card-feature:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-glow);
+    border-color: color-mix(in srgb, hsl(var(--primary)) 30%, transparent);
   }
 
   /* Text Gradients */
   .text-gradient {
-    @apply bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   /* Animation Classes */
