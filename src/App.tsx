@@ -16,9 +16,9 @@ import CommandPalette from "./components/CommandPalette";
 
 // Lazy Load Pages for Performance
 const Index = lazy(() => import("./pages/Index"));
-const ProjectsArchive = lazy(() => import("./pages/ProjectsArchive"));
+// const ProjectsArchive = lazy(() => import("./pages/ProjectsArchive"));
 const Blog = lazy(() => import("./pages/Blog"));
-const BlogPost = lazy(() => import("./pages/BlogPost"));
+// const BlogPost = lazy(() => import("./pages/BlogPost"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -77,10 +77,10 @@ const App = () => (
                 <Suspense fallback={<div className="h-screen w-full flex items-center justify-center text-muted-foreground text-sm font-mono">Initializing kernel...</div>}>
                   <Routes>
                     <Route path="/" element={<Index />} />
-                    <Route path="/work" element={<ProjectsArchive />} />
-                    <Route path="/projects" element={<ProjectsArchive />} /> {/* Redirect/Alias */}
+                    {/* <Route path="/work" element={<ProjectsArchive />} />
+                    <Route path="/projects" element={<ProjectsArchive />} /> Redirect/Alias */}
                     <Route path="/blog" element={<Blog />} />
-                    <Route path="/blog/:slug" element={<BlogPost />} />
+                    {/* <Route path="/blog/:slug" element={<BlogPost />} /> */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
