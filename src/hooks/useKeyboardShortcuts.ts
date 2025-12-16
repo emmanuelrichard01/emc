@@ -1,24 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 
 interface KeyboardShortcuts {
-  [key: string]: () => void;
+  [key: string]: (e: KeyboardEvent) => void;
 }
 
 export const useKeyboardShortcuts = (shortcuts: KeyboardShortcuts) => {
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      // Create a key combination string
-      const key = [];
-      if (event.ctrlKey || event.metaKey) key.push('ctrl');
-      if (event.shiftKey) key.push('shift');
-      if (event.altKey) key.push('alt');
-      key.push(event.key.toLowerCase());
-      
-      const keyCombo = key.join('+');
-      
-      if (shortcuts[keyCombo]) {
-        event.preventDefault();
-        shortcuts[keyCombo]();
+      // Ignore shortcuts if user is typing in an input/textarea
+      const target = event.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) {
+        return;
+      }
+
+      // Build key string (e.g., "ctrl+k")
+      const keys = [];
+      if (event.ctrlKey || event.metaKey) keys.push('ctrl'); // normalized meta/ctrl
+      if (event.shiftKey) keys.push('shift');
+      if (event.altKey) keys.push('alt');
+
+      // Handle special keys vs characters
+      const keyName = event.key.toLowerCase();
+      if (!['control', 'shift', 'alt', 'meta'].includes(keyName)) {
+        keys.push(keyName);
+      }
+
+      const combo = keys.join('+');
+
+      // Check for exact match first
+      if (shortcuts[combo]) {
+        event.preventDefault(); // Prevent default browser actions (like Ctrl+P)
+        shortcuts[combo](event);
+        return;
+      }
+
+      // Fallback for single keys if no modifier combo matched
+      if (keys.length === 1 && shortcuts[keyName]) {
+        shortcuts[keyName](event);
       }
     };
 
@@ -28,25 +46,38 @@ export const useKeyboardShortcuts = (shortcuts: KeyboardShortcuts) => {
 };
 
 export const useKonamiCode = (callback: () => void) => {
-  const [sequence, setSequence] = useState<string[]>([]);
-  const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+  const [input, setInput] = useState<string[]>([]);
+  // Up, Up, Down, Down, Left, Right, Left, Right, B, A
+  const sequence = useMemo<string[]>(
+    () => [
+      'ArrowUp', 'ArrowUp',
+      'ArrowDown', 'ArrowDown',
+      'ArrowLeft', 'ArrowRight',
+      'ArrowLeft', 'ArrowRight',
+      'b', 'a'
+    ],
+    []
+  );
 
   useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      setSequence(prev => {
-        const newSequence = [...prev, event.code].slice(-konamiCode.length);
-        
-        if (newSequence.length === konamiCode.length && 
-            newSequence.every((key, index) => key === konamiCode[index])) {
-          callback();
-          return [];
+    const handleKeyDown = (e: KeyboardEvent) => {
+      setInput((prev) => {
+        const newSequence = [...prev, e.key];
+        if (newSequence.length > sequence.length) {
+          newSequence.shift();
         }
-        
+
+        // Check match
+        if (JSON.stringify(newSequence) === JSON.stringify(sequence)) {
+          callback();
+          return []; // Reset after success
+        }
+
         return newSequence;
       });
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [callback]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [callback, sequence]);
 };

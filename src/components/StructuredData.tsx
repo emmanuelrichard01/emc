@@ -1,84 +1,88 @@
+import React from 'react';
 import { Helmet } from 'react-helmet-async';
-import { StructuredDataPerson } from '@/types';
+
+// Helper to safely get origin
+const getOrigin = () => typeof window !== 'undefined' ? window.location.origin : 'https://emmanuelmoghalu.com';
 
 const StructuredData = () => {
-  const personData: StructuredDataPerson = {
+  const origin = getOrigin();
+
+  // 1. Person Schema (The Engineer)
+  const personSchema = {
     "@context": "https://schema.org",
-    "@type": "Person",
-    name: "Emmanuel C. Moghalu",
-    jobTitle: "Software Developer & Data Engineer",
-    description: "Passionate software developer and data engineer with expertise in building scalable applications and robust data infrastructure. Specializes in full-stack development, cloud architecture, and machine learning.",
-    url: window.location.origin,
-    sameAs: [
-      "https://github.com/emmanuelrichard01",
-      "https://www.linkedin.com/in/e-mc/",
-      "https://x.com/_mrebuka",
-      "https://www.instagram.com/officialemmanuelrichard/"
-    ],
-    worksFor: {
-      "@type": "Organization",
-      name: "TechCorp Solutions"
-    },
-    knowsAbout: [
-      "Software Development",
+    "@type": "SoftwareEngineer", // More specific than "Person"
+    "name": "Emmanuel Moghalu",
+    "givenName": "Emmanuel",
+    "familyName": "Moghalu",
+    "jobTitle": "Lead Data Engineer & System Architect",
+    "url": origin,
+    "image": `${origin}/avatar.jpg`,
+    "description": "Specialist in distributed data systems, cloud architecture, and high-performance software engineering.",
+    "knowsAbout": [
+      "Distributed Systems",
       "Data Engineering",
-      "Full-Stack Development",
-      "Cloud Architecture",
-      "Machine Learning",
+      "Apache Kafka",
       "React",
       "TypeScript",
       "Python",
-      "Node.js",
-      "AWS",
-      "Data Analytics",
-      "Web Development"
+      "AWS Architecture"
     ],
-    email: "emma.moghalu@gmail.com",
-    telephone: "+2347086493145",
-    address: {
+    "sameAs": [
+      "https://github.com/emmanuelrichard01",
+      "https://www.linkedin.com/in/e-mc/",
+      "https://x.com/_mrebuka"
+    ],
+    "address": {
       "@type": "PostalAddress",
-      addressLocality: "San Francisco",
-      addressRegion: "CA",
-      addressCountry: "US"
+      "addressLocality": "Abuja",
+      "addressCountry": "NG"
+    },
+    "email": "emma.moghalu@gmail.com"
+  };
+
+  // 2. WebSite Schema (The Portfolio)
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Emmanuel (Richard) Moghalu — Engineering Logs",
+    "url": origin,
+    "description": "Portfolio and technical case studies of Emmanuel Moghalu.",
+    "author": {
+      "@type": "Person",
+      "name": "Emmanuel Moghalu"
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": `${origin}/search?q={search_term_string}`,
+      "query-input": "required name=search_term_string"
     }
   };
 
-  const organizationData = {
+  // 3. Organization Schema (Your 'Brand' as a Freelancer/Consultant)
+  const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Emmanuel C. Moghalu - Portfolio",
-    url: window.location.origin,
-    logo: `${window.location.origin}/logo.png`,
-    description: "Professional portfolio showcasing software development and data engineering expertise",
-    founder: {
-      "@type": "Person",
-      name: "Emmanuel C. Moghalu"
+    "name": "Emmanuel Moghalu Engineering",
+    "url": origin,
+    "logo": `${origin}/logo.png`,
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "email": "emma.moghalu@gmail.com",
+      "contactType": "professional service",
+      "areaServed": "Global"
     }
-  };
-
-  const websiteData = {
-    "@context": "https://schema.org",
-    "@type": "Website",
-    name: "Emmanuel C. Moghalu - Portfolio",
-    url: window.location.origin,
-    description: "Software Developer & Data Engineer Portfolio",
-    author: {
-      "@type": "Person",
-      name: "Emmanuel C. Moghalu"
-    },
-    inLanguage: "en-US"
   };
 
   return (
     <Helmet>
       <script type="application/ld+json">
-        {JSON.stringify(personData)}
+        {JSON.stringify(personSchema)}
       </script>
       <script type="application/ld+json">
-        {JSON.stringify(organizationData)}
+        {JSON.stringify(websiteSchema)}
       </script>
       <script type="application/ld+json">
-        {JSON.stringify(websiteData)}
+        {JSON.stringify(organizationSchema)}
       </script>
     </Helmet>
   );

@@ -180,17 +180,11 @@
 
 @layer base {
   * {
-    /* Prefer direct CSS for global border-color to avoid @apply issues */
-    border-color: hsl(var(--border));
+    @apply border-border;
   }
 
   body {
-    /* Use direct CSS instead of @apply for custom utilities */
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: 'Inter', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    @apply bg-background text-foreground font-inter antialiased;
     font-feature-settings: 'cv11', 'ss01';
     scroll-behavior: smooth;
     overflow-x: hidden;
@@ -206,84 +200,39 @@
 @layer components {
   /* Enhanced Button Variants */
   .btn-hero {
-    /* Use direct CSS for design tokens to avoid @apply on custom utilities */
-    background-color: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
-    padding-left: 2rem; /* px-8 */
-    padding-right: 2rem;
-    padding-top: 1rem; /* py-4 */
-    padding-bottom: 1rem;
-    border-radius: 0.75rem; /* rounded-xl */
-    font-weight: 600; /* font-semibold */
-    font-size: 1.125rem; /* text-lg */
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: var(--shadow-md);
-    transform-origin: center;
-  }
-  .btn-hero:hover {
-    background-color: hsl(var(--primary) / 0.9);
-    box-shadow: var(--shadow-glow);
-    transform: scale(1.05);
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 
+           px-8 py-4 rounded-xl font-semibold text-lg
+           transition-all duration-300 
+           shadow-md hover:shadow-glow
+           transform hover:scale-105;
   }
 
   .btn-ghost-hero {
-    border-width: 2px;
-    border-style: solid;
-    border-color: hsl(var(--primary));
-    color: hsl(var(--primary));
-    padding-left: 2rem; /* px-8 */
-    padding-right: 2rem;
-    padding-top: 1rem; /* py-4 */
-    padding-bottom: 1rem;
-    border-radius: 0.75rem; /* rounded-xl */
-    font-weight: 600; /* font-semibold */
-    font-size: 1.125rem; /* text-lg */
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .btn-ghost-hero:hover {
-    background-color: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
-    transform: scale(1.05);
+    @apply border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground
+           px-8 py-4 rounded-xl font-semibold text-lg
+           transition-all duration-300
+           transform hover:scale-105;
   }
 
   /* Card Variants */
   .card-elegant {
-    background-color: hsl(var(--card));
-    border-width: 1px;
-    border-style: solid;
-    border-color: hsl(var(--border));
-    border-radius: 1rem; /* rounded-2xl */
-    padding: 1.5rem; /* p-6 */
-    box-shadow: var(--shadow-md);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .card-elegant:hover {
-    box-shadow: var(--shadow-lg);
-    border-color: color-mix(in srgb, hsl(var(--primary)) 20%, transparent);
+    @apply bg-card border border-border rounded-2xl p-6
+           shadow-md hover:shadow-lg
+           transition-all duration-300
+           hover:border-primary/20;
   }
 
   .card-feature {
-    background-image: var(--gradient-card);
-    border-width: 1px;
-    border-style: solid;
-    border-color: hsl(var(--border));
-    border-radius: 1rem; /* rounded-2xl */
-    padding: 2rem; /* p-8 */
-    box-shadow: var(--shadow-lg);
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .card-feature:hover {
-    transform: scale(1.02);
-    box-shadow: var(--shadow-glow);
-    border-color: color-mix(in srgb, hsl(var(--primary)) 30%, transparent);
+    @apply bg-gradient-to-br from-card to-accent
+           border border-border rounded-2xl p-8
+           shadow-lg hover:shadow-glow
+           transition-all duration-500
+           hover:scale-[1.02] hover:border-primary/30;
   }
 
   /* Text Gradients */
   .text-gradient {
-    background-image: var(--gradient-primary);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    @apply bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent;
   }
 
   /* Animation Classes */
@@ -531,7 +480,6 @@
   .card-elegant {
     margin-left: 0;
     margin-right: 0;
-    padding: 1rem;
   }
 
   .grid {
@@ -547,12 +495,6 @@
     padding-right: 1rem;
   }
 
-  /* Enhanced touch targets */
-  /* button, a, [role="button"] {
-            min-height: 44px;
-            min-width: 44px;
-          } */
-
   /* Fix hero social icons on mobile */
   .fixed.right-6 {
     right: 1rem;
@@ -567,50 +509,6 @@
   .flex-wrap {
     flex-wrap: wrap;
   }
-
-  /* Improved mobile typography */
-  .text-4xl {
-    font-size: 2rem;
-  }
-
-  .text-5xl {
-    font-size: 2.5rem;
-  }
-}
-
-/* Focus management improvements */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Enhanced focus indicators */
-:focus-visible {
-  outline: 2px solid hsl(var(--primary));
-  outline-offset: 2px;
-}
-
-/* Skip link for accessibility */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 6px;
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  padding: 8px 16px;
-  border-radius: 4px;
-  text-decoration: none;
-  z-index: 1000;
-  transition: top 0.3s;
-}
-
-.skip-link:focus {
-  top: 6px;
 }
 
 /* Sleek global scrollbar styling */

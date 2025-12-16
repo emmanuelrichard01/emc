@@ -13,11 +13,23 @@ import {
 
 // Shared Background with Spotlight integration
 const BackgroundGrid = () => (
-  <div className="absolute inset-0 -z-10 h-full w-full pointer-events-none overflow-hidden select-none">
+  <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+    {/* Base background */}
     <div className="absolute inset-0 bg-background transition-colors duration-300" />
-    <div className="absolute inset-0 bg-[radial-gradient(#00000020_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff15_1px,transparent_1px)] [background-size:20px_20px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_70%,transparent_100%)]" />
-    <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen" />
-    <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen" />
+
+    {/* Grid */}
+    <div
+      className="
+        absolute inset-0
+        bg-[radial-gradient(rgba(0,0,0,0.08)_1px,transparent_1px)]
+        dark:bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)]
+        [background-size:22px_22px]
+      "
+    />
+
+    {/* Ambient blobs */}
+    <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary/10 blur-[140px]" />
+    <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-[140px]" />
   </div>
 );
 

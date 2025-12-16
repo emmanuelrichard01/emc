@@ -58,7 +58,7 @@ const EmailDisplay = () => {
 
       <button
         onClick={handleCopy}
-        className="relative flex items-center gap-4 text-2xl md:text-4xl font-bold text-foreground hover:text-primary transition-colors text-left"
+        className="relative flex items-center gap-4 text-xl md:text-4xl font-bold text-foreground hover:text-primary transition-colors text-left"
       >
         <span className="border-b-2 border-transparent group-hover:border-primary/20 pb-1 transition-all">
           {EMAIL}

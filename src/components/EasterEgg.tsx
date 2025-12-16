@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import {
   Sparkles,
   Trophy,
@@ -8,7 +8,8 @@ import {
   Coffee,
   Heart,
   Zap,
-  Crown
+  Crown,
+  Terminal
 } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
@@ -24,42 +25,43 @@ interface EasterEggProps {
 /* SUB-COMPONENTS                                                             */
 /* -------------------------------------------------------------------------- */
 
-// 1. Particle Explosion Engine
+// 1. Particle Explosion Engine (Optimized Physics)
 const ConfettiBurst = () => {
-  // Generate particles with random physics trajectories
   const particles = useMemo(() => {
-    return Array.from({ length: 40 }).map((_, i) => {
+    return Array.from({ length: 50 }).map((_, i) => {
       const angle = Math.random() * 360;
-      const velocity = 100 + Math.random() * 300; // Random spread distance
-      const size = 4 + Math.random() * 6;
+      const velocity = 150 + Math.random() * 250;
+      const size = 3 + Math.random() * 5;
+      const spin = Math.random() * 360;
 
       return {
         id: i,
-        angle,
+        angle: angle * (Math.PI / 180),
         velocity,
         size,
-        color: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'][Math.floor(Math.random() * 5)],
-        delay: Math.random() * 0.2
+        color: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ffffff'][Math.floor(Math.random() * 6)],
+        delay: Math.random() * 0.1,
+        spin
       };
     });
   }, []);
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
       {particles.map((p) => (
         <motion.div
           key={p.id}
-          initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+          initial={{ x: 0, y: 0, scale: 0, opacity: 1, rotate: 0 }}
           animate={{
-            x: Math.cos(p.angle * (Math.PI / 180)) * p.velocity,
-            y: Math.sin(p.angle * (Math.PI / 180)) * p.velocity,
-            scale: [0, 1, 0],
+            x: Math.cos(p.angle) * p.velocity,
+            y: Math.sin(p.angle) * p.velocity,
+            scale: [0, 1.5, 0],
             opacity: [1, 1, 0],
-            rotate: Math.random() * 360
+            rotate: p.spin
           }}
           transition={{
-            duration: 1.2,
-            ease: "easeOut",
+            duration: 1.5,
+            ease: [0.22, 1, 0.36, 1], // Custom Ease Out Quart
             delay: p.delay
           }}
           style={{
@@ -67,7 +69,8 @@ const ConfettiBurst = () => {
             height: p.size,
             backgroundColor: p.color,
             position: 'absolute',
-            borderRadius: Math.random() > 0.5 ? '50%' : '2px' // Mix of circles and squares
+            borderRadius: Math.random() > 0.6 ? '50%' : '2px',
+            boxShadow: `0 0 ${p.size * 2}px ${p.color}`
           }}
         />
       ))}
@@ -78,20 +81,20 @@ const ConfettiBurst = () => {
 // 2. Floating Background Symbol
 const FloatingSymbol = ({ delay, x, y, children }: { delay: number, x: string, y: string, children: React.ReactNode }) => (
   <motion.div
-    initial={{ opacity: 0, y: 50 }}
+    initial={{ opacity: 0, y: 20 }}
     animate={{
-      opacity: [0, 0.4, 0],
-      y: -100,
-      rotate: [0, 45, -45, 0]
+      opacity: [0, 0.3, 0],
+      y: -60,
+      rotate: [0, 20, -20, 0]
     }}
     transition={{
-      duration: 4,
+      duration: 5,
       delay: delay,
       ease: "easeInOut",
       repeat: Infinity,
-      repeatDelay: Math.random() * 2
+      repeatDelay: Math.random() * 3
     }}
-    className="absolute text-primary/20 pointer-events-none"
+    className="absolute text-white/10 pointer-events-none z-0"
     style={{ left: x, bottom: y }}
   >
     {children}
@@ -105,31 +108,38 @@ const FloatingSymbol = ({ delay, x, y, children }: { delay: number, x: string, y
 const EasterEgg = ({ isActive, onComplete }: EasterEggProps) => {
   const [showMessage, setShowMessage] = useState(false);
 
-  // Curated achievement messages
-  const ACHIEVEMENTS = [
-    { title: "Cheat Code Activated", subtitle: "You've unlocked developer mode!", icon: TerminalIcon },
-    { title: "Konami Code Master", subtitle: "Old school gamer detected.", icon: Crown },
-    { title: "System Overridden", subtitle: "Welcome to the matrix.", icon: Code2 },
-    { title: "Super User Status", subtitle: "Sudo access granted.", icon: Zap },
-  ];
+  // Parallax Tilt Logic
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-100, 100], [10, -10]);
+  const rotateY = useTransform(x, [-100, 100], [-10, 10]);
 
-  // Pick a random achievement on mount
-  const achievement = useMemo(() => ACHIEVEMENTS[Math.floor(Math.random() * ACHIEVEMENTS.length)], [isActive]);
-  const AchievementIcon = achievement.icon;
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    x.set(e.clientX - centerX);
+    y.set(e.clientY - centerY);
+  };
+
+  const achievements = useMemo(() => [
+    { title: "Developer Mode", subtitle: "Cheat Code Activated", icon: Terminal },
+    { title: "Konami Code", subtitle: "Retro Gamer Detected", icon: Crown },
+    { title: "System Override", subtitle: "Access Granted", icon: Code2 },
+    { title: "God Mode", subtitle: "Unlimited Power", icon: Zap },
+  ], []);
+
+  const activeAchievement = useMemo(() => achievements[Math.floor(Math.random() * achievements.length)], [achievements]);
+  const Icon = activeAchievement.icon;
 
   useEffect(() => {
     if (isActive) {
-      // Sequence: Animation Start -> Show Message -> Wait -> Close
-      const showTimer = setTimeout(() => setShowMessage(true), 400); // Wait for burst to clear slightly
-      const closeTimer = setTimeout(() => {
+      const timer1 = setTimeout(() => setShowMessage(true), 300);
+      const timer2 = setTimeout(() => {
         setShowMessage(false);
         onComplete();
-      }, 4500);
-
-      return () => {
-        clearTimeout(showTimer);
-        clearTimeout(closeTimer);
-      };
+      }, 5000);
+      return () => { clearTimeout(timer1); clearTimeout(timer2); };
     } else {
       setShowMessage(false);
     }
@@ -143,97 +153,69 @@ const EasterEgg = ({ isActive, onComplete }: EasterEggProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md perspective-1000"
+        onMouseMove={handleMouseMove}
       >
-        {/* 1. Background Atmosphere */}
-        <div className="absolute inset-0 overflow-hidden">
-          <FloatingSymbol delay={0} x="10%" y="10%"><Code2 size={48} /></FloatingSymbol>
-          <FloatingSymbol delay={1.5} x="80%" y="20%"><Heart size={32} /></FloatingSymbol>
-          <FloatingSymbol delay={0.8} x="20%" y="70%"><Coffee size={40} /></FloatingSymbol>
-          <FloatingSymbol delay={2.2} x="70%" y="60%"><Rocket size={56} /></FloatingSymbol>
-          <FloatingSymbol delay={1.2} x="50%" y="40%"><Sparkles size={24} /></FloatingSymbol>
+        {/* Background Ambience */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <FloatingSymbol delay={0} x="15%" y="15%"><Code2 size={64} /></FloatingSymbol>
+          <FloatingSymbol delay={1} x="85%" y="25%"><Heart size={40} /></FloatingSymbol>
+          <FloatingSymbol delay={0.5} x="25%" y="75%"><Coffee size={48} /></FloatingSymbol>
+          <FloatingSymbol delay={2} x="75%" y="65%"><Rocket size={56} /></FloatingSymbol>
         </div>
 
-        {/* 2. Confetti Explosion */}
         <ConfettiBurst />
 
-        {/* 3. The Achievement Card */}
+        {/* The Card */}
         <motion.div
-          initial={{ scale: 0.5, opacity: 0, rotateX: 45 }}
-          animate={{ scale: 1, opacity: 1, rotateX: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          transition={{ type: "spring", damping: 12, stiffness: 100 }}
+          style={{ rotateX, rotateY, z: 100 }}
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 50 }}
+          transition={{ type: "spring", damping: 20, stiffness: 200 }}
           className="relative z-10"
         >
-          {/* Rotating Border Beam Effect */}
-          <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-r from-primary via-purple-500 to-primary opacity-75 blur-md animate-pulse" />
+          <div className="relative w-[340px] bg-neutral-900 border border-white/10 rounded-3xl p-8 text-center shadow-2xl overflow-hidden group">
 
-          <div className="relative bg-neutral-900/90 border border-white/10 rounded-3xl p-8 md:p-12 text-center shadow-2xl backdrop-blur-xl overflow-hidden min-w-[320px] max-w-sm">
+            {/* Moving Gradient Border */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
 
-            {/* Glossy Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-50 pointer-events-none" />
+            {/* Glow Blob */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
 
-            {/* Icon Container */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", duration: 1.5, bounce: 0.5 }}
-              className="relative mx-auto w-24 h-24 mb-6 flex items-center justify-center rounded-full bg-gradient-to-tr from-primary/20 to-purple-500/20 border border-primary/50 shadow-[0_0_40px_-10px_var(--tw-shadow-color)] shadow-primary/50"
-            >
-              <AchievementIcon className="w-12 h-12 text-primary drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+            {/* Icon */}
+            <div className="relative mb-6 mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 shadow-[0_0_30px_-5px_rgba(var(--primary-rgb),0.3)]">
+              <Icon className="w-10 h-10 text-primary drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+            </div>
 
-              {/* Spinning Ring */}
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 rounded-full border-t-2 border-r-2 border-primary/30"
-              />
-            </motion.div>
-
-            {/* Text Reveal */}
-            <AnimatePresence>
+            {/* Text */}
+            <AnimatePresence mode='wait'>
               {showMessage && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
+                  exit={{ opacity: 0, y: -10 }}
                 >
-                  <motion.h2
-                    className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-primary to-purple-400 mb-2"
-                  >
-                    {achievement.title}
-                  </motion.h2>
-                  <motion.p
-                    className="text-neutral-400 text-sm font-medium tracking-wide uppercase"
-                  >
-                    {achievement.subtitle}
-                  </motion.p>
+                  <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
+                    {activeAchievement.title}
+                  </h2>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/5 text-[10px] font-mono uppercase tracking-widest text-primary-foreground/80">
+                    <Sparkles className="w-3 h-3" />
+                    {activeAchievement.subtitle}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Close Hint */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 2.5 }}
-              className="mt-8 pt-4 border-t border-white/5"
-            >
-              <p className="text-xs text-neutral-600">Press ESC to dismiss</p>
-            </motion.div>
+            {/* Footer */}
+            <div className="mt-8 text-[10px] text-neutral-500 font-mono">
+              [ESC] to dismiss
+            </div>
           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 };
-
-// Helper Icon for default
-const TerminalIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-    <polyline points="4 17 10 11 4 5" />
-    <line x1="12" y1="19" x2="20" y2="19" />
-  </svg>
-);
 
 export default EasterEgg;
