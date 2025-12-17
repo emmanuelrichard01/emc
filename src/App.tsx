@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AnimatePresence } from "framer-motion";
+import { Analytics } from "@vercel/analytics/react";
 
 // Components with relative paths to avoid alias resolution issues
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -86,7 +87,7 @@ const App = () => (
                 </Suspense>
               </MainLayout>
             </BrowserRouter>
-
+            <Analytics />
           </ErrorBoundary>
         </TooltipProvider>
       </ThemeProvider>
