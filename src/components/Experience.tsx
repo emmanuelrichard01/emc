@@ -89,6 +89,28 @@ const EXPERIENCE = [
 /* 2. UI COMPONENTS                                                           */
 /* -------------------------------------------------------------------------- */
 
+// Scroll-linked timeline progress (Desktop only)
+const ScrollProgress = () => {
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: timelineRef,
+    offset: ["start center", "end center"]
+  });
+  const scaleY = useTransform(scrollYProgress, [0, 1], [0, 1]);
+
+  return (
+    <div ref={timelineRef} className="hidden md:block absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px z-0">
+      {/* Background track */}
+      <div className="absolute inset-0 bg-border" />
+      {/* Animated fill */}
+      <motion.div
+        className="absolute top-0 left-0 right-0 bg-gradient-to-b from-primary via-primary/60 to-primary/20 origin-top"
+        style={{ scaleY, height: '100%' }}
+      />
+    </div>
+  );
+};
+
 const ExperienceCard = ({ role, index }: { role: typeof EXPERIENCE[0], index: number }) => {
   return (
     <motion.div
@@ -127,7 +149,7 @@ const ExperienceCard = ({ role, index }: { role: typeof EXPERIENCE[0], index: nu
 
         {/* RIGHT: The Narrative (Card) */}
         <div className="md:col-span-7 pb-16 md:pb-24">
-          <div className="group relative bg-white/50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-sm hover:border-primary/20 transition-colors">
+          <div className="group relative bg-white/50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-sm hover:border-primary/20 hover:shadow-[0_0_30px_-5px_rgba(var(--primary-rgb,188,19,254),0.1)] transition-all duration-300">
 
             {/* Role Title */}
             <div className="mb-6">
@@ -188,7 +210,7 @@ const ExperienceCard = ({ role, index }: { role: typeof EXPERIENCE[0], index: nu
 
 const Experience: React.FC = () => {
   return (
-    <section id="experience" className="py-24 md:py-32 bg-background relative overflow-hidden">
+    <section id="experience" data-section="experience" className="py-24 md:py-32 bg-background relative overflow-hidden">
 
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-[radial-gradient(#00000010_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff05_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
@@ -215,6 +237,9 @@ const Experience: React.FC = () => {
         <div className="relative">
           {/* Vertical Line (Mobile Only - Desktop uses grid) */}
           <div className="absolute left-[5px] top-4 bottom-0 w-px bg-gradient-to-b from-primary via-border to-transparent md:hidden" />
+
+          {/* Desktop scroll-linked progress overlay */}
+          <ScrollProgress />
 
           <div className="flex flex-col">
             {EXPERIENCE.map((role, index) => (

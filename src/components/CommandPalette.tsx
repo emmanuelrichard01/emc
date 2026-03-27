@@ -2,10 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, ArrowRight, Home, User, Briefcase, Mail,
-  FileText, Palette, Moon, Sun, Monitor, Terminal,
-  Layers, Zap, Cpu
+  FileText, Terminal, Layers
 } from 'lucide-react';
-import { useTheme } from './ThemeProvider'; // Updated import
 
 /* -------------------------------------------------------------------------- */
 /* 1. TYPES & DATA                                                            */
@@ -33,7 +31,6 @@ interface CommandPaletteProps {
 const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { setTheme } = useTheme();
 
   // Scroll Helper
   const scrollToSection = useCallback((id: string) => {
@@ -92,34 +89,16 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       category: 'Navigation',
       keywords: ['email', 'reach', 'touch', 'hire']
     },
-    // Theme
-    {
-      id: 'theme-light',
-      title: 'Light Mode',
-      description: 'Switch to light appearance',
-      icon: Sun,
-      action: () => { setTheme('light'); onClose(); },
-      category: 'Theme',
-      keywords: ['light', 'day', 'white']
-    },
-    {
-      id: 'theme-dark',
-      title: 'Dark Mode',
-      description: 'Switch to dark appearance',
-      icon: Moon,
-      action: () => { setTheme('dark'); onClose(); },
-      category: 'Theme',
-      keywords: ['dark', 'night', 'black']
-    },
     {
       id: 'theme-system',
-      title: 'System Mode',
-      description: 'Match OS preference',
-      icon: Monitor,
-      action: () => { setTheme('system'); onClose(); },
-      category: 'Theme',
-      keywords: ['auto', 'system', 'os']
+      title: 'Console Output',
+      description: 'Toggle developer logs (Coming Soon)',
+      icon: Terminal,
+      action: () => { onClose(); },
+      category: 'System',
+      keywords: ['logs', 'console', 'debug']
     },
+
     // System Actions (Future Proofing)
     {
       id: 'sys-stack',
@@ -130,7 +109,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       category: 'System',
       keywords: ['tech', 'stack', 'tools']
     }
-  ], [setTheme, onClose, scrollToSection]);
+  ], [onClose, scrollToSection]);
 
   // Filtering Logic
   const filteredCommands = useMemo(() => {
@@ -202,22 +181,25 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           initial={{ scale: 0.95, opacity: 0, y: -20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: -20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="relative w-full max-w-2xl bg-background/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[60vh]"
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          className="relative w-full max-w-[600px] bg-[#050505]/70 backdrop-blur-3xl border border-white/[0.08] shadow-[0_20px_60px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden flex flex-col max-h-[60vh] ring-1 ring-white/[0.02]"
         >
+          {/* Subtle Inner Line */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.15] to-transparent pointer-events-none" />
+          
           {/* Header / Search */}
-          <div className="flex items-center px-4 py-4 border-b border-border/50 gap-3">
-            <Search className="w-5 h-5 text-muted-foreground" />
+          <div className="relative flex items-center px-5 py-4 border-b border-white/[0.06] gap-3 bg-white/[0.01]">
+            <Search className="w-5 h-5 text-white/40" />
             <input
               autoFocus
               type="text"
-              placeholder="Type a command or search..."
-              className="flex-1 bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground/50"
+              placeholder="Search sections or type a command..."
+              className="flex-1 bg-transparent border-none outline-none text-base text-white/90 placeholder:text-white/30 tracking-wide font-medium"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <div className="flex items-center gap-1">
-              <kbd className="hidden sm:inline-flex items-center h-6 px-2 text-[10px] font-mono font-medium text-muted-foreground bg-muted rounded border border-border">
+              <kbd className="hidden sm:inline-flex items-center h-6 px-1.5 text-[10px] font-mono font-medium text-white/30 bg-white/[0.05] rounded border border-white/10 tracking-widest">
                 ESC
               </kbd>
             </div>
@@ -232,7 +214,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
             ) : (
               <div className="flex flex-col gap-1">
                 {/* Group by category if no search, else flat list */}
-                {['Navigation', 'System', 'Theme'].map(category => {
+                {['Navigation', 'System'].map(category => {
                   const categoryCommands = filteredCommands.filter(c => c.category === category);
                   if (categoryCommands.length === 0) return null;
 
@@ -251,20 +233,20 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                             key={command.id}
                             onClick={command.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
-                            className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-all duration-200 group ${isSelected
-                              ? 'bg-primary/10 text-primary'
-                              : 'text-muted-foreground hover:bg-muted/50'
+                            className={`w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-300 group ${isSelected
+                              ? 'bg-white/[0.06] border border-white/[0.04]'
+                              : 'border border-transparent hover:bg-white/[0.02]'
                               }`}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-md ${isSelected ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground'}`}>
+                            <div className="flex items-center gap-4">
+                              <div className={`p-2.5 rounded-lg transition-colors duration-300 ${isSelected ? 'bg-primary/20 text-primary' : 'bg-white/[0.03] text-white/40 group-hover:bg-white/[0.06] group-hover:text-white/60'}`}>
                                 <command.icon className="w-4 h-4" />
                               </div>
                               <div className="text-left">
-                                <div className={`text-sm font-medium ${isSelected ? 'text-foreground' : ''}`}>
+                                <div className={`text-[13px] tracking-wide transition-colors duration-300 ${isSelected ? 'text-white font-medium' : 'text-white/70 font-medium group-hover:text-white/90'}`}>
                                   {command.title}
                                 </div>
-                                <div className="text-xs opacity-70">
+                                <div className="text-[11px] text-white/40 mt-0.5 tracking-wide">
                                   {command.description}
                                 </div>
                               </div>
@@ -275,9 +257,9 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                                 layoutId="cmd-arrow"
                                 initial={{ opacity: 0, x: -5 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="pr-2"
+                                className="pr-3 text-white/60"
                               >
-                                <ArrowRight className="w-4 h-4" />
+                                <ArrowRight className="w-3.5 h-3.5" />
                               </motion.div>
                             )}
                           </button>
@@ -291,16 +273,16 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           </div>
 
           {/* Footer Hints */}
-          <div className="px-4 py-3 bg-muted/20 border-t border-border/50 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+          <div className="px-5 py-3 bg-white/[0.01] border-t border-white/[0.06] flex items-center justify-between text-[10px] text-white/30 font-mono tracking-widest uppercase">
             <div className="flex gap-4">
-              <span className="flex items-center gap-1">
-                <kbd className="bg-background border border-border rounded px-1">↑↓</kbd> to navigate
+              <span className="flex items-center gap-1.5">
+                <kbd className="bg-white/5 border border-white/10 rounded px-1 text-white/50 tracking-normal font-sans text-xs flex items-center h-4">↑↓</kbd> navigate
               </span>
-              <span className="flex items-center gap-1">
-                <kbd className="bg-background border border-border rounded px-1">↵</kbd> to select
+              <span className="flex items-center gap-1.5">
+                <kbd className="bg-white/5 border border-white/10 rounded px-1.5 text-white/50 tracking-normal font-sans text-xs flex items-center h-4">↵</kbd> select
               </span>
             </div>
-            <span>System v2.0</span>
+            <span className="opacity-50">SYSTEM_v2</span>
           </div>
 
         </motion.div>

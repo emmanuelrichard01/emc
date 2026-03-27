@@ -1,59 +1,30 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useEffect, createContext, useContext } from 'react';
 
 /* -------------------------------------------------------------------------- */
-/* THEME CONTEXT & HOOK                                                       */
+/* THEME — Dark mode only, no toggle needed                                   */
 /* -------------------------------------------------------------------------- */
-
-type Theme = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  resolvedTheme: 'light' | 'dark';
+  theme: 'dark';
+  resolvedTheme: 'dark';
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType>({ theme: 'dark', resolvedTheme: 'dark' });
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
-
-  // Initialize from local storage
   useEffect(() => {
-    const saved = localStorage.getItem('theme') as Theme | null;
-    if (saved) setTheme(saved);
+    const root = document.documentElement;
+    root.classList.remove('light');
+    root.classList.add('dark');
   }, []);
 
-  // Handle system changes and apply theme
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const applyTheme = () => {
-      const systemTheme = mediaQuery.matches ? 'dark' : 'light';
-      const effectiveTheme = theme === 'system' ? systemTheme : theme;
-      setResolvedTheme(effectiveTheme);
-
-      const root = window.document.documentElement;
-      root.classList.remove('light', 'dark');
-      root.classList.add(effectiveTheme);
-      localStorage.setItem('theme', theme);
-    };
-
-    applyTheme();
-    const listener = () => { if (theme === 'system') applyTheme(); };
-    mediaQuery.addEventListener('change', listener);
-    return () => mediaQuery.removeEventListener('change', listener);
-  }, [theme]);
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={{ theme: 'dark', resolvedTheme: 'dark' }}>
       {children}
     </ThemeContext.Provider>
   );
 };
 
 export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (!context) throw new Error('useTheme must be used within a ThemeProvider');
-  return context;
+  return useContext(ThemeContext);
 }

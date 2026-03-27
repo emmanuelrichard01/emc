@@ -289,7 +289,7 @@ const ProjectCard = ({ project, index }: { project: typeof PROJECTS[0], index: n
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group relative w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 p-5 md:p-8 rounded-2xl md:rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 backdrop-blur-sm overflow-hidden"
+      className="group relative w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 p-5 md:p-8 rounded-2xl md:rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 backdrop-blur-sm overflow-hidden hover:shadow-[0_0_40px_-10px_rgba(var(--primary-rgb,188,19,254),0.12)] hover:border-primary/20 transition-all duration-500"
     >
       {/* Spotlight Hover Effect - Desktop Only */}
       <div className="absolute -inset-px bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 lg:group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl" />
@@ -471,9 +471,9 @@ const ProjectCard = ({ project, index }: { project: typeof PROJECTS[0], index: n
 
 const Projects: React.FC = () => {
   return (
-    <section id="projects" className="py-24 md:py-32 bg-neutral-50/50 dark:bg-black/20 relative">
+    <section id="projects" data-section="projects" className="py-24 md:py-32 bg-neutral-50/50 dark:bg-black/20 relative">
       {/* Background Noise */}
-      <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none" />
+      <div className="noise-overlay" />
 
       <div className="container px-4 md:px-6 max-w-7xl mx-auto">
 

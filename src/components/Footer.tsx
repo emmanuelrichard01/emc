@@ -43,7 +43,7 @@ const ScrollToTop = () => {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-50 group hidden md:flex items-center justify-center w-12 h-12 rounded-full bg-background/80 backdrop-blur-md border border-border shadow-lg hover:shadow-xl transition-all duration-300"
+          className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 group flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 backdrop-blur-md border border-border shadow-lg hover:shadow-xl transition-all duration-300"
           aria-label="Scroll to top"
         >
           {/* Progress Ring */}
@@ -79,6 +79,7 @@ const ScrollToTop = () => {
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const currentQuarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}`;
 
   return (
     <footer className="py-12 border-t border-border/40 bg-background relative overflow-hidden">
@@ -108,7 +109,7 @@ const Footer = () => {
 
         {/* RIGHT: Maintenance Signal */}
         <div className="flex flex-col items-center md:items-end gap-1 text-right opacity-60 font-mono">
-          <span>© {currentYear} · Updated Q4</span>
+          <span>© {currentYear} · Updated {currentQuarter}</span>
           <span>Abuja, NG (UTC+1)</span>
         </div>
 

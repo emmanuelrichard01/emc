@@ -1,10 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
 
-// Relative imports to bypass alias resolution issues
-// Assuming file structure:
-// src/pages/Index.tsx
-// src/components/Hero.tsx
+// Components
 import Hero from '../components/Hero';
 import About from '../components/About';
 import Projects from '../components/Projects';
@@ -14,66 +10,27 @@ import EasterEgg from '../components/EasterEgg';
 import SEOHead from '../components/SEOHead';
 import StructuredData from '../components/StructuredData';
 
+// Hooks
+import { useKonamiCode } from '../hooks/useKonamiCode';
+
 // Types
-import { SEOMetadata } from '../types'; // Adjusted import path to match type file location
-
-// Simple inline hook for Konami Code to ensure stability
-const useKonamiCode = (callback: () => void) => {
-  const [keys, setKeys] = useState<string[]>([]);
-
-  React.useEffect(() => {
-    const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
-    const down = (e: KeyboardEvent) => {
-      setKeys((prev) => {
-        const newKeys = [...prev, e.key].slice(-konamiCode.length);
-        if (JSON.stringify(newKeys) === JSON.stringify(konamiCode)) {
-          callback();
-        }
-        return newKeys;
-      });
-    };
-    window.addEventListener('keydown', down);
-    return () => window.removeEventListener('keydown', down);
-  }, [callback]);
-};
-
-// Page Transition
-const pageVariants = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.5, staggerChildren: 0.1 } },
-  exit: { opacity: 0 }
-};
+import { SEOMetadata } from '../types';
 
 const Index = () => {
   const [isEasterEggActive, setIsEasterEggActive] = useState(false);
 
-  // Activate Easter Egg via Konami Code
   useKonamiCode(() => {
     setIsEasterEggActive(true);
   });
 
-  // 2026-Ready Metadata
   const seoMetadata: SEOMetadata = {
     title: "Emmanuel Moghalu | Data Engineer & System Architect",
     description: "Engineering resilient data pipelines and scalable software systems. Focusing on architecture, tradeoffs, and operational excellence.",
     keywords: [
-      "Data Engineer",
-      "System Architect",
-      "Software Engineer",
-      "Distributed Systems",
-      "Pipeline Design",
-      "React",
-      "Next.js",
-      "TypeScript",
-      "Python",
-      "Kafka",
-      "AWS",
-      "Apache Spark",
-      "Docker",
-      "Kubernetes",
-      "Azure",
-      "GCP",
-      "Emmanuel Moghalu"
+      "Data Engineer", "System Architect", "Software Engineer",
+      "Distributed Systems", "Pipeline Design", "React", "Next.js",
+      "TypeScript", "Python", "Kafka", "AWS", "Apache Spark",
+      "Docker", "Kubernetes", "Azure", "GCP", "Emmanuel Moghalu"
     ],
     canonical: typeof window !== 'undefined' ? window.location.href : undefined,
     openGraph: {
@@ -93,30 +50,28 @@ const Index = () => {
   };
 
   return (
-    <motion.div
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageVariants}
-      className="bg-background min-h-screen"
-    >
-      {/* SEO Components */}
-      <SEOHead metadata={seoMetadata} />
-      <StructuredData />
+    <div className="bg-[#050505] min-h-screen relative selection:bg-primary/20 selection:text-primary">
+      {/* Global Background Grid for continuous flow */}
+      <div className="fixed inset-0 z-0 pointer-events-none select-none">
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] [background-size:24px_24px]" />
+      </div>
 
-      {/* Sections - Clean Composition (Layout handled by App.tsx) */}
-      <Hero />
-      <About />
-      <Projects />
-      <Experience />
-      <Contact />
+      <div className="relative z-10 w-full flex flex-col items-stretch">
+        <SEOHead metadata={seoMetadata} />
+        <StructuredData />
 
-      {/* Hidden Features */}
-      <EasterEgg
-        isActive={isEasterEggActive}
-        onComplete={() => setIsEasterEggActive(false)}
-      />
-    </motion.div>
+        <Hero />
+        <About />
+        <Projects />
+        <Experience />
+        <Contact />
+
+        <EasterEgg
+          isActive={isEasterEggActive}
+          onComplete={() => setIsEasterEggActive(false)}
+        />
+      </div>
+    </div>
   );
 };
 

@@ -1,304 +1,182 @@
-import React, { useState, useEffect } from 'react';
-import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
-import {
-  ArrowRight, Terminal, Activity,
-  GitCommit, Cpu, Zap, Server,
-  Database, Globe, Layers, Command,
-  LayoutTemplate, CheckCircle2
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useMotionTemplate } from 'framer-motion';
+import { ArrowRight, Download, Github, Linkedin, Twitter, Command } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
-/* 1. UTILITY COMPONENTS                                                      */
+/* SINGLE-LINE TERMINAL                                                       */
 /* -------------------------------------------------------------------------- */
 
-// Shared Background with Spotlight integration
-const BackgroundGrid = () => (
-  <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
-    {/* Base background */}
-    <div className="absolute inset-0 bg-background transition-colors duration-300" />
+const TERMINAL_LINES = [
+  { text: "deploying pipeline → us-east-1", duration: 3000, prefix: "$" },
+  { text: "building containers ....✓", duration: 2000, prefix: "›" },
+  { text: "pushing to registry ....✓", duration: 2000, prefix: "›" },
+  { text: "routing traffic to gateway", duration: 2200, prefix: "›" },
+  { text: "all services operational", duration: 4000, prefix: "●" },
+];
 
-    {/* Grid */}
-    <div
-      className="
-        absolute inset-0
-        bg-[radial-gradient(rgba(0,0,0,0.08)_1px,transparent_1px)]
-        dark:bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)]
-        [background-size:22px_22px]
-      "
-    />
-
-    {/* Ambient blobs */}
-    <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary/10 blur-[140px]" />
-    <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-[140px]" />
-  </div>
-);
-
-const StatusBadge = () => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, ease: "easeOut" }}
-    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 dark:border-emerald-500/20 backdrop-blur-md mb-6 cursor-default transition-colors duration-300"
-  >
-    <div className="relative flex h-2 w-2">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 duration-1000"></span>
-      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-    </div>
-    <span className="text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400 tracking-wider uppercase">
-      Systems Operational
-    </span>
-  </motion.div>
-);
-
-// Rolling Button Component for Text Cycling
-interface RollingButtonProps {
-  primary?: boolean;
-  label: React.ReactNode;
-  reveal?: React.ReactNode;
-  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  onClick?: React.MouseEventHandler<HTMLButtonElement>;
-}
-
-const RollingButton: React.FC<RollingButtonProps> = ({ primary = false, label, reveal, icon: Icon, onClick }) => {
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        group/button relative px-8 py-3 rounded-xl font-medium text-sm
-        transition-all duration-300 overflow-hidden
-        ${primary
-          ? 'bg-foreground text-background hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5'
-          : 'border border-border/40 bg-background/50 hover:bg-muted/50 text-foreground hover:border-foreground/20'
-        }
-      `}
-    >
-      {/* Lock height to one line */}
-      <div className="relative h-5 overflow-hidden">
-
-        {/* Vertical roller */}
-        <div
-          className="
-            flex flex-col
-            transition-transform duration-500
-            ease-[cubic-bezier(0.16,1,0.3,1)]
-            group-hover/button:-translate-y-5
-          "
-        >
-          {/* DEFAULT STATE — NO ICON */}
-          <div className="flex items-center justify-center h-5">
-            <span>{label}</span>
-          </div>
-
-          {/* REVEAL STATE — ICON APPEARS */}
-          <div className="flex items-center justify-center gap-2 h-5">
-            <span>{reveal}</span>
-            {Icon && (
-              <Icon
-                className="
-                  w-3.5 h-3.5
-                  opacity-0 -translate-x-1
-                  transition-all duration-300 delay-150
-                  group-hover/button:opacity-100
-                  group-hover/button:translate-x-0
-                "
-              />
-            )}
-          </div>
-        </div>
-
-      </div>
-    </button>
-  );
-};
-
-
-
-/* -------------------------------------------------------------------------- */
-/* 2. DASHBOARD VISUALS                                                       */
-/* -------------------------------------------------------------------------- */
-
-const DataFlowLine = ({ delay = 0 }: { delay?: number }) => (
-  <div className="flex-1 relative h-px mx-4">
-    {/* Static Track */}
-    <div className="absolute inset-0 border-t border-dashed border-muted-foreground/50" />
-    {/* Moving Packet */}
-    <motion.div
-      className="absolute top-1/2 -translate-y-1/2 h-[2px] w-12 bg-gradient-to-r from-transparent via-primary/80 to-transparent rounded-full blur-[0.5px]"
-      initial={{ left: "-20%", opacity: 0 }}
-      animate={{ left: "120%", opacity: [0, 1, 1, 0] }}
-      transition={{
-        duration: 2,
-        repeat: Infinity,
-        ease: "linear",
-        delay: delay
-      }}
-    />
-  </div>
-);
-
-interface MetricItemProps {
-  label: string;
-  value: React.ReactNode;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  color?: 'emerald' | 'blue';
-}
-
-const MetricItem: React.FC<MetricItemProps> = ({ label, value, icon: Icon, color = 'blue' }) => (
-  <div className="flex items-start justify-between p-3 rounded-lg bg-neutral-100/50 dark:bg-white/5 border border-neutral-200 dark:border-white/5 transition-colors duration-300">
-    <div>
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">{label}</div>
-      <div className="text-lg font-bold font-mono tracking-tight text-foreground">{value}</div>
-    </div>
-    <div className={`p-1.5 rounded-md ${color === 'emerald' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
-      <Icon className="w-3.5 h-3.5" />
-    </div>
-  </div>
-);
-
-const LiveLog = () => {
-  const [logs, setLogs] = useState([
-    { id: 1, text: "Initializing kernel...", status: "ok" },
-    { id: 2, text: "Loading data pipelines...", status: "ok" },
-  ]);
+const TypingTerminal = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    const sequence = [
-      { text: "Connecting to cluster...", status: "wait" },
-      { text: "Cluster connected (us-east-1)", status: "ok" },
-      { text: "Fetching graphics engine...", status: "ok" },
-      { text: "Rendering viewport...", status: "ok" },
-      { text: "System Ready.", status: "done" },
-    ];
-    let index = 0;
-
-    const interval = setInterval(() => {
-      if (index < sequence.length) {
-        setLogs(prev => [...prev.slice(-3), { id: Date.now(), ...sequence[index] }]);
-        index++;
-      }
-    }, 1500);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="font-mono text-[10px] space-y-1.5 mt-4 opacity-80">
-      {logs.map((log) => (
-        <motion.div
-          key={log.id}
-          initial={{ opacity: 0, x: -5 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2"
-        >
-          <span className={`
-            ${log.status === 'ok' || log.status === 'done' ? 'text-emerald-500' : 'text-amber-500'}
-          `}>
-            {log.status === 'ok' ? '✓' : log.status === 'done' ? '➜' : '⟳'}
-          </span>
-          <span className="text-muted-foreground">{log.text}</span>
-        </motion.div>
-      ))}
-    </div>
-  );
-};
-
-const SystemDashboard = () => {
-  // Smooth, weighted tilt effect
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [5, -5]), { stiffness: 150, damping: 20 });
-  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-5, 5]), { stiffness: 150, damping: 20 });
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    x.set(mouseX / width - 0.5);
-    y.set(mouseY / height - 0.5);
-  };
+    const timeout = setTimeout(() => {
+      setCurrentIndex((prev) => (prev + 1) % TERMINAL_LINES.length);
+    }, TERMINAL_LINES[currentIndex].duration);
+    return () => clearTimeout(timeout);
+  }, [currentIndex]);
 
   return (
     <motion.div
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => { x.set(0); y.set(0); }}
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 0.2 }}
-      className="relative w-full max-w-md mx-auto perspective-1000"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.7, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="w-full max-w-sm mx-auto mt-4"
     >
-      {/* Main Interface Card */}
-      <div className="relative bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/50 p-6 overflow-hidden transition-colors duration-300">
+      <div className="rounded-full border border-white/[0.06] bg-white/[0.015] backdrop-blur-md h-9 flex items-center px-4 gap-2.5">
+        {/* Terminal Icon */}
+        <Command className="w-3 h-3 text-white/20 shrink-0" />
+        <div className="w-px h-3.5 bg-white/[0.06] shrink-0" />
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-200 dark:border-white/5">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-semibold tracking-tight text-foreground">dashboard</span>
-          </div>
-          <div className="flex gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-neutral-200 dark:bg-white/10" />
-            <div className="w-2 h-2 rounded-full bg-neutral-200 dark:bg-white/10" />
-          </div>
+        {/* Animated text line */}
+        <div className="flex-1 relative h-full flex items-center overflow-hidden">
+          <AnimatePresence mode="popLayout">
+            <motion.span
+              key={currentIndex}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="absolute inset-0 flex items-center font-mono text-[11px] text-white/30 whitespace-nowrap tracking-wide"
+            >
+              <span className="text-white/15 mr-1.5">{TERMINAL_LINES[currentIndex].prefix}</span>
+              {TERMINAL_LINES[currentIndex].text}
+            </motion.span>
+          </AnimatePresence>
         </div>
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <MetricItem label="Uptime" value="99.99%" icon={Activity} color="emerald" />
-          <MetricItem label="Latency" value="24ms" icon={Zap} color="blue" />
-        </div>
-
-        {/* Visualization Area */}
-        <div className="relative h-32 bg-neutral-100/50 dark:bg-white/5 rounded-lg border border-neutral-200 dark:border-white/5 overflow-hidden mb-2 transition-colors duration-300">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-full px-8 flex justify-between items-center relative z-10">
-              <div className="flex flex-col items-center gap-2">
-                <Database className="w-5 h-5 text-muted-foreground" />
-              </div>
-
-              <DataFlowLine delay={0} />
-
-              <div className="flex flex-col items-center gap-2">
-                <Server className="w-5 h-5 text-foreground" />
-              </div>
-
-              <DataFlowLine delay={1} />
-
-              <div className="flex flex-col items-center gap-2">
-                <Globe className="w-5 h-5 text-muted-foreground" />
-              </div>
-            </div>
-            {/* Grid Lines */}
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_49%,rgba(0,0,0,0.05)_50%,transparent_51%)] dark:bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.05)_50%,transparent_51%)] bg-[size:20px_100%]" />
-          </div>
-        </div>
-
-        <LiveLog />
       </div>
-
-      {/* Decorative Elements (Behind) */}
-      <div className="absolute -z-10 top-4 -right-4 w-full h-full bg-neutral-200/50 dark:bg-white/5 rounded-2xl border border-neutral-200 dark:border-white/5 blur-[1px] transition-colors duration-300" />
     </motion.div>
   );
 };
 
+
 /* -------------------------------------------------------------------------- */
-/* 3. MAIN HERO LAYOUT                                                        */
+/* SOCIAL LINKS                                                               */
+/* -------------------------------------------------------------------------- */
+
+const SOCIALS = [
+  { icon: Github, href: "https://github.com/emmanuelrichard01", label: "GitHub" },
+  { icon: Linkedin, href: "https://www.linkedin.com/in/emmanuelrichard01", label: "LinkedIn" },
+  { icon: Twitter, href: "https://twitter.com/_mrebuka", label: "X / Twitter" },
+];
+
+
+/* -------------------------------------------------------------------------- */
+/* STAGGER LINK (Continuous Cycle + Gradient)                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 3-layer continuous rolling stagger:
+ *   [white] → [gradient] → [white]
+ * Always rolls upward (never reverses). Cycles periodically + on hover.
+ */
+const StaggerLink = ({ text, intervalMs = 4000 }: { text: string; intervalMs?: number }) => {
+  // 0 = white visible, 1 = gradient visible, 2 = white2 visible (then reset to 0)
+  const [phase, setPhase] = useState(0);
+
+  // Shuffled delay order
+  const shuffledDelays = React.useMemo(() => {
+    const indices = Array.from({ length: text.length }, (_, i) => i);
+    const seed = text.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    let s = seed;
+    for (let j = indices.length - 1; j > 0; j--) {
+      s = (s * 16807 + 11) % 2147483647;
+      const k = s % (j + 1);
+      [indices[j], indices[k]] = [indices[k], indices[j]];
+    }
+    const delayMap = new Array(text.length);
+    indices.forEach((orig, rank) => { delayMap[orig] = rank; });
+    return delayMap;
+  }, [text]);
+
+  // Advance one phase
+  const advance = React.useCallback(() => {
+    setPhase((p) => {
+      const next = p + 1;
+      // After reaching phase 2, schedule a snap-reset to 0
+      if (next >= 2) {
+        // Wait for the stagger to finish, then silently reset
+        const resetDelay = text.length * 30 + 400;
+        setTimeout(() => setPhase(0), resetDelay);
+      }
+      return next;
+    });
+  }, [text.length]);
+
+  // Periodic auto-cycle
+  useEffect(() => {
+    const interval = setInterval(advance, intervalMs);
+    return () => clearInterval(interval);
+  }, [advance, intervalMs]);
+
+  // y offset: each phase shifts up by -33.33%
+  const getY = (p: number) => `${-p * 33.333}%`;
+
+  return (
+    <span
+      className="inline-flex cursor-pointer"
+      onMouseEnter={advance}
+    >
+      {Array.from(text).map((char, i) => (
+        <span
+          key={i}
+          className="inline-block overflow-hidden relative"
+          style={{ lineHeight: "1.3em", height: "1.3em" }}
+        >
+          <motion.span
+            className="inline-flex flex-col"
+            animate={{ y: getY(phase) }}
+            transition={
+              phase === 0
+                ? { duration: 0 } // instant snap-reset (invisible)
+                : { duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: shuffledDelays[i] * 0.03 }
+            }
+          >
+            {/* Layer 1: White */}
+            <span className="inline-block text-white" style={{ lineHeight: "1.3em" }}>
+              {char === " " ? "\u00A0" : char}
+            </span>
+            {/* Layer 2: Gradient (spans full word) */}
+            <span
+              className="inline-block bg-clip-text text-transparent"
+              style={{
+                lineHeight: "1.3em",
+                backgroundImage: "linear-gradient(to right, hsl(280 100% 55%), #c084fc, #c922ee)",
+                backgroundSize: `${text.length}ch 100%`,
+                backgroundPosition: `${-i}ch 0`,
+              }}
+            >
+              {char === " " ? "\u00A0" : char}
+            </span>
+            {/* Layer 3: White (for seamless loop) */}
+            <span className="inline-block text-white" style={{ lineHeight: "1.3em" }}>
+              {char === " " ? "\u00A0" : char}
+            </span>
+          </motion.span>
+        </span>
+      ))}
+    </span>
+  );
+};
+
+
+/* -------------------------------------------------------------------------- */
+/* HERO                                                                       */
 /* -------------------------------------------------------------------------- */
 
 export default function Hero() {
   const { scrollY } = useScroll();
+  const opacity = useTransform(scrollY, [0, 400], [1, 0]);
+  const y = useTransform(scrollY, [0, 400], [0, 60]);
 
-  // Refined Scroll Animations for "Overlap" Effect
-  // Extended range [0, 700] prevents premature vanishing (empty space)
-  const yText = useTransform(scrollY, [0, 700], [0, 150]);
-  const yGraphic = useTransform(scrollY, [0, 700], [0, 100]);
-  const opacity = useTransform(scrollY, [0, 600], [1, 0]);
-  const blur = useTransform(scrollY, [0, 600], ["blur(0px)", "blur(12px)"]);
-  const scale = useTransform(scrollY, [0, 600], [1, 0.95]);
-
-  // Spotlight Effect State
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -311,84 +189,126 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="relative min-h-[100vh] flex items-center pt-16 md:pt-24 pb-12 overflow-hidden group/section"
+      data-section="home"
+      className="relative min-h-[100svh] flex flex-col items-center justify-center px-4 overflow-hidden group/hero"
       onMouseMove={handleMouseMove}
     >
-      <BackgroundGrid />
+      {/* Background Glows (Hero specific) */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+        <div className="absolute top-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full bg-primary/6 blur-[180px]" />
+        <div className="absolute bottom-[-10%] left-[-8%] w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-[180px]" />
+      </div>
 
-      {/* Interactive Spotlight Overlay */}
+      {/* Spotlight */}
       <motion.div
-        className="pointer-events-none absolute -inset-px opacity-0 transition duration-500 group-hover/section:opacity-100 z-0"
+        className="pointer-events-none absolute -inset-px opacity-0 transition duration-500 group-hover/hero:opacity-100 z-0"
         style={{
-          background: useMotionTemplate`
-            radial-gradient(
-              450px circle at ${mouseX}px ${mouseY}px,
-              rgba(14, 165, 233, 0.1),
-              transparent 80%
-            )
-          `,
+          background: useMotionTemplate`radial-gradient(600px circle at ${mouseX}px ${mouseY}px, rgba(168,85,247,0.03), transparent 80%)`,
         }}
       />
 
-      <div className="container px-4 md:px-6 max-w-7xl mx-auto z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+      {/* Content */}
+      <motion.div
+        style={{ y, opacity }}
+        className="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto mt-20 md:mt-16 lg:mt-12"
+      >
+        {/* Role Tag */}
+        <motion.span
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="text-[11px] font-mono font-medium text-primary/80 tracking-[0.2em] uppercase mb-8"
+        >
+          Data Engineer & Cloud Architect
+        </motion.span>
 
-          {/* LEFT: Copy */}
-          <motion.div
-            style={{ y: yText, opacity, filter: blur, scale }}
-            className="flex flex-col items-start max-w-2xl origin-left"
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.1] mb-5"
+        >
+          I build data <StaggerLink text="Systems" />{' '}
+          that <StaggerLink text="Scale." />
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="text-base md:text-lg text-white/40 leading-relaxed mb-8 max-w-md"
+        >
+          Building the invisible pipelines that power decision engines,
+          production infrastructure, and resilient software.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="flex flex-wrap justify-center gap-4 mb-10"
+        >
+          <button
+            onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
+            className="group/btn px-8 py-3.5 rounded-full font-medium text-[13px] bg-white text-black hover:shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:scale-[1.02] transition-all duration-300 flex items-center gap-2"
           >
-            <StatusBadge />
-
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.1] mb-6">
-              I architect <br />
-              <span className="text-muted-foreground">data systems</span> that scale.
-            </h1>
-
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-lg">
-              <span className="text-foreground font-medium">Data Engineer & Cloud Architect.</span>
-              <br />
-              Building the invisible pipelines that power decision engines, production infrastructure, and resilient software.
-            </p>
-
-            <div className="flex flex-wrap gap-4">
-              <RollingButton
-                primary
-                label="View My Work"
-                reveal="Engineering Logs"
-                icon={ArrowRight}
-                onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
-              />
-
-              <RollingButton
-                label="Review CV"
-                reveal="Analyze Stack"
-                icon={Terminal}
-                onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
-              />
-            </div>
-          </motion.div>
-
-          {/* RIGHT: Visual */}
-          <motion.div
-            style={{ y: yGraphic, opacity, filter: blur, scale }}
-            className="relative hidden lg:block origin-center"
+            View My Work
+            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5" />
+          </button>
+          <a
+            href="/resume.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group/btn px-8 py-3.5 rounded-full font-medium text-[13px] border border-white/[0.15] bg-white/[0.03] text-white/80 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.25] transition-all duration-300 flex items-center gap-2 backdrop-blur-md hover:scale-[1.02]"
           >
-            <SystemDashboard />
-          </motion.div>
+            Download CV
+            <Download className="w-3.5 h-3.5 transition-transform group-hover/btn:-translate-y-0.5" />
+          </a>
+        </motion.div>
 
-        </div>
-      </div>
+        {/* Terminal */}
+        <TypingTerminal />
+      </motion.div>
+
+      {/* Social Links*/}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="absolute left-4 md:left-8 top-1/3 -translate-y-1/3 z-40 hidden sm:flex flex-col items-center gap-4 md:gap-5 px-3 py-5 md:px-3.5 md:py-6 rounded-full bg-white/[0.02] border border-white/[0.05] backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] group/socials overflow-hidden"
+      >
+        {/* Inner Left Glow */}
+        <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-white/[0.15] to-transparent pointer-events-none" />
+
+        {SOCIALS.map((s) => (
+          <a
+            key={s.label}
+            href={s.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={s.label}
+            className="relative p-1.5 text-white/40 transition-all duration-300 group-hover/socials:text-white/50 hover:!text-white hover:scale-110 hover:-translate-y-0.5"
+          >
+            <s.icon className="w-[18px] h-[18px]" />
+          </a>
+        ))}
+      </motion.div>
 
       {/* Scroll Indicator */}
       <motion.div
-        style={{ opacity: useTransform(scrollY, [0, 200], [0.5, 0]) }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2, duration: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-80 pointer-events-none"
+        style={{ opacity: useTransform(scrollY, [0, 120], [0.4, 0]) }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none"
       >
-        <div className="w-[1px] h-12 bg-gradient-to-b from-transparent via-foreground/50 to-transparent" />
+        <div className="w-5 h-8 rounded-full border border-white/10 flex items-start justify-center p-1.5">
+          <motion.div
+            className="w-0.5 h-1.5 rounded-full bg-white/30"
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
       </motion.div>
     </section>
   );

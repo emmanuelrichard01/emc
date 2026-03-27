@@ -1,74 +1,59 @@
-import React, { useRef, useMemo } from "react";
+import React, { useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
-  Code2, Database, Terminal, Globe,
-  Cloud, Workflow, Layers, Container,
-  Command, ArrowRight, ShieldCheck, Activity,
-  Cpu, Zap, GitCommit
+  Terminal, Activity, ShieldCheck, Cpu, GitCommit, Workflow, Zap
 } from "lucide-react";
+import {
+  SiPython, SiTypescript, SiReact, SiPostgresql,
+  SiAmazonwebservices, SiDocker, SiApachekafka,
+  SiTerraform, SiNextdotjs, SiRedis,
+  SiSnowflake, SiDatabricks, SiApachespark,
+  SiApacheairflow
+} from "react-icons/si";
 
 /* -------------------------------------------------------------------------- */
-/* 1. DATA & CONSTANTS                                                        */
+/* DATA & CONSTANTS                                                           */
 /* -------------------------------------------------------------------------- */
 
-// Using reliable remote image to prevent build errors in this environment
 const AVATAR_URL = "https://i.ibb.co/Nzy2pvp/avatar.jpg";
-
 const ROLES = ["Data Engineer", "Software Developer", "Cloud Architect"];
 
 const TECH_STACK = [
-  { name: "Python", icon: Terminal },
-  { name: "TypeScript", icon: Code2 },
-  { name: "React", icon: Globe },
-  { name: "PostgreSQL", icon: Database },
-  { name: "AWS", icon: Cloud },
-  { name: "Docker", icon: Container },
-  { name: "Kafka", icon: Workflow },
-  { name: "Terraform", icon: Layers },
-  { name: "Next.js", icon: Zap },
-  { name: "Redis", icon: Database },
+  { name: "Python", icon: SiPython },
+  { name: "TypeScript", icon: SiTypescript },
+  { name: "React", icon: SiReact },
+  { name: "PostgreSQL", icon: SiPostgresql },
+  { name: "AWS", icon: SiAmazonwebservices },
+  { name: "Docker", icon: SiDocker },
+  { name: "Kafka", icon: SiApachekafka },
+  { name: "Terraform", icon: SiTerraform },
+  { name: "Next.js", icon: SiNextdotjs },
+  { name: "Redis", icon: SiRedis },
+  { name: "Snowflake", icon: SiSnowflake },
+  { name: "Databricks", icon: SiDatabricks },
+  { name: "Spark", icon: SiApachespark },
+  { name: "Airflow", icon: SiApacheairflow },
+  { name: "Dagster", icon: Workflow },
+  { name: "Redpanda", icon: Zap },
 ];
 
 /* -------------------------------------------------------------------------- */
-/* 2. UTILITY COMPONENTS                                                      */
+/* SHARED COMPONENTS                                                          */
 /* -------------------------------------------------------------------------- */
 
-// Consistent Background Grid (Matches Hero)
-const BackgroundGrid = () => (
-  <div className="absolute inset-0 -z-10 h-full w-full pointer-events-none overflow-hidden select-none">
-    <div className="absolute inset-0 bg-background transition-colors duration-300" />
-    <div className="absolute inset-0 bg-[radial-gradient(#00000015_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff10_1px,transparent_1px)] [background-size:20px_20px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]" />
-    {/* Ambient Glows positioned to continue the flow */}
-    <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-primary/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen" />
-    <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen" />
-  </div>
-);
-
-// Enhanced Text Reveal
 const RevealText = ({ text, className = "" }: { text: string; className?: string }) => {
-  const container = useRef(null);
-
-  const { scrollYProgress } = useScroll({
-    target: container,
-    offset: ["start 0.85", "end 0.6"]
-  });
+  const container = React.useRef(null);
+  const { scrollYProgress } = useScroll({ target: container, offset: ["start 0.9", "start 0.4"] });
 
   const words = text.split(" ");
-
-  // Child component so hooks (useTransform) are called in a component body rather than inside a callback
   const Word = ({ word, index, total }: { word: string; index: number; total: number }) => {
     const start = index / total;
-    const end = start + (1 / total);
+    const end = Math.min(start + (2 / total), 1);
     const opacity = useTransform(scrollYProgress, [start, end], [0.15, 1]);
-    const blur = useTransform(scrollYProgress, [start, end], [3, 0]);
-    const y = useTransform(scrollYProgress, [start, end], [4, 0]);
-    const filter = useTransform(blur, (v) => `blur(${v}px)`);
+    const blur = useTransform(scrollYProgress, [start, end], ["blur(4px)", "blur(0px)"]);
 
     return (
-      <motion.span
-        style={{ opacity, filter, y }}
-        className="relative will-change-transform inline-block mr-1.5"
-      >
+      <motion.span style={{ opacity, filter: blur }} className="relative inline-block mr-1.5">
         {word}
       </motion.span>
     );
@@ -83,25 +68,72 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
   );
 };
 
-// Animated Marquee
-const TechMarquee = () => {
+const GlassCard = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    setMousePosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
   return (
-    <div className="relative flex overflow-hidden w-full mask-linear-fade">
-      <div className="absolute left-0 top-0 bottom-0 w-8 md:w-12 bg-gradient-to-r from-white dark:from-neutral-950 to-transparent z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-8 md:w-12 bg-gradient-to-l from-white dark:from-neutral-950 to-transparent z-10" />
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      whileHover={{ y: -2 }}
+      className={`rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-xl overflow-hidden relative hover:border-white/[0.1] transition-colors duration-700 ${className}`}
+    >
+      {/* Mouse tracking spotlight */}
+      <div
+        className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 transition-opacity duration-500"
+        style={{
+          opacity: isHovered ? 1 : 0,
+          background: `radial-gradient(500px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(168,85,247,0.04), transparent 40%)`
+        }}
+      />
+      {/* Subtle top edge glow */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+
+      <div className="relative z-10 h-full w-full">
+        {children}
+      </div>
+    </motion.div>
+  );
+};
+
+const TechMarquee = () => {
+  const [isPaused, setIsPaused] = useState(false);
+
+  return (
+    <div
+      className="relative flex overflow-hidden w-full"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#080808] to-transparent z-10" />
+      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#080808] to-transparent z-10" />
 
       <motion.div
         animate={{ x: "-50%" }}
-        transition={{ duration: 30, ease: "linear", repeat: Infinity }}
-        className="flex flex-none gap-3 md:gap-4 pr-3 md:pr-4 items-center"
+        transition={{ duration: 40, ease: "linear", repeat: Infinity }}
+        style={{ animationPlayState: isPaused ? 'paused' : 'running' }}
+        className="flex flex-none gap-2.5 pr-2.5 items-center"
       >
         {[...TECH_STACK, ...TECH_STACK].map((tech, i) => (
           <div
             key={`${tech.name}-${i}`}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-100/80 dark:bg-white/5 border border-neutral-200 dark:border-white/5 backdrop-blur-sm text-muted-foreground whitespace-nowrap transition-colors hover:border-primary/20 hover:text-primary"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-white/35 whitespace-nowrap transition-all duration-300 hover:border-white/[0.1] hover:text-white/60 hover:bg-white/[0.04]"
           >
             <tech.icon className="w-3.5 h-3.5" />
-            <span className="text-xs font-mono font-medium">{tech.name}</span>
+            <span className="text-[10px] font-mono tracking-wider">{tech.name}</span>
           </div>
         ))}
       </motion.div>
@@ -110,222 +142,206 @@ const TechMarquee = () => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* 3. SYSTEM MODULES (RIGHT COLUMN)                                           */
+/* BENTO BOX MODULES                                                          */
 /* -------------------------------------------------------------------------- */
 
 const PhilosophyTerminal = () => (
-  <motion.div
-    whileHover={{ y: -2 }}
-    className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white/80 dark:bg-black/40 backdrop-blur-md overflow-hidden shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 group"
-  >
-    <div className="flex items-center justify-between px-4 py-3 bg-neutral-50/50 dark:bg-white/5 border-b border-neutral-200 dark:border-white/5">
-      <div className="flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-        <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
-        <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
-        <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
-      </div>
-      <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase flex items-center gap-2 opacity-70">
+  <GlassCard className="col-span-1 md:col-span-2">
+    <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.04]">
+      <div className="flex items-center gap-2 text-white/25">
         <Terminal className="w-3 h-3" />
-        system_values.ts
+        <span className="text-[10px] font-mono tracking-widest">system_values.ts</span>
       </div>
-      <div className="w-3" />
+      <div className="flex gap-1 opacity-40">
+        <div className="w-2 h-2 rounded-full bg-white/20" />
+        <div className="w-2 h-2 rounded-full bg-white/20" />
+        <div className="w-2 h-2 rounded-full bg-white/20" />
+      </div>
     </div>
-    <div className="p-4 md:p-6 font-mono text-[10px] md:text-xs leading-relaxed text-muted-foreground selection:bg-primary/20 selection:text-primary overflow-x-auto">
-      <div className="min-w-[300px]">
-        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">1</span>
+    <div className="p-5 overflow-x-auto scrollbar-hide">
+      <div className="min-w-[320px] font-mono text-[11px] leading-relaxed tracking-wide">
+        <div className="flex text-white/50">
+          <span className="w-6 text-right pr-4 text-white/15 select-none">1</span>
           <span>
-            <span className="text-purple-600 dark:text-purple-400">const</span>{' '}
-            <span className="text-blue-600 dark:text-blue-400">Engineering</span>{' '}
+            <span className="text-purple-400/80">const</span>{' '}
+            <span className="text-blue-400/80">Engineering</span>{' '}
             ={' '}
-            <span className="text-amber-600 dark:text-yellow-200">{'{'}</span>
+            <span className="text-white/30">{'{'}</span>
           </span>
         </div>
-        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">2</span>
+        <div className="flex text-white/50">
+          <span className="w-6 text-right pr-4 text-white/15 select-none">2</span>
           <span className="pl-4">
-            <span className="text-blue-500 dark:text-blue-300">priority</span>:{' '}
-            <span className="text-emerald-600 dark:text-emerald-400">"Reliability {'>'} Features"</span>,
+            <span className="text-sky-300/60">priority</span>:{' '}
+            <span className="text-emerald-400/70">"Reliability {'>'} Features"</span>,
           </span>
         </div>
-        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">3</span>
+        <div className="flex text-white/50">
+          <span className="w-6 text-right pr-4 text-white/15 select-none">3</span>
           <span className="pl-4">
-            <span className="text-blue-500 dark:text-blue-300">approach</span>:{' '}
-            <span className="text-emerald-600 dark:text-emerald-400">"System over Syntax"</span>,
+            <span className="text-sky-300/60">approach</span>:{' '}
+            <span className="text-emerald-400/70">"System over Syntax"</span>,
           </span>
         </div>
-        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">4</span>
+        <div className="flex text-white/50">
+          <span className="w-6 text-right pr-4 text-white/15 select-none">4</span>
           <span className="pl-4">
-            <span className="text-blue-500 dark:text-blue-300">goal</span>:{' '}
-            <span className="text-emerald-600 dark:text-emerald-400">"Predictable Scale"</span>
+            <span className="text-sky-300/60">goal</span>:{' '}
+            <span className="text-emerald-400/70">"Predictable Scale"</span>
           </span>
         </div>
-        <div className="flex group/line hover:bg-white/5 -mx-4 px-4">
-          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">5</span>
-          <span className="text-amber-600 dark:text-yellow-200">{'}'}</span>;
+        <div className="flex text-white/50">
+          <span className="w-6 text-right pr-4 text-white/15 select-none">5</span>
+          <span className="text-white/30">{'}'}</span>;
         </div>
-        <div className="flex mt-2 group/line hover:bg-white/5 -mx-4 px-4">
-          <span className="w-6 select-none text-right pr-4 opacity-20 group-hover/line:opacity-50">6</span>
-          <span className="text-neutral-400 dark:text-neutral-500 italic">// Optimization target: 99.9% Uptime</span>
+        <div className="flex mt-1.5">
+          <span className="w-6 text-right pr-4 text-white/15 select-none">6</span>
+          <span className="text-white/20 italic">// target: 99.9% uptime</span>
         </div>
       </div>
     </div>
-  </motion.div>
+  </GlassCard>
 );
 
 const MetricsModule = () => (
-  <div className="grid grid-cols-2 gap-4">
-    <motion.div
-      whileHover={{ y: -2 }}
-      className="p-5 rounded-xl border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm hover:border-primary/20 transition-all duration-300"
-    >
-      <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-        <Activity className="w-4 h-4" />
-        <span className="text-[10px] font-mono uppercase tracking-widest">Experience</span>
+  <>
+    <GlassCard className="col-span-1 p-5 flex flex-col justify-center min-h-[130px]">
+      <div className="flex items-center gap-2 mb-3 text-white/30">
+        <Activity className="w-3.5 h-3.5" />
+        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/40">Experience</span>
       </div>
-      <div className="text-3xl font-bold tracking-tight text-foreground">
-        4+ <span className="text-sm font-normal text-muted-foreground">Years</span>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-3xl lg:text-4xl font-light tracking-tight text-white/85">4+</span>
+        <span className="text-xs font-light text-white/30">Years</span>
       </div>
-    </motion.div>
-    <motion.div
-      whileHover={{ y: -2 }}
-      className="p-5 rounded-xl border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm hover:border-primary/20 transition-all duration-300"
-    >
-      <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-        <ShieldCheck className="w-4 h-4" />
-        <span className="text-[10px] font-mono uppercase tracking-widest">Projects</span>
+    </GlassCard>
+
+    <GlassCard className="col-span-1 p-5 flex flex-col justify-center min-h-[130px]">
+      <div className="flex items-center gap-2 mb-3 text-white/30">
+        <ShieldCheck className="w-3.5 h-3.5" />
+        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/40">Projects</span>
       </div>
-      <div className="text-3xl font-bold tracking-tight text-foreground">
-        20+ <span className="text-sm font-normal text-muted-foreground">Deployed</span>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-3xl lg:text-4xl font-light tracking-tight text-white/85">20+</span>
+        <span className="text-xs font-light text-white/30">Deployed</span>
       </div>
-    </motion.div>
-  </div>
+    </GlassCard>
+  </>
 );
 
 const GitActivity = () => {
-  // Config for responsive grid
-  const days = 7;
-
+  const rows = 5;
+  const cols = 42;
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm p-5 hover:border-primary/20 transition-all duration-300 overflow-hidden"
-    >
+    <GlassCard className="col-span-1 md:col-span-2 p-5 flex flex-col justify-center">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <GitCommit className="w-4 h-4" />
-          <span className="text-[10px] font-mono uppercase tracking-widest">Commit Topology</span>
+        <div className="flex items-center gap-2 text-white/30">
+          <GitCommit className="w-3.5 h-3.5" />
+          <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/40">Commit Activity</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-emerald-500/15 bg-emerald-500/[0.05]">
           <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
           </span>
-          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Live</span>
+          <span className="text-[8px] font-mono font-medium text-emerald-400/80 tracking-widest">ACTIVE</span>
         </div>
       </div>
 
-      {/* Responsive Container for the Grid - Mobile Friendly */}
-      <div className="relative w-full overflow-hidden mask-linear-fade">
-        {/* Scrollable Container */}
-        <div className="overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
-          <div className="flex flex-col gap-1 min-w-max opacity-80 hover:opacity-100 transition-opacity">
-            <div className="flex gap-[3px]">
-              {/* Generating data points - enough for horizontal scroll on mobile */}
-              {Array.from({ length: 28 * days }).map((_, i) => {
-                // deterministic pseudo-random based on index to avoid Math.random during render
-                const pseudo = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
-                const rand = pseudo - Math.floor(pseudo);
-                const level = Math.sin(i * 0.5) * Math.cos(i * 0.2) + rand * 0.5;
-                let bg = "bg-neutral-200 dark:bg-white/5";
-                if (level > 0.8) bg = "bg-emerald-500";
-                else if (level > 0.4) bg = "bg-emerald-500/60";
-                else if (level > 0) bg = "bg-emerald-500/30";
+      <div className="flex flex-col gap-[2px]">
+        {Array.from({ length: rows }).map((_, row) => (
+          <div key={row} className="flex gap-[2px]">
+            {Array.from({ length: cols }).map((_, col) => {
+              const i = row * cols + col;
+              const pseudo = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+              const rand = pseudo - Math.floor(pseudo);
+              const wave = Math.sin(col * 0.3 + row * 0.5) * 0.5 + 0.5;
+              const level = wave * 0.6 + rand * 0.4;
 
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: Math.min(i * 0.002, 1) }}
-                    className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-[1px] ${bg} flex-shrink-0`}
-                  />
-                );
-              })}
-            </div>
+              let bg = "bg-white/[0.03]";
+              if (level > 0.75) bg = "bg-emerald-500/70";
+              else if (level > 0.5) bg = "bg-emerald-500/40";
+              else if (level > 0.3) bg = "bg-emerald-500/20";
+
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: Math.min(col * 0.01 + row * 0.02, 1.5) }}
+                  className={`w-[6px] h-[6px] sm:w-[7px] sm:h-[7px] rounded-[2px] ${bg} flex-shrink-0`}
+                />
+              );
+            })}
           </div>
-        </div>
+        ))}
       </div>
-    </motion.div>
+    </GlassCard>
   );
 };
 
 const StackModule = () => (
-  <motion.div
-    whileHover={{ y: -2 }}
-    className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white/80 dark:bg-black/40 backdrop-blur-md p-6 transition-all duration-300 hover:border-primary/20"
-  >
-    <div className="mb-6 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <div className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </div>
-        <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-          Active Dependencies
-        </span>
+  <GlassCard className="col-span-1 md:col-span-2 p-5 flex flex-col justify-center">
+    <div className="mb-4 flex items-center justify-between">
+      <div className="flex items-center gap-2 text-white/30">
+        <Cpu className="w-3.5 h-3.5" />
+        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/40">Active Dependencies</span>
       </div>
-      <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
+      <span className="text-[9px] font-mono text-white/20 tracking-wide">{TECH_STACK.length} pkgs</span>
     </div>
-
-    <div className="-mx-6">
+    <div className="-mx-5">
       <TechMarquee />
     </div>
-  </motion.div>
+  </GlassCard>
 );
 
 /* -------------------------------------------------------------------------- */
-/* 4. MAIN COMPONENT                                                          */
+/* MAIN SECTION                                                               */
 /* -------------------------------------------------------------------------- */
 
 const About: React.FC = () => {
   return (
-    <section id="about" className="py-24 md:py-32 relative bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
+    <section id="about" data-section="about" className="pt-12 pb-24 md:pt-20 md:pb-32 relative">
+      <div className="container px-4 md:px-6 max-w-6xl mx-auto">
 
-      <BackgroundGrid />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
 
-      <div className="container px-4 md:px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
+          {/* LEFT COLUMN: IDENTITY / MANIFESTO (Sticky) */}
+          <div className="relative z-10 lg:col-span-5 lg:sticky lg:top-32 h-fit">
 
-          {/* LEFT COLUMN: THE MANIFESTO (Sticky on Desktop) */}
-          <div className="relative z-10 lg:sticky lg:top-24">
-
-            {/* Identity Header - Responsive Profile Image */}
+            {/* Identity Header */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               className="flex items-center gap-5 mb-10"
             >
-              <div className="relative group cursor-default shrink-0">
-                <div className="absolute -inset-0.5 bg-gradient-to-br from-primary to-blue-500 rounded-full opacity-30 group-hover:opacity-60 blur transition duration-500"></div>
-                {/* Enforcing consistent aspect ratio and circle shape with strict classes */}
-                <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-background ring-2 ring-primary/10 transition-transform group-hover:scale-[1.02] aspect-square">
+              <div className="relative shrink-0 group/avatar cursor-pointer">
+                {/* Animated Status Rings */}
+                <div className="absolute -inset-1.5 bg-gradient-to-r from-emerald-500/20 via-primary/20 to-emerald-500/20 rounded-full blur-md opacity-0 group-hover/avatar:opacity-100 animate-[spin_4s_linear_infinite] transition-opacity duration-700" />
+                <div className="absolute -inset-0.5 bg-gradient-to-tr from-emerald-500/30 via-transparent to-primary/30 rounded-full opacity-0 group-hover/avatar:opacity-100 animate-[spin_3s_linear_infinite] transition-opacity duration-500" />
+
+                {/* Avatar */}
+                <div className="relative z-10 w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border border-white/[0.08] bg-[#050505] transition-transform duration-500 group-hover/avatar:scale-[1.03]">
                   <img
                     src={AVATAR_URL}
                     alt="Emmanuel Moghalu"
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-white/[0.02] text-xl font-bold text-white/50">EM</div>';
+                    }}
                   />
                 </div>
               </div>
+
               <div>
-                <h3 className="text-xl font-bold tracking-tight text-foreground">Emmanuel (Richard) Moghalu</h3>
-                <div className="flex flex-wrap gap-2 mt-1.5">
+                <h3 className="text-base md:text-lg font-medium tracking-tight text-white/85">Emmanuel Moghalu</h3>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {ROLES.map((role) => (
-                    <span key={role} className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/10 whitespace-nowrap">
+                    <span key={role} className="text-[9px] font-mono tracking-wider px-2 py-0.5 rounded-full bg-white/[0.03] text-white/40 border border-white/[0.05]">
                       {role}
                     </span>
                   ))}
@@ -335,73 +351,45 @@ const About: React.FC = () => {
 
             {/* Positioning Statement */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <div className="flex items-center gap-2 text-primary font-mono text-xs tracking-widest mb-6 opacity-80">
-                <Terminal className="w-3.5 h-3.5" />
-                <span>IDENTITY_SIGNAL</span>
+              <div className="flex items-center gap-2 text-white/25 font-mono text-[9px] tracking-[0.2em] uppercase mb-5">
+                <Terminal className="w-3 h-3 text-primary/50" />
+                <span>Identity</span>
               </div>
 
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-8 leading-[1.15] text-foreground/90">
-                I design and engineer systems that prioritize <span className="text-muted-foreground/60">reliability</span>, <span className="text-muted-foreground/60">performance</span>, and <span className="text-muted-foreground/60">long-term maintainability.</span>
+              <h2 className="text-2xl md:text-3xl lg:text-[2.1rem] font-medium tracking-tight mb-8 leading-[1.25] text-white/80">
+                I design systems that prioritize <span className="text-white/95">reliability</span>, <span className="text-white/95">performance</span>, and <span className="text-white/95">scale.</span>
               </h2>
             </motion.div>
 
-            {/* Scroll Reveal Manifesto */}
-            <div className="space-y-8 text-lg text-muted-foreground leading-relaxed">
-              <RevealText
-                text="I approach software as a system — optimizing not just for features, but for failure modes, scale, and developer experience. I value boring, predictable architectures over clever abstractions that collapse under real-world load."
-                className="font-light"
-              />
-
-              <RevealText
-                text="I care deeply about correctness, clarity, and building things that remain understandable years after launch. Currently focused on building resilient data infrastructure and scalable frontend systems."
-                className="font-light"
-              />
+            {/* Bio Paragraphs */}
+            <div className="space-y-5 text-sm md:text-[15px] text-white/40 leading-relaxed max-w-lg mt-6 font-light">
+              <RevealText text="I approach software as a system — optimizing not just for features, but for failure modes, scalability, and developer experience. I value boring, predictable architectures over clever abstractions that collapse under real-world load." />
+              <RevealText text="I care deeply about correctness, clarity, and building things that remain understandable years after launch. Currently focused on building resilient data infrastructure and robust backend services." />
             </div>
+
           </div>
 
-          {/* RIGHT COLUMN: THE SYSTEM MODULES */}
-          <div className="relative z-10 space-y-6 lg:pt-8">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <PhilosophyTerminal />
-            </motion.div>
+          {/* RIGHT COLUMN: BENTO BOX GRID */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="relative z-10 lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-3 auto-rows-max"
+          >
+            {/* Ambient Back Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/[0.03] blur-[120px] rounded-full pointer-events-none -z-10" />
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <MetricsModule />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.35 }}
-            >
-              <GitActivity />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <StackModule />
-            </motion.div>
-          </div>
+            <PhilosophyTerminal />
+            <MetricsModule />
+            <GitActivity />
+            <StackModule />
+          </motion.div>
 
         </div>
       </div>

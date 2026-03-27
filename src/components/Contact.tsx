@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, Github, Linkedin, Twitter,
   ArrowUpRight, Copy, CheckCircle2,
-  MapPin, Terminal, MessageSquare
+  MapPin, Terminal, MessageSquare, Send, AlertCircle
 } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
@@ -35,6 +35,7 @@ const SOCIAL_LINKS = [
 ];
 
 const EMAIL = "emma.moghalu@gmail.com";
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/xwvwpaaz";
 
 /* -------------------------------------------------------------------------- */
 /* 2. UI COMPONENTS                                                           */
@@ -109,13 +110,115 @@ const EmailDisplay = () => {
   );
 };
 
+// Contact Form Component
+const ContactForm = () => {
+  const [formState, setFormState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormState('submitting');
+
+    try {
+      const res = await fetch(FORMSPREE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        setFormState('success');
+        setFormData({ name: '', email: '', message: '' });
+        setTimeout(() => setFormState('idle'), 4000);
+      } else {
+        setFormState('error');
+        setTimeout(() => setFormState('idle'), 4000);
+      }
+    } catch {
+      setFormState('error');
+      setTimeout(() => setFormState('idle'), 4000);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/50 bg-white/50 dark:bg-white/5 backdrop-blur-sm p-6 hover:border-primary/20 transition-all duration-300">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 mb-4">
+          <Terminal className="w-3.5 h-3.5" /> Direct Message
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all"
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            required
+            value={formData.email}
+            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+            className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all"
+          />
+        </div>
+
+        <textarea
+          name="message"
+          placeholder="What are you building?"
+          rows={4}
+          required
+          value={formData.message}
+          onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+          className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all resize-none"
+        />
+
+        <button
+          type="submit"
+          disabled={formState === 'submitting'}
+          className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background font-medium text-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <AnimatePresence mode="wait">
+            {formState === 'submitting' ? (
+              <motion.span key="sending" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                Transmitting...
+              </motion.span>
+            ) : formState === 'success' ? (
+              <motion.span key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+                Message Sent
+              </motion.span>
+            ) : formState === 'error' ? (
+              <motion.span key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-red-400">
+                <AlertCircle className="w-4 h-4" />
+                Transmission Failed
+              </motion.span>
+            ) : (
+              <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                Send Message
+                <Send className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+      </form>
+    </div>
+  );
+};
+
 /* -------------------------------------------------------------------------- */
 /* 3. MAIN COMPONENT                                                          */
 /* -------------------------------------------------------------------------- */
 
 const Contact: React.FC = () => {
   return (
-    <section id="contact" className="py-24 md:py-32 bg-background relative overflow-hidden">
+    <section id="contact" data-section="contact" className="py-24 md:py-32 bg-background relative overflow-hidden">
 
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-[radial-gradient(#00000010_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff05_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
@@ -141,6 +244,9 @@ const Contact: React.FC = () => {
             </div>
 
             <EmailDisplay />
+
+            {/* Contact Form */}
+            <ContactForm />
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/20 w-fit px-4 py-2 rounded-full border border-border/50">
               <span className="relative flex h-2 w-2">

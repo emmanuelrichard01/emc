@@ -251,6 +251,34 @@
   .animate-glow {
     animation: glow 2s ease-in-out infinite alternate;
   }
+
+  /* Animated gradient text */
+  .text-gradient-animated {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--foreground)) 0%,
+      hsl(var(--primary)) 30%,
+      hsl(280 100% 75%) 50%,
+      hsl(var(--primary)) 70%,
+      hsl(var(--foreground)) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-shift 4s ease-in-out infinite;
+  }
+
+  /* CSS-only noise/grain texture */
+  .noise-overlay {
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+  }
 }
 
 @keyframes fadeInUp {
@@ -343,6 +371,26 @@
 
 .konami-easter-egg {
   animation: konami 2s ease-in-out;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 200% center; }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .text-gradient-animated {
+    animation: none;
+    background-position: 0% center;
+  }
 }
 
 /* Blog Post Prose Styles */
@@ -481,34 +529,21 @@
     margin-left: 0;
     margin-right: 0;
   }
+}
 
-  .grid {
-    gap: 1rem;
-  }
-
-  .space-x-4 > * + * {
-    margin-left: 0.75rem;
-  }
-
-  .max-w-7xl {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  /* Fix hero social icons on mobile */
-  .fixed.right-6 {
-    right: 1rem;
-  }
-
-  /* Fix overflow issues */
-  .overflow-hidden {
-    overflow: hidden;
-  }
-
-  /* Ensure proper text wrapping */
-  .flex-wrap {
-    flex-wrap: wrap;
-  }
+/* Section divider — smooth gradient transition between sections */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--primary) / 0.2) 20%,
+    hsl(var(--primary) / 0.4) 50%,
+    hsl(var(--primary) / 0.2) 80%,
+    transparent 100%
+  );
+  margin: 0 auto;
+  max-width: 80%;
 }
 
 /* Sleek global scrollbar styling */
