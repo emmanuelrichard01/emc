@@ -8,8 +8,8 @@ import { ArrowRight, Download, Github, Linkedin, Twitter, Command } from 'lucide
 
 const TERMINAL_LINES = [
   { text: "deploying pipeline → us-east-1", duration: 3000, prefix: "$" },
-  { text: "building containers ....✓", duration: 2000, prefix: "›" },
-  { text: "pushing to registry ....✓", duration: 2000, prefix: "›" },
+  { text: "building containers .... ✓", duration: 2000, prefix: "›" },
+  { text: "pushing to registry .... ✓", duration: 2000, prefix: "›" },
   { text: "routing traffic to gateway", duration: 2200, prefix: "›" },
   { text: "all services operational", duration: 4000, prefix: "●" },
 ];
@@ -210,14 +210,14 @@ export default function Hero() {
       {/* Content */}
       <motion.div
         style={{ y, opacity }}
-        className="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto mt-20 md:mt-16 lg:mt-12"
+        className="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto mt-20 md:mt-16 lg:mt-24"
       >
         {/* Role Tag */}
         <motion.span
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="text-[11px] font-mono font-medium text-primary/80 tracking-[0.2em] uppercase mb-8"
+          className="text-[11px] font-mono font-medium text-primary/80 tracking-[0.2em] uppercase mb-4"
         >
           Data Engineer & Cloud Architect
         </motion.span>
@@ -249,7 +249,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="flex flex-wrap justify-center gap-4 mb-10"
+          className="flex flex-wrap justify-center gap-4 mb-8"
         >
           <button
             onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
