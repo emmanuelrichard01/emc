@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -184,7 +182,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-inter antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: 'cv11', 'ss01';
     scroll-behavior: smooth;
     overflow-x: hidden;
@@ -588,4 +586,19 @@ body,
   flex-direction: column;
   will-change: transform;
   animation: marquee-vert 32s linear infinite;
+}
+
+/***** Horizontal tech-stack marquee *****/
+@keyframes marquee-strip {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-strip {
+  will-change: transform;
+  animation: marquee-strip 40s linear infinite;
 }

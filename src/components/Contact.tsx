@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, Github, Linkedin, Twitter,
@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
-/* 1. DATA: CONNECTION PROTOCOLS                                              */
+/* 1. DATA                                                                    */
 /* -------------------------------------------------------------------------- */
 
 const SOCIAL_LINKS = [
@@ -16,39 +16,48 @@ const SOCIAL_LINKS = [
     label: "GitHub",
     context: "Production Code & Systems",
     href: "https://github.com/emmanuelrichard01",
-    icon: Github
+    icon: Github,
   },
   {
     id: "linkedin",
     label: "LinkedIn",
     context: "Professional Context & Roles",
     href: "https://www.linkedin.com/in/e-mc/",
-    icon: Linkedin
+    icon: Linkedin,
   },
   {
     id: "twitter",
     label: "X / Twitter",
     context: "Thoughts & Engineering",
     href: "https://x.com/_mrebuka",
-    icon: Twitter
-  }
+    icon: Twitter,
+  },
 ];
 
 const EMAIL = "emma.moghalu@gmail.com";
-const FORMSPREE_ENDPOINT = "https://formspree.io/f/xwvwpaaz";
+
+// FIX: Moved to environment variable. Add VITE_FORMSPREE_ENDPOINT to your .env file.
+// Fallback to the hardcoded value only if the env var is absent — keeps local dev
+// working without a .env while encouraging the right habit for production.
+const FORMSPREE_ENDPOINT =
+  import.meta.env.VITE_FORMSPREE_ENDPOINT ?? "https://formspree.io/f/xwvwpaaz";
 
 /* -------------------------------------------------------------------------- */
 /* 2. UI COMPONENTS                                                           */
 /* -------------------------------------------------------------------------- */
 
-// Copyable Email Component
 const EmailDisplay = () => {
   const [copied, setCopied] = useState(false);
+  // FIX: Store the timeout ref so we can cancel a previous timer before setting
+  // a new one. Without this, rapid clicks stack multiple setTimeouts and the
+  // "copied" state flickers as each one resolves.
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(EMAIL);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -59,36 +68,31 @@ const EmailDisplay = () => {
 
       <button
         onClick={handleCopy}
-        className="relative flex items-center gap-4 text-xl md:text-4xl font-bold text-foreground hover:text-primary transition-colors text-left"
+        className="relative flex items-center gap-3 text-left"
       >
-        <span className="border-b-2 border-transparent group-hover:border-primary/20 pb-1 transition-all">
+        {/*
+          FIX: Was text-xl md:text-4xl. At 36px, emma.moghalu@gmail.com is ~620px
+          wide — it clips at the container edge on 768–1024px viewports before the
+          layout goes 2-column. Clamped to text-lg md:text-2xl which renders cleanly
+          across the full breakpoint range.
+        */}
+        <span className="text-lg md:text-2xl font-bold text-foreground hover:text-primary transition-colors border-b-2 border-transparent group-hover:border-primary/20 pb-1 transition-all">
           {EMAIL}
         </span>
-        <div className="relative p-2 rounded-full bg-secondary/30 text-muted-foreground group-hover:text-foreground group-hover:bg-secondary/60 transition-all">
+        <div className="p-2 rounded-full bg-secondary/30 text-muted-foreground group-hover:text-foreground group-hover:bg-secondary/60 transition-all shrink-0">
           <AnimatePresence mode="wait">
             {copied ? (
-              <motion.div
-                key="check"
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-              >
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              <motion.div key="check" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               </motion.div>
             ) : (
-              <motion.div
-                key="copy"
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-              >
-                <Copy className="w-5 h-5" />
+              <motion.div key="copy" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}>
+                <Copy className="w-4 h-4" />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Tooltip Feedback */}
         <AnimatePresence>
           {copied && (
             <motion.div
@@ -97,7 +101,7 @@ const EmailDisplay = () => {
               exit={{ opacity: 0, y: 10 }}
               className="absolute left-full ml-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg whitespace-nowrap hidden sm:block"
             >
-              Copied to Clipboard!
+              Copied!
             </motion.div>
           )}
         </AnimatePresence>
@@ -110,7 +114,8 @@ const EmailDisplay = () => {
   );
 };
 
-// Contact Form Component
+/* -------------------------------------------------------------------------- */
+
 const ContactForm = () => {
   const [formState, setFormState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
@@ -122,7 +127,7 @@ const ContactForm = () => {
     try {
       const res = await fetch(FORMSPREE_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(formData),
       });
 
@@ -141,7 +146,12 @@ const ContactForm = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-white/50 dark:bg-white/5 backdrop-blur-sm p-6 hover:border-primary/20 transition-all duration-300">
+    /*
+      FIX: Was bg-white/50 — renders as a glaring bright card in a dark-mode-only
+      build. The design doc explicitly states light-mode CSS has been purged.
+      Changed to bg-white/5 for a consistent dark glass surface.
+    */
+    <div className="rounded-2xl border border-border/50 bg-white/5 backdrop-blur-sm p-6 hover:border-primary/20 transition-all duration-300">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 mb-4">
           <Terminal className="w-3.5 h-3.5" /> Direct Message
@@ -154,7 +164,7 @@ const ContactForm = () => {
             placeholder="Name"
             required
             value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all"
           />
           <input
@@ -163,7 +173,7 @@ const ContactForm = () => {
             placeholder="Email"
             required
             value={formData.email}
-            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
             className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all"
           />
         </div>
@@ -174,7 +184,7 @@ const ContactForm = () => {
           rows={4}
           required
           value={formData.message}
-          onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+          onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
           className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all resize-none"
         />
 
@@ -216,6 +226,32 @@ const ContactForm = () => {
 /* 3. MAIN COMPONENT                                                          */
 /* -------------------------------------------------------------------------- */
 
+/*
+  LAYOUT RESTRUCTURE:
+  The original layout put the heading, email, contact form, AND availability
+  badge all in the left column — making it roughly 2× taller than the right
+  column which only held 3 social links. This created a severe height imbalance
+  on desktop and visual confusion between two competing contact methods sharing
+  the same column.
+
+  New structure:
+  ┌─────────────────────────────┬─────────────────────────────┐
+  │ LEFT — Intent & Identity    │ RIGHT — Action              │
+  │                             │                             │
+  │ Section label               │ ContactForm                 │
+  │ H2 headline                 │                             │
+  │ Description                 │ ── divider ──               │
+  │ EmailDisplay                │ Social links (compact)      │
+  │ Availability badge          │                             │
+  └─────────────────────────────┴─────────────────────────────┘
+
+  The left column is now purely about framing intent and providing the direct
+  email line. The right column is purely about action — send a message or find
+  the right channel. The columns balance visually at all viewport widths.
+
+  Location: removed from Contact (it's already in the Footer). One source of truth.
+*/
+
 const Contact: React.FC = () => {
   return (
     <section id="contact" data-section="contact" className="py-24 md:py-32 bg-background relative overflow-hidden">
@@ -227,7 +263,7 @@ const Contact: React.FC = () => {
       <div className="container px-4 md:px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
 
-          {/* LEFT: INTENT FRAMING */}
+          {/* LEFT: Intent & Identity */}
           <div className="space-y-12">
             <div>
               <div className="flex items-center gap-2 text-primary font-mono text-xs tracking-widest mb-6">
@@ -239,67 +275,71 @@ const Contact: React.FC = () => {
                 <span className="text-muted-foreground">solid.</span>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                I'm interested in meaningful work—resilient systems, thoughtful teams, and problems worth solving. If you're building a serious product or engineering team, I'd love to hear from you.
+                I'm interested in meaningful work — resilient systems, thoughtful teams, and problems worth solving. If you're building a serious product or engineering team, I'd love to hear from you.
               </p>
             </div>
 
             <EmailDisplay />
 
-            {/* Contact Form */}
-            <ContactForm />
-
             <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/20 w-fit px-4 py-2 rounded-full border border-border/50">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
               <span>Available for Full-time Roles & Select Projects</span>
             </div>
           </div>
 
-          {/* RIGHT: CONTEXTUAL LINKS */}
-          <div className="lg:pl-12 flex flex-col justify-center space-y-8">
-            <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-2">
-              Additional Protocols
+          {/* RIGHT: Action — form + channels */}
+          <div className="flex flex-col gap-8">
+
+            {/* Contact form now lives here, giving it full column width and
+                visual weight equivalent to the left column's content block. */}
+            <ContactForm />
+
+            {/* Divider with label */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-border/50" />
+              {/*
+                FIX: "Additional Protocols" read as filler padding.
+                Using a code comment style that fits the terminal aesthetic.
+              */}
+              <span className="text-xs font-mono text-muted-foreground/60 whitespace-nowrap">
+                // find_me_elsewhere
+              </span>
+              <div className="flex-1 h-px bg-border/50" />
             </div>
 
-            <div className="space-y-4">
+            {/* Compact social links — reduced padding vs the original large cards
+                since this column now has a primary action (the form) above.
+                The links support rather than compete. */}
+            <div className="space-y-2">
               {SOCIAL_LINKS.map((link) => (
                 <a
                   key={link.id}
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-center justify-between p-5 rounded-xl border border-border/50 bg-secondary/5 hover:bg-secondary/20 hover:border-primary/20 transition-all duration-300"
+                  className="group flex items-center justify-between p-4 rounded-xl border border-border/50 bg-secondary/5 hover:bg-secondary/20 hover:border-primary/20 transition-all duration-300"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="p-2.5 rounded-lg bg-background border border-border text-muted-foreground group-hover:text-primary group-hover:border-primary/30 transition-colors">
-                      <link.icon className="w-5 h-5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground group-hover:text-primary group-hover:border-primary/30 transition-colors">
+                      <link.icon className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                      <div className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
                         {link.label}
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {link.context}
                       </div>
                     </div>
                   </div>
-                  <ArrowUpRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
+                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                 </a>
               ))}
             </div>
 
-            {/* Location Signal */}
-            <div className="mt-8 pt-8 border-t border-border/50 flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span>Abuja, Nigeria (Remote Ready)</span>
-              </div>
-              <div className="font-mono text-xs opacity-50">
-                UTC+1
-              </div>
-            </div>
           </div>
 
         </div>

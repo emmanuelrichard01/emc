@@ -1,23 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * Tracks the current scroll position and returns the ID of the section
  * currently occupying the main viewing area.
+ * 
+ * Uses requestAnimationFrame for frame-aligned updates (no jank on low-end devices).
  */
 export function useSectionObserver() {
   const [activeSection, setActiveSection] = useState<string>('home');
+  const rafId = useRef<number>(0);
 
   useEffect(() => {
-    const handleScroll = () => {
+    const update = () => {
       const sections = Array.from(document.querySelectorAll('[data-section]'));
       if (!sections.length) return;
 
       let current = 'home';
-      
+
       sections.forEach((section) => {
         const rect = section.getBoundingClientRect();
-        // If the top of the section is above the 40% vertical mark of the viewport, 
-        // consider it the active section. As we map sequentially, the deepest valid section wins.
+        // If the top of the section is above the 40% vertical mark of the viewport,
+        // consider it the active section. The deepest valid section wins.
         if (rect.top <= window.innerHeight * 0.4) {
           current = section.getAttribute('data-section') || current;
         }
@@ -26,13 +29,19 @@ export function useSectionObserver() {
       setActiveSection(current);
     };
 
+    const handleScroll = () => {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = requestAnimationFrame(update);
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // Initial check (with slight delay to ensure DOM and animations have settled)
-    const timeout = setTimeout(handleScroll, 100);
+
+    // Initial check (slight delay for DOM/animations to settle)
+    const timeout = setTimeout(update, 100);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      cancelAnimationFrame(rafId.current);
       clearTimeout(timeout);
     };
   }, []);

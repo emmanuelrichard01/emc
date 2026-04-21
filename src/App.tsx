@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 
 // Components with relative paths to avoid alias resolution issues
@@ -30,6 +30,26 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Bootloader for route code-splitting
+const BootLoader = () => (
+  <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505]">
+    <div className="flex flex-col items-center gap-4">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        className="w-5 h-5 border-2 border-white/10 border-t-purple-500 rounded-full"
+      />
+      <div className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-2">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-500 opacity-50" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500" />
+        </span>
+        Initializing system...
+      </div>
+    </div>
+  </div>
+);
 
 // Layout Wrapper to handle persistent UI elements
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
@@ -75,7 +95,7 @@ const App = () => (
 
             <BrowserRouter>
               <MainLayout>
-                <Suspense fallback={<div className="h-screen w-full flex items-center justify-center text-muted-foreground text-sm font-mono">Initializing kernel...</div>}>
+                <Suspense fallback={<BootLoader />}>
                   <Routes>
                     <Route path="/" element={<Index />} />
                     {/* <Route path="/work" element={<ProjectsArchive />} />

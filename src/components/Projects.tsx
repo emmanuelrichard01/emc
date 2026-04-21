@@ -1,523 +1,433 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
+import { motion } from "framer-motion";
 import {
-  Database, Server, Globe, Cpu,
-  GitBranch, AlertTriangle, CheckCircle2,
+  Database, Globe, Cpu,
   ArrowRight, Terminal, Layers,
-  Layout, Activity, Lock, Zap,
-  MessageSquare, ShoppingCart, BarChart3,
-  Container, BookOpen, Brain, ExternalLink, Github
+  Zap, BarChart3, Container,
+  BookOpen, Brain, MessageSquare,
+  ExternalLink, Github, Truck,
+  Factory, DollarSign
 } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
-/* 1. DATA: ENGINEERING CASE STUDIES                                          */
+/* DATA: REAL PROJECTS                                                        */
 /* -------------------------------------------------------------------------- */
 
 const PROJECTS = [
   {
+    id: "logistics-watchtower",
+    featured: true,
+    title: "Logistics Watchtower",
+    subtitle: "Real-Time Cold Chain Fleet Monitoring",
+    role: "Data Engineer",
+    timeline: "2026",
+    github: "https://github.com/emmanuelrichard01/logistics-watchtower",
+    demo: null,
+    context:
+      "Cold chain logistics fail when cargo exceeds safe temperature thresholds. Traditional monitoring identifies spoilage only after delivery — too late for intervention.",
+    solution:
+      "A real-time telemetry pipeline streaming IoT data from a simulated fleet through Redpanda (Kafka), processing 8 alert rules with sub-200ms latency, and pushing updates to a live dashboard via WebSocket.",
+    decisions: [
+      {
+        title: "Redpanda over Kafka",
+        detail:
+          "C++ core eliminates JVM pauses. Single-binary deployment with full Kafka API compatibility — reduced tail latency by 40%.",
+      },
+      {
+        title: "Physics-Based Simulation",
+        detail:
+          "Waypoint interpolation with Haversine distance, road-type speed limits, and deterministic failure injection for reproducible testing.",
+      },
+      {
+        title: "Event-Driven over Polling",
+        detail:
+          "WebSocket transport for sub-second map updates. REST polling would add latency and server load for a real-time use case.",
+      },
+    ],
+    stack: ["Python", "FastAPI", "Redpanda", "Docker", "WebSocket", "Prometheus"],
+  },
+  {
+    id: "modern-warehouse",
+    featured: true,
+    title: "Modern Data Warehouse",
+    subtitle: "1.5M+ Record Analytics Platform",
+    role: "Data Engineer",
+    timeline: "2025",
+    github: "https://github.com/emmanuelrichard01/modern-warehouse",
+    demo: null,
+    context:
+      "E-commerce analytics required processing 1.5M+ records across 9 datasets (orders, payments, reviews, geospatial) with full data quality guarantees and reproducible transformations.",
+    solution:
+      "A production-ready Medallion Architecture (Bronze→Silver→Gold) orchestrated by Dagster, transformed via dbt, stored in DuckDB, and served through an interactive Plotly dashboard with 9 visualizations.",
+    decisions: [
+      {
+        title: "DuckDB over Postgres",
+        detail:
+          "Billing data is analytical (SUMs, GROUP BYs), not transactional. DuckDB is orders of magnitude faster for aggregations with zero management overhead.",
+      },
+      {
+        title: "21 dbt Schema Tests",
+        detail:
+          "Primary keys, foreign keys, accepted values, and relationship tests ensure no orphan orders, no negative revenue, and complete dimensional integrity.",
+      },
+      {
+        title: "Incremental Models",
+        detail:
+          "1M+ geolocation records processed incrementally — only new/changed rows are transformed on each run, cutting pipeline time significantly.",
+      },
+    ],
+    stack: ["Python", "Dagster", "dbt", "DuckDB", "Docker", "Plotly"],
+  },
+  {
+    id: "cloud-bill-hunter",
+    featured: false,
+    title: "Cloud Bill Hunter",
+    subtitle: "FinOps Intelligence Platform",
+    role: "Data Engineer",
+    timeline: "2025",
+    github: "https://github.com/emmanuelrichard01/cloud-bill-hunter",
+    demo: null,
+    context:
+      "20–30% of cloud spend is waste from orphaned or idle resources. Detecting this requires joining billing data with usage metrics — typically siloed with different schemas and granularity.",
+    solution:
+      "An event-driven microservices platform that ingests AWS CUR files, applies Medallion ETL (Bronze→Silver→Gold), and surfaces 'Zombie Infrastructure' via a Streamlit dashboard and headless API.",
+    decisions: [
+      {
+        title: "Watchdog over Cron",
+        detail:
+          "File-event listeners trigger the pipeline the millisecond a billing file arrives — zero polling latency, simulating AWS Lambda triggers.",
+      },
+      {
+        title: "API-First Architecture",
+        detail:
+          "Logic lives in FastAPI, UI is just a consumer. Enables integration with Slack bots, Jira workflows, and CI/CD gates without refactoring core logic.",
+      },
+      {
+        title: "Idempotent Ingestion",
+        detail:
+          "Each run is fingerprinted by file hash + billing period. Re-uploading the same bill never duplicates costs — critical for financial accuracy.",
+      },
+    ],
+    stack: ["Python", "FastAPI", "DuckDB", "Docker", "Streamlit"],
+  },
+  {
+    id: "ultra-news",
+    featured: false,
+    title: "ULTRA-NEWS V2",
+    subtitle: "Production-Grade News Aggregation Platform",
+    role: "Full Stack Engineer",
+    timeline: "2025",
+    github: "https://github.com/emmanuelrichard01/ULTRA-NEWS",
+    demo: null,
+    context:
+      "Modern news aggregators suffer from information overload — cluttered card layouts, intrusive ads, and poor signal-to-noise ratios. Users want density without cognitive fatigue.",
+    solution:
+      "An 'Information Instrument' built with Django 5 + Next.js 16. RSS ingestion with deep content scraping (Trafilatura), ISR edge caching at 60s revalidation, and an editorial-grade UI optimized for rapid consumption.",
+    decisions: [
+      {
+        title: "PostgreSQL TSVector over ElasticSearch",
+        detail:
+          "Database-level full-text search eliminates an entire infrastructure dependency while delivering sub-10ms query times with proper indexing.",
+      },
+      {
+        title: "GitHub Actions over Celery",
+        detail:
+          "Free-tier compatible ingestion — Actions triggers authenticated API endpoint every 30 min, spawning a background thread. Zero worker cost.",
+      },
+      {
+        title: "ISR with 60s Revalidation",
+        detail:
+          "Sub-100ms responses via edge caching without real-time complexity. News tolerance for 60s staleness makes this the right tradeoff.",
+      },
+    ],
+    stack: ["Python", "Django", "Next.js", "PostgreSQL", "Redis", "Docker"],
+  },
+  {
     id: "crypto-pipeline",
+    featured: false,
     title: "Crypto Data Pipeline",
     subtitle: "End-to-End Market Analytics Engine",
     role: "Data Engineer",
     timeline: "Q3 2025",
     github: "https://github.com/emmanuelrichard01/crypto-data-pipeline",
     demo: null,
-    problem: "Cryptocurrency market data is notoriously noisy and fragmented. Traders and analysts lacked a unified, trustworthy source of truth that combined real-time ingestion with rigorous data quality checks.",
-    system: "A containerized ETL pipeline orchestrated via Make/Docker. Ingests raw API data from CoinGecko, validates schema in PostgreSQL, transforms logic via dbt, and serves insights through Streamlit and Grafana.",
-    architecture: [
+    context:
+      "Cryptocurrency market data is notoriously noisy and fragmented. Traders and analysts lacked a unified, trustworthy source of truth with rigorous data quality checks.",
+    solution:
+      "A containerized ETL pipeline orchestrated via Make/Docker. Ingests raw API data from CoinGecko, validates schema in PostgreSQL, transforms via dbt, and serves insights through Streamlit and Grafana.",
+    decisions: [
       {
         title: "Resilient Extraction",
-        detail: "Implemented an asynchronous extractor service with exponential backoff retry logic to handle flaky public APIs without pipeline failure."
+        detail:
+          "Asynchronous extractor with exponential backoff retry logic to handle flaky public APIs without pipeline failure.",
       },
       {
         title: "Quality as Code",
-        detail: "Leveraged dbt for in-pipeline testing (schema validation, null checks) to ensure downstream dashboards only ever display trusted data."
-      }
-    ],
-    tradeoffs: [
-      "Chose batch extraction (hourly) over streaming to respect free-tier API rate limits while maintaining sufficient granularity for trend analysis.",
-      "Self-hosted PostgreSQL reduces costs but requires manual maintenance of storage scaling compared to managed cloud warehouses."
+        detail:
+          "dbt for in-pipeline testing (schema validation, null checks) — downstream dashboards only display trusted data.",
+      },
+      {
+        title: "Batch over Stream",
+        detail:
+          "Hourly batch extraction over streaming to respect free-tier API rate limits while maintaining sufficient granularity.",
+      },
     ],
     stack: ["Python", "dbt", "PostgreSQL", "Docker", "Streamlit", "Grafana"],
-    diagram: {
-      steps: [
-        { icon: Globe, label: "CoinGecko" },
-        { icon: Container, label: "Extractor" },
-        { icon: Database, label: "Postgres" },
-        { icon: Layers, label: "dbt" },
-        { icon: BarChart3, label: "Grafana" },
-      ]
-    }
   },
   {
     id: "caritas-scholar",
+    featured: false,
     title: "CARITAS AI Scholar",
-    subtitle: "Intelligent Academic Intelligence Platform",
+    subtitle: "Intelligent Academic Platform",
     role: "Full Stack Engineer",
     timeline: "Q2 2025",
     github: "https://github.com/emmanuelrichard01/caritas-ai-scholar",
     demo: "https://caritas-ai-scholar.vercel.app/",
-    problem: "Students struggle with disjointed study tools and 'hallucinating' generic AI. They needed a unified platform that could provide instant, context-aware assistance grounded in their actual course materials.",
-    system: "A holistic React/Supabase platform. Combines a dynamic study scheduler, RAG-based document analysis (PDF to Quiz), and multi-model AI tutoring into a single responsive interface.",
-    architecture: [
+    context:
+      "Students struggle with disjointed study tools and hallucinating generic AI. They needed a unified platform providing context-aware assistance grounded in their actual course materials.",
+    solution:
+      "A holistic React/Supabase platform combining a dynamic study scheduler, RAG-based document analysis (PDF to Quiz), and multi-model AI tutoring in a single responsive interface.",
+    decisions: [
       {
         title: "Edge-First AI",
-        detail: "Offloaded heavy LLM processing (summaries, quiz generation) to Supabase Edge Functions (Deno) to maintain UI responsiveness and secure API keys."
+        detail:
+          "Offloaded heavy LLM processing to Supabase Edge Functions (Deno) to maintain UI responsiveness and secure API keys.",
       },
       {
         title: "Vector Context (RAG)",
-        detail: "Implemented a RAG pipeline using pgvector. Course documents are chunked, embedded, and stored, allowing the AI to 'read' and cite user-uploaded textbooks."
-      }
-    ],
-    tradeoffs: [
-      "Optimized for real-time interactivity using Supabase subscriptions, creating a strict dependency on WebSocket stability.",
-      "Balancing token costs vs context window size required complex text chunking strategies for large PDF uploads."
+        detail:
+          "Course documents chunked, embedded via pgvector, and stored — allowing the AI to cite user-uploaded textbooks.",
+      },
+      {
+        title: "Token Cost Control",
+        detail:
+          "Complex text chunking strategies for large PDF uploads to balance context window size against per-request token costs.",
+      },
     ],
     stack: ["TypeScript", "React", "Supabase", "OpenAI", "Tailwind", "RAG"],
-    diagram: {
-      steps: [
-        { icon: BookOpen, label: "Docs" },
-        { icon: Zap, label: "Edge Fn" },
-        { icon: Database, label: "Vectors" },
-        { icon: Brain, label: "LLM" },
-        { icon: MessageSquare, label: "Chat" },
-      ]
-    }
-  },
-  {
-    id: "nebula",
-    title: "Nebula E-commerce",
-    subtitle: "High-Scale Headless Retail Platform",
-    role: "System Architect",
-    timeline: "Q2 2023",
-    // Placeholder link for demo purposes (replace with actual if available)
-    github: "https://github.com/emmanuelrichard01",
-    demo: null,
-    problem: "Legacy monolithic architecture suffered cascading failures during Black Friday traffic spikes (10k+ concurrent users), resulting in significant revenue loss.",
-    system: "A decomposed microservices architecture. Decoupled the storefront (Next.js) from the inventory engine using an event bus (Redis/BullMQ) to handle bursty write loads.",
-    architecture: [
-      {
-        title: "Async Inventory",
-        detail: "Optimistic UI updates combined with an eventual consistency model for inventory reservations prevented database locks during flash sales."
-      },
-      {
-        title: "Edge Caching",
-        detail: "Aggressive Stale-While-Revalidate caching strategy at the CDN edge reduced origin server load by 85%."
-      }
-    ],
-    tradeoffs: [
-      "Strict consistency sacrificed for availability (AP over CP in CAP theorem) during peak load.",
-      "Distributed tracing (OpenTelemetry) became mandatory to debug inter-service latency."
-    ],
-    stack: ["Next.js", "Redis", "Kubernetes", "GraphQL", "Node.js"],
-    diagram: {
-      steps: [
-        { icon: ShoppingCart, label: "Store" },
-        { icon: Globe, label: "CDN" },
-        { icon: Zap, label: "Queue" },
-        { icon: Server, label: "Inventory" },
-      ]
-    }
-  },
-  {
-    id: "neural-code",
-    title: "Neural Code Reviewer",
-    subtitle: "LLM-Powered Static Analysis",
-    role: "ML Engineer",
-    timeline: "2023",
-    // Placeholder link for demo purposes
-    github: "https://github.com/emmanuelrichard01",
-    demo: null,
-    problem: "Senior engineers spent 15+ hours/week on trivial code reviews. Existing linters caught syntax errors but missed semantic bugs and optimization opportunities.",
-    system: "An automated PR agent that combines AST parsing with a fine-tuned LLM. It generates context-aware suggestions and detects potential security vulnerabilities before human review.",
-    architecture: [
-      {
-        title: "Context Window Optimization",
-        detail: "Implemented RAG (Retrieval Augmented Generation) to fetch only relevant file dependencies, fitting large codebases into limited token windows."
-      },
-      {
-        title: "Hybrid Analysis",
-        detail: "Uses deterministic static analysis for syntax (FastAPI) and probabilistic models (TensorFlow) for logic, reducing hallucination rates."
-      }
-    ],
-    tradeoffs: [
-      "Inference latency (~5s) is higher than traditional linters.",
-      "Requires constant model fine-tuning to adapt to team-specific coding styles."
-    ],
-    stack: ["Python", "TensorFlow", "FastAPI", "AWS Lambda", "LangChain"],
-    diagram: {
-      steps: [
-        { icon: GitBranch, label: "Pull Req" },
-        { icon: Terminal, label: "Parser" },
-        { icon: Cpu, label: "LLM" },
-        { icon: MessageSquare, label: "Comment" },
-      ]
-    }
-  },
-  {
-    id: "helix",
-    title: "Helix",
-    subtitle: "Distributed Event Streaming Platform",
-    role: "Lead Data Engineer",
-    timeline: "Q3 2024",
-    // Placeholder link for demo purposes (replace with actual if available)
-    github: "https://github.com/emmanuelrichard01",
-    demo: null,
-    // 1. Problem Framing
-    problem: "Financial clients experienced 400ms+ latency in trade execution due to monolithic REST API bottlenecks and database locks during high-volume events.",
-    // 2. System Overview
-    system: "Ingests 50k+ events/sec via WebSocket edge nodes, buffers in Redpanda (Kafka), processes stateful aggregations in Flink, and pushes updates to client dashboards via SSE.",
-    // 3. Architecture & Decisions
-    architecture: [
-      {
-        title: "Why Redpanda?",
-        detail: "Chosen over standard Kafka for its C++ architecture (no JVM pauses) and single-binary deployment, reducing tail latency by 40%."
-      },
-      {
-        title: "Pattern: CQRS",
-        detail: "Decoupled write (ingestion) and read (analytics) paths to ensure dashboard queries never block trade execution."
-      }
-    ],
-    // 4. Tradeoffs
-    tradeoffs: [
-      "Sacrificed immediate consistency for eventual consistency (max 100ms lag).",
-      "Increased operational complexity with Flink cluster management vs simple cron jobs."
-    ],
-    stack: ["Go", "Redpanda", "Flink", "TimescaleDB", "gRPC"],
-    // Visualization Data (Abstract Schema)
-    diagram: {
-      steps: [
-        { icon: Globe, label: "Edge Clients" },
-        { icon: Server, label: "Go Ingest" },
-        { icon: Layers, label: "Redpanda" },
-        { icon: Database, label: "Timescale" },
-      ]
-    }
-  },
-  {
-    id: "sentinel",
-    title: "Sentinel",
-    subtitle: "Infrastructure Observability Engine",
-    role: "Backend Architect",
-    timeline: "Q1 2025",
-    // Placeholder link for demo purposes (replace with actual if available)
-    github: "https://github.com/emmanuelrichard01",
-    demo: null,
-    problem: "Production incidents took 45+ mins to diagnose because logs, metrics, and traces were scattered across three different disjointed tools.",
-    system: "A unified telemetry pipeline that correlates logs (Loki), metrics (Prometheus), and traces (Tempo) into a single 'Graph' view for instant root cause analysis.",
-    architecture: [
-      {
-        title: "Columnar Storage",
-        detail: "Utilized ClickHouse for log storage to enable sub-second aggregations over billions of rows, replacing expensive ElasticSearch clusters."
-      },
-      {
-        title: "Sampling Strategy",
-        detail: "Implemented dynamic tail-based sampling to capture 100% of error traces while discarding 95% of healthy traffic to manage costs."
-      }
-    ],
-    tradeoffs: [
-      "High storage requirements for raw trace data during peak hours.",
-      "Custom query language learning curve for team members used to SQL."
-    ],
-    stack: ["Rust", "ClickHouse", "Grafana", "Kubernetes", "OpenTelemetry"],
-    diagram: {
-      steps: [
-        { icon: Activity, label: "Services" },
-        { icon: Cpu, label: "O-Tel Col" },
-        { icon: GitBranch, label: "Router" },
-        { icon: Lock, label: "Storage" },
-      ]
-    }
   },
 ];
 
 /* -------------------------------------------------------------------------- */
-/* 2. UI COMPONENTS                                                           */
+/* PROJECT CARD — Inline Narrative (no tabs)                                  */
 /* -------------------------------------------------------------------------- */
 
-// Refined Animated Schematic - SUBTLE & RESPONSIVE
-type SchematicStep = {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  label: string;
-};
-const Schematic: React.FC<{ steps: SchematicStep[] }> = ({ steps }) => {
-  return (
-    <div className="relative flex items-center justify-between w-full h-24 md:h-32 px-4 md:px-8 bg-neutral-100/50 dark:bg-white/5 rounded-xl border border-neutral-200 dark:border-white/10 overflow-hidden select-none group/schematic">
-      {/* Technical Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_49%,rgba(0,0,0,0.03)_50%,transparent_51%)] dark:bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.03)_50%,transparent_51%)] bg-[size:20px_100%]" />
-
-      {/* Connecting Line Container */}
-      <div className="absolute top-1/2 left-8 right-8 md:left-10 md:right-10 h-px -translate-y-1/2 z-0">
-        {/* Static Path */}
-        <div className="absolute inset-0 border-t border-dashed border-muted-foreground/20" />
-
-        {/* Animated Data Packets - Ultra Subtle */}
-        <motion.div
-          className="absolute top-1/2 -translate-y-1/2 h-[1.5px] w-12 bg-gradient-to-r from-transparent via-primary/40 to-transparent blur-[0.5px]"
-          animate={{ left: ["-20%", "120%"] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-        />
-      </div>
-
-      {/* Nodes */}
-      {steps.map((step, i) => (
-        <div key={i} className="relative z-10 flex flex-col items-center gap-2 md:gap-3 group/node">
-          <div className="relative">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-background border border-border flex items-center justify-center shadow-sm transition-all duration-500 group-hover/schematic:border-primary/20 group-hover/schematic:shadow-[0_0_15px_-3px_rgba(var(--primary-rgb),0.1)]">
-              <step.icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground transition-colors duration-500 group-hover/schematic:text-primary" />
-            </div>
-          </div>
-          <span className="hidden md:block text-[9px] font-mono font-medium text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded border border-transparent group-hover/schematic:border-border/30 transition-colors whitespace-nowrap">
-            {step.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-/* -------------------------------------------------------------------------- */
-/* 3. PROJECT CARD COMPONENT                                                  */
-/* -------------------------------------------------------------------------- */
-
-const ProjectCard = ({ project, index }: { project: typeof PROJECTS[0], index: number }) => {
-  const [activeTab, setActiveTab] = useState<"problem" | "architecture" | "tradeoffs">("problem");
-
+const ProjectCard = ({
+  project,
+  index,
+}: {
+  project: (typeof PROJECTS)[0];
+  index: number;
+}) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group relative w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 p-5 md:p-8 rounded-2xl md:rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 backdrop-blur-sm overflow-hidden hover:shadow-[0_0_40px_-10px_rgba(var(--primary-rgb,188,19,254),0.12)] hover:border-primary/20 transition-all duration-500"
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      className={`group relative w-full rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-xl overflow-hidden hover:border-white/[0.1] transition-all duration-500 ${
+        project.featured ? "p-6 md:p-10" : "p-6 md:p-8"
+      }`}
     >
-      {/* Spotlight Hover Effect - Desktop Only */}
-      <div className="absolute -inset-px bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 lg:group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl" />
+      {/* Top edge glow */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent pointer-events-none" />
 
-      {/* LEFT COLUMN: Header & Visuals (Col Span 5) */}
-      <div className="lg:col-span-5 flex flex-col h-full gap-6 md:gap-8 order-1">
+      {/* Hover spotlight */}
+      <div className="absolute -inset-px bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
+
+      {/* Header */}
+      <div className="relative z-10 flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
         <div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-5">
-            <span className="px-2 py-1 rounded bg-primary/10 text-primary text-[9px] md:text-[10px] font-mono font-bold uppercase tracking-widest border border-primary/20">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[9px] font-mono font-semibold uppercase tracking-[0.15em] border border-primary/20">
               {project.role}
             </span>
-            <span className="text-[9px] md:text-[10px] font-mono text-muted-foreground border border-border px-2 py-1 rounded">
+            <span className="text-[9px] font-mono text-white/30 border border-white/[0.06] px-2.5 py-1 rounded-full">
               {project.timeline}
             </span>
           </div>
-          <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-2 leading-tight">
+          <h3
+            className={`font-bold text-white/90 leading-tight mb-1.5 ${
+              project.featured
+                ? "text-2xl md:text-3xl"
+                : "text-xl md:text-2xl"
+            }`}
+          >
             {project.title}
           </h3>
-          <p className="text-base md:text-lg text-muted-foreground font-light leading-relaxed">
+          <p className="text-sm md:text-base text-white/35 font-light">
             {project.subtitle}
           </p>
-
-          {/* GitHub Link Action */}
-          {/* Action Links */}
-          <div className="flex flex-wrap gap-4 mt-4">
-            {project.github && (
-              <a
-                href={project.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors group/link"
-              >
-                <Github className="w-4 h-4 transition-transform group-hover/link:-translate-y-0.5" />
-                <span>Source</span>
-              </a>
-            )}
-
-            {project.demo && (
-              <a
-                href={project.demo}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors group/link"
-              >
-                <ExternalLink className="w-4 h-4 transition-transform group-hover/link:-translate-y-0.5" />
-                <span>Live Demo</span>
-              </a>
-            )}
-          </div>
         </div>
 
-        {/* Visual Artifact (Diagram) */}
-        <div className="mt-auto">
-          <div className="text-[9px] md:text-[10px] font-mono text-muted-foreground mb-2 md:mb-3 flex items-center gap-2 uppercase tracking-wider">
-            <Activity className="w-3 h-3" /> System Architecture
-          </div>
-          <Schematic steps={project.diagram.steps} />
-        </div>
-
-        {/* Tech Stack Footer */}
-        <div className="flex flex-wrap gap-1.5 md:gap-2 pt-4 md:pt-6 border-t border-border/40">
-          {project.stack.map(tech => (
-            <span key={tech} className="text-[10px] md:text-[11px] font-mono text-muted-foreground bg-neutral-100/80 dark:bg-white/5 px-2 py-1 rounded cursor-default hover:text-primary hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20">
-              {tech}
-            </span>
-          ))}
+        {/* Links */}
+        <div className="flex items-center gap-3 shrink-0">
+          {project.github && (
+            <a
+              href={project.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/50 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-300 text-[12px] font-medium"
+            >
+              <Github className="w-3.5 h-3.5" />
+              Source
+            </a>
+          )}
+          {project.demo && (
+            <a
+              href={project.demo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all duration-300 text-[12px] font-medium"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Live Demo
+            </a>
+          )}
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Narrative Deep Dive (Col Span 7) */}
-      <div className="lg:col-span-7 flex flex-col bg-neutral-50/50 dark:bg-black/20 rounded-xl md:rounded-2xl border border-neutral-200 dark:border-white/5 overflow-hidden order-2">
+      {/* Narrative Flow: Context → Solution → Decisions */}
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
+        {/* Left: Context + Solution */}
+        <div className="lg:col-span-5 space-y-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <div className="w-1 h-1 rounded-full bg-amber-400/60" />
+              <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/30">
+                Context
+              </span>
+            </div>
+            <p className="text-[13px] md:text-sm text-white/45 leading-relaxed font-light">
+              {project.context}
+            </p>
+          </div>
 
-        {/* Tabs - Scrollable on mobile */}
-        <div className="flex border-b border-neutral-200 dark:border-white/5 bg-neutral-50/80 dark:bg-white/5 overflow-x-auto scrollbar-hide">
-          {[
-            { id: "problem", label: "01. Problem", icon: AlertTriangle },
-            { id: "architecture", label: "02. Architecture", icon: Layout },
-            { id: "tradeoffs", label: "03. Tradeoffs", icon: GitBranch },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as "problem" | "architecture" | "tradeoffs")}
-              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3 md:py-3.5 text-xs font-mono font-medium tracking-wide transition-all border-b-2
-                ${activeTab === tab.id
-                  ? "bg-white dark:bg-white/5 text-primary border-primary"
-                  : "text-muted-foreground hover:bg-white/50 dark:hover:bg-white/5 border-transparent"
-                }
-              `}
-            >
-              <tab.icon className={`w-3.5 h-3.5 ${activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className="hidden sm:inline">{tab.label.split(' ')[1]}</span>
-              <span className="sm:hidden">{tab.label.split(' ')[1]}</span> {/* Show label on mobile too for clarity */}
-            </button>
-          ))}
+          <div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <div className="w-1 h-1 rounded-full bg-emerald-400/60" />
+              <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/30">
+                What I Built
+              </span>
+            </div>
+            <p className="text-[13px] md:text-sm text-white/45 leading-relaxed font-light">
+              {project.solution}
+            </p>
+          </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="p-5 md:p-8 flex-1 relative bg-white/40 dark:bg-transparent min-h-[200px]">
-          <AnimatePresence mode="wait">
-            {activeTab === "problem" && (
-              <motion.div
-                key="problem"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.3 }}
+        {/* Right: Key Decisions */}
+        <div className="lg:col-span-7">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1 h-1 rounded-full bg-primary/60" />
+            <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/30">
+              Key Decisions
+            </span>
+          </div>
+          <div className="space-y-3">
+            {project.decisions.map((d, i) => (
+              <div
+                key={i}
+                className="px-4 py-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.03] transition-all duration-300"
               >
-                <h4 className="text-xs md:text-sm font-bold text-foreground mb-3 md:mb-4 uppercase tracking-widest flex items-center gap-2">
-                  <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500" />
-                  Context & Challenge
-                </h4>
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed mb-6">
-                  {project.problem}
-                </p>
-                <div className="pl-4 border-l-2 border-primary/30">
-                  <div className="text-[10px] md:text-xs font-mono text-muted-foreground mb-1 uppercase tracking-wider">System Overview</div>
-                  <p className="text-sm text-foreground italic leading-relaxed">
-                    "{project.system}"
-                  </p>
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <span className="text-[9px] font-mono text-primary/50">
+                    0{i + 1}
+                  </span>
+                  <span className="text-[13px] font-medium text-white/70">
+                    {d.title}
+                  </span>
                 </div>
-              </motion.div>
-            )}
-
-            {activeTab === "architecture" && (
-              <motion.div
-                key="architecture"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                {project.architecture.map((item, i) => (
-                  <div key={i}>
-                    <h4 className="text-xs md:text-sm font-bold text-foreground mb-1.5 flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-500" />
-                      {item.title}
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed pl-5 md:pl-6 border-l border-border/50 ml-1.5 md:ml-2">
-                      {item.detail}
-                    </p>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-
-            {activeTab === "tradeoffs" && (
-              <motion.div
-                key="tradeoffs"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <h4 className="text-xs md:text-sm font-bold text-foreground mb-3 md:mb-4 uppercase tracking-widest flex items-center gap-2">
-                  <GitBranch className="w-3.5 h-3.5 md:w-4 md:h-4 text-purple-500" />
-                  Constraints & Reality
-                </h4>
-                <ul className="space-y-3 md:space-y-4">
-                  {project.tradeoffs.map((item, i) => (
-                    <li key={i} className="flex gap-3 text-sm text-muted-foreground">
-                      <span className="text-purple-500 font-mono mt-0.5 opacity-70">0{i + 1}.</span>
-                      <span className="leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <p className="text-[12px] text-white/35 leading-relaxed pl-6 font-light">
+                  {d.detail}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* Tech Stack Footer */}
+      <div className="relative z-10 flex flex-wrap gap-1.5 pt-6 mt-8 border-t border-white/[0.04]">
+        {project.stack.map((tech) => (
+          <span
+            key={tech}
+            className="text-[10px] font-mono text-white/35 bg-white/[0.02] px-2.5 py-1 rounded-lg border border-white/[0.04] cursor-default hover:text-white/55 hover:border-white/[0.1] transition-all duration-300"
+          >
+            {tech}
+          </span>
+        ))}
       </div>
     </motion.div>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/* 4. MAIN COMPONENT                                                          */
+/* MAIN SECTION                                                               */
 /* -------------------------------------------------------------------------- */
 
 const Projects: React.FC = () => {
   return (
-    <section id="projects" data-section="projects" className="py-24 md:py-32 bg-neutral-50/50 dark:bg-black/20 relative">
-      {/* Background Noise */}
-      <div className="noise-overlay" />
-
-      <div className="container px-4 md:px-6 max-w-7xl mx-auto">
-
+    <section
+      id="projects"
+      data-section="projects"
+      className="py-24 md:py-32 relative"
+    >
+      <div className="container px-4 md:px-6 max-w-5xl mx-auto">
         {/* Section Header */}
-        <div className="mb-12 md:mb-24 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 text-primary font-mono text-xs tracking-widest mb-3 md:mb-4">
-              <Terminal className="w-4 h-4" />
-              <span>ENGINEERING_LOGS</span>
+        <div className="mb-14 md:mb-20 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <div className="flex items-center gap-2 text-primary/60 font-mono text-[10px] tracking-[0.2em] uppercase mb-3">
+              <Terminal className="w-3.5 h-3.5" />
+              <span>Case Studies</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-foreground">
-              Selected <span className="text-muted-foreground">Systems</span>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white/90">
+              Recent{" "}
+              <span className="text-white/40">Work</span>
             </h2>
-          </div>
-          <p className="text-muted-foreground max-w-sm text-sm md:text-base leading-relaxed">
-            A look at how I solve problems. Focusing on architecture, tradeoffs, and system design over syntax.
-          </p>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-white/30 max-w-sm text-sm leading-relaxed font-light"
+          >
+            Real systems I've designed and built — focusing on
+            architecture decisions and engineering tradeoffs.
+          </motion.p>
         </div>
 
-        {/* Projects Stack */}
-        <div className="flex flex-col gap-12 lg:gap-24">
+        {/* Projects */}
+        <div className="flex flex-col gap-6 lg:gap-8">
           {PROJECTS.map((project, index) => (
             <ProjectCard key={project.id} project={project} index={index} />
           ))}
         </div>
 
-        {/* Footer Action */}
+        {/* Footer CTA */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-12 text-center"
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mt-14 flex flex-col items-center gap-3"
         >
-          <a href="https://github.com/emmanuelrichard01">
-            <button
-              className="group inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <span className="border-b border-foreground/0 group-hover:border-primary font-mono">View Full Archive on GitHub</span>
-              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
-            </button>
+          <a
+            href="https://github.com/emmanuelrichard01"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center gap-2 text-[13px] font-medium text-white/40 hover:text-white/70 transition-colors"
+          >
+            <span>View more on GitHub</span>
+            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
           </a>
         </motion.div>
-
       </div>
     </section>
   );
