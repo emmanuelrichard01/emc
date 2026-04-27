@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AnimatePresence, motion } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Components with relative paths to avoid alias resolution issues
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -172,6 +173,7 @@ const App = () => (
               </MainLayout>
             </BrowserRouter>
             <Analytics />
+            <SpeedInsights />
           </ErrorBoundary>
         </TooltipProvider>
       </ThemeProvider>
