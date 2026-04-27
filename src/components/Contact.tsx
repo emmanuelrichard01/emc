@@ -1,9 +1,9 @@
 import React, { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import {
-  Mail, Github, Linkedin, Twitter,
+  Github, Linkedin, Twitter,
   ArrowUpRight, Copy, CheckCircle2,
-  MapPin, Terminal, MessageSquare, Send, AlertCircle
+  Terminal, Send, AlertCircle,
 } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
@@ -14,43 +14,177 @@ const SOCIAL_LINKS = [
   {
     id: "github",
     label: "GitHub",
-    context: "Production Code & Systems",
     href: "https://github.com/emmanuelrichard01",
     icon: Github,
   },
   {
     id: "linkedin",
     label: "LinkedIn",
-    context: "Professional Context & Roles",
     href: "https://www.linkedin.com/in/e-mc/",
     icon: Linkedin,
   },
   {
     id: "twitter",
-    label: "X / Twitter",
-    context: "Thoughts & Engineering",
+    label: "X",
     href: "https://x.com/_mrebuka",
     icon: Twitter,
   },
 ];
 
 const EMAIL = "emma.moghalu@gmail.com";
-
-// FIX: Moved to environment variable. Add VITE_FORMSPREE_ENDPOINT to your .env file.
-// Fallback to the hardcoded value only if the env var is absent — keeps local dev
-// working without a .env while encouraging the right habit for production.
 const FORMSPREE_ENDPOINT =
   import.meta.env.VITE_FORMSPREE_ENDPOINT ?? "https://formspree.io/f/xwvwpaaz";
 
 /* -------------------------------------------------------------------------- */
-/* 2. UI COMPONENTS                                                           */
+/* 2. ANIMATION                                                               */
 /* -------------------------------------------------------------------------- */
 
-const EmailDisplay = () => {
+const ease = [0.16, 1, 0.3, 1] as const;
+
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease } },
+};
+
+/* -------------------------------------------------------------------------- */
+/* 3. CONTACT FORM                                                            */
+/* -------------------------------------------------------------------------- */
+
+const ContactForm = () => {
+  const [formState, setFormState] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
+  const [focused, setFocused] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormState("submitting");
+    try {
+      const res = await fetch(FORMSPREE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        setFormState("success");
+        setFormData({ name: "", email: "", message: "" });
+        setTimeout(() => setFormState("idle"), 4000);
+      } else {
+        setFormState("error");
+        setTimeout(() => setFormState("idle"), 4000);
+      }
+    } catch {
+      setFormState("error");
+      setTimeout(() => setFormState("idle"), 4000);
+    }
+  };
+
+  const fieldClass = (name: string) =>
+    `w-full bg-transparent text-white/80 text-sm placeholder:text-white/40 outline-none transition-all duration-300 border-b ${
+      focused === name
+        ? "border-primary/50 placeholder:text-white/50"
+        : "border-white/[0.06] hover:border-white/[0.12]"
+    } pb-3 pt-1`;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-7">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div>
+          <label className="text-[10px] font-mono text-white/50 uppercase tracking-[0.15em] mb-2 block">
+            Name
+          </label>
+          <input
+            type="text"
+            name="name"
+            placeholder="Your name"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+            onFocus={() => setFocused("name")}
+            onBlur={() => setFocused(null)}
+            className={fieldClass("name")}
+          />
+        </div>
+        <div>
+          <label className="text-[10px] font-mono text-white/50 uppercase tracking-[0.15em] mb-2 block">
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            placeholder="you@company.com"
+            required
+            value={formData.email}
+            onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
+            onFocus={() => setFocused("email")}
+            onBlur={() => setFocused(null)}
+            className={fieldClass("email")}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-[10px] font-mono text-white/20 uppercase tracking-[0.15em] mb-2 block">
+          Message
+        </label>
+        <textarea
+          name="message"
+          placeholder="Tell me about your project..."
+          rows={4}
+          required
+          value={formData.message}
+          onChange={(e) => setFormData((p) => ({ ...p, message: e.target.value }))}
+          onFocus={() => setFocused("message")}
+          onBlur={() => setFocused(null)}
+          className={`${fieldClass("message")} resize-none`}
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={formState === "submitting"}
+        className="group/btn inline-flex items-center gap-2.5 text-sm font-medium text-white/70 hover:text-white transition-colors duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <AnimatePresence mode="wait">
+          {formState === "submitting" ? (
+            <motion.span key="s" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border-[1.5px] border-white/20 border-t-white/70 rounded-full animate-spin" />
+              Sending...
+            </motion.span>
+          ) : formState === "success" ? (
+            <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-emerald-400">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Message sent
+            </motion.span>
+          ) : formState === "error" ? (
+            <motion.span key="err" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-red-400">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Failed — try again
+            </motion.span>
+          ) : (
+            <motion.span key="go" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+              Send message
+              <Send className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </button>
+    </form>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* 4. MAIN                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const Contact: React.FC = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
   const [copied, setCopied] = useState(false);
-  // FIX: Store the timeout ref so we can cancel a previous timer before setting
-  // a new one. Without this, rapid clicks stack multiple setTimeouts and the
-  // "copied" state flickers as each one resolves.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleCopy = () => {
@@ -61,288 +195,102 @@ const EmailDisplay = () => {
   };
 
   return (
-    <div className="group relative inline-flex flex-col items-start gap-3">
-      <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-        <Mail className="w-3.5 h-3.5" /> Primary Channel
-      </div>
-
-      <button
-        onClick={handleCopy}
-        className="relative flex items-center gap-3 text-left"
-      >
-        {/*
-          FIX: Was text-xl md:text-4xl. At 36px, emma.moghalu@gmail.com is ~620px
-          wide — it clips at the container edge on 768–1024px viewports before the
-          layout goes 2-column. Clamped to text-lg md:text-2xl which renders cleanly
-          across the full breakpoint range.
-        */}
-        <span className="text-lg md:text-2xl font-bold text-foreground hover:text-primary transition-colors border-b-2 border-transparent group-hover:border-primary/20 pb-1 transition-all">
-          {EMAIL}
-        </span>
-        <div className="p-2 rounded-full bg-secondary/30 text-muted-foreground group-hover:text-foreground group-hover:bg-secondary/60 transition-all shrink-0">
-          <AnimatePresence mode="wait">
-            {copied ? (
-              <motion.div key="check" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}>
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              </motion.div>
-            ) : (
-              <motion.div key="copy" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}>
-                <Copy className="w-4 h-4" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <AnimatePresence>
-          {copied && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="absolute left-full ml-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg whitespace-nowrap hidden sm:block"
-            >
-              Copied!
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </button>
-
-      <p className="text-sm text-muted-foreground max-w-md">
-        Best for role inquiries, technical collaborations, and deep-dive engineering discussions.
-      </p>
-    </div>
-  );
-};
-
-/* -------------------------------------------------------------------------- */
-
-const ContactForm = () => {
-  const [formState, setFormState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormState('submitting');
-
-    try {
-      const res = await fetch(FORMSPREE_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (res.ok) {
-        setFormState('success');
-        setFormData({ name: '', email: '', message: '' });
-        setTimeout(() => setFormState('idle'), 4000);
-      } else {
-        setFormState('error');
-        setTimeout(() => setFormState('idle'), 4000);
-      }
-    } catch {
-      setFormState('error');
-      setTimeout(() => setFormState('idle'), 4000);
-    }
-  };
-
-  return (
-    /*
-      FIX: Was bg-white/50 — renders as a glaring bright card in a dark-mode-only
-      build. The design doc explicitly states light-mode CSS has been purged.
-      Changed to bg-white/5 for a consistent dark glass surface.
-    */
-    <div className="rounded-2xl border border-border/50 bg-white/5 backdrop-blur-sm p-6 hover:border-primary/20 transition-all duration-300">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 mb-4">
-          <Terminal className="w-3.5 h-3.5" /> Direct Message
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            required
-            value={formData.name}
-            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-            className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all"
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            required
-            value={formData.email}
-            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-            className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all"
-          />
-        </div>
-
-        <textarea
-          name="message"
-          placeholder="What are you building?"
-          rows={4}
-          required
-          value={formData.message}
-          onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
-          className="w-full px-4 py-3 rounded-xl bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all resize-none"
-        />
-
-        <button
-          type="submit"
-          disabled={formState === 'submitting'}
-          className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background font-medium text-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+    <section id="contact" data-section="contact" className="py-20 sm:py-24 md:py-32 relative overflow-hidden" aria-label="Contact information">
+      <div ref={ref} className="container px-4 md:px-6 max-w-5xl mx-auto">
+        <motion.div
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+          variants={stagger}
         >
-          <AnimatePresence mode="wait">
-            {formState === 'submitting' ? (
-              <motion.span key="sending" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
-                Transmitting...
-              </motion.span>
-            ) : formState === 'success' ? (
-              <motion.span key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" />
-                Message Sent
-              </motion.span>
-            ) : formState === 'error' ? (
-              <motion.span key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-red-400">
-                <AlertCircle className="w-4 h-4" />
-                Transmission Failed
-              </motion.span>
-            ) : (
-              <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                Send Message
-                <Send className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </button>
-      </form>
-    </div>
-  );
-};
-
-/* -------------------------------------------------------------------------- */
-/* 3. MAIN COMPONENT                                                          */
-/* -------------------------------------------------------------------------- */
-
-/*
-  LAYOUT RESTRUCTURE:
-  The original layout put the heading, email, contact form, AND availability
-  badge all in the left column — making it roughly 2× taller than the right
-  column which only held 3 social links. This created a severe height imbalance
-  on desktop and visual confusion between two competing contact methods sharing
-  the same column.
-
-  New structure:
-  ┌─────────────────────────────┬─────────────────────────────┐
-  │ LEFT — Intent & Identity    │ RIGHT — Action              │
-  │                             │                             │
-  │ Section label               │ ContactForm                 │
-  │ H2 headline                 │                             │
-  │ Description                 │ ── divider ──               │
-  │ EmailDisplay                │ Social links (compact)      │
-  │ Availability badge          │                             │
-  └─────────────────────────────┴─────────────────────────────┘
-
-  The left column is now purely about framing intent and providing the direct
-  email line. The right column is purely about action — send a message or find
-  the right channel. The columns balance visually at all viewport widths.
-
-  Location: removed from Contact (it's already in the Footer). One source of truth.
-*/
-
-const Contact: React.FC = () => {
-  return (
-    <section id="contact" data-section="contact" className="py-24 md:py-32 bg-background relative overflow-hidden">
-
-      {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[radial-gradient(#00000010_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff05_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="container px-4 md:px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
-
-          {/* LEFT: Intent & Identity */}
-          <div className="space-y-12">
-            <div>
-              <div className="flex items-center gap-2 text-primary font-mono text-xs tracking-widest mb-6">
-                <MessageSquare className="w-4 h-4" />
-                <span>INITIATE_HANDSHAKE</span>
-              </div>
-              <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
-                Let's build something <br />
-                <span className="text-muted-foreground">solid.</span>
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                I'm interested in meaningful work — resilient systems, thoughtful teams, and problems worth solving. If you're building a serious product or engineering team, I'd love to hear from you.
-              </p>
+          {/* Header */}
+          <motion.div variants={fadeUp} className="mb-12 sm:mb-16 md:mb-20">
+            <div className="flex items-center gap-2 text-primary/60 font-mono text-[10px] tracking-[0.2em] uppercase mb-4">
+              <Terminal className="w-3.5 h-3.5" />
+              <span>Contact</span>
             </div>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white/90 mb-4">
+              Let's work{" "}
+              <span className="text-white/55">together.</span>
+            </h2>
+            <p className="text-sm text-white/55 max-w-md font-light leading-relaxed">
+              Have a project in mind or looking for an engineer?
+              I'd love to hear about it.
+            </p>
+          </motion.div>
 
-            <EmailDisplay />
+          {/* Layout: stacked, not 2-column */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 sm:gap-16 lg:gap-20">
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/20 w-fit px-4 py-2 rounded-full border border-border/50">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span>Available for Full-time Roles & Select Projects</span>
-            </div>
-          </div>
-
-          {/* RIGHT: Action — form + channels */}
-          <div className="flex flex-col gap-8">
-
-            {/* Contact form now lives here, giving it full column width and
-                visual weight equivalent to the left column's content block. */}
-            <ContactForm />
-
-            {/* Divider with label */}
-            <div className="flex items-center gap-4">
-              <div className="flex-1 h-px bg-border/50" />
-              {/*
-                FIX: "Additional Protocols" read as filler padding.
-                Using a code comment style that fits the terminal aesthetic.
-              */}
-              <span className="text-xs font-mono text-muted-foreground/60 whitespace-nowrap">
-                // find_me_elsewhere
-              </span>
-              <div className="flex-1 h-px bg-border/50" />
-            </div>
-
-            {/* Compact social links — reduced padding vs the original large cards
-                since this column now has a primary action (the form) above.
-                The links support rather than compete. */}
-            <div className="space-y-2">
-              {SOCIAL_LINKS.map((link) => (
-                <a
-                  key={link.id}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center justify-between p-4 rounded-xl border border-border/50 bg-secondary/5 hover:bg-secondary/20 hover:border-primary/20 transition-all duration-300"
+            {/* Left: email + socials */}
+            <motion.div variants={stagger} className="lg:col-span-4 space-y-10">
+              {/* Email */}
+              <motion.div variants={fadeUp}>
+                <div className="text-[10px] font-mono text-white/50 uppercase tracking-[0.15em] mb-3">
+                  Email
+                </div>
+                <button
+                  onClick={handleCopy}
+                  className="group flex items-center gap-2.5 text-left"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground group-hover:text-primary group-hover:border-primary/30 transition-colors">
-                      <link.icon className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
-                        {link.label}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {link.context}
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                </a>
-              ))}
-            </div>
+                  <span className="text-base font-medium text-white/70 group-hover:text-white transition-colors duration-300 border-b border-transparent group-hover:border-white/20 pb-0.5">
+                    {EMAIL}
+                  </span>
+                  <AnimatePresence mode="wait">
+                    {copied ? (
+                      <motion.div key="c" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      </motion.div>
+                    ) : (
+                      <motion.div key="p" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                        <Copy className="w-3.5 h-3.5 text-white/40 group-hover:text-white/60 transition-colors" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </button>
+              </motion.div>
+
+              {/* Social links */}
+              <motion.div variants={fadeUp}>
+                <div className="text-[10px] font-mono text-white/50 uppercase tracking-[0.15em] mb-3">
+                  Elsewhere
+                </div>
+                <div className="flex flex-col gap-1">
+                  {SOCIAL_LINKS.map((link) => (
+                    <a
+                      key={link.id}
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group inline-flex items-center gap-2 py-1.5 text-sm text-white/55 hover:text-white/80 transition-colors duration-300 w-fit"
+                    >
+                      <link.icon className="w-3.5 h-3.5" />
+                      <span>{link.label}</span>
+                      <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 translate-x-0.5 group-hover:opacity-50 group-hover:translate-y-0 group-hover:translate-x-0 transition-all duration-300" />
+                    </a>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Availability */}
+              <motion.div
+                variants={fadeUp}
+                className="flex items-center gap-2 text-[11px] text-white/55 font-mono"
+              >
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                </span>
+                Available for work
+              </motion.div>
+            </motion.div>
+
+            {/* Right: form */}
+            <motion.div variants={fadeUp} className="lg:col-span-8">
+              <ContactForm />
+            </motion.div>
 
           </div>
-
-        </div>
+        </motion.div>
       </div>
     </section>
   );

@@ -75,26 +75,26 @@ type TerminalEntry = {
 };
 
 const ENTRIES: TerminalEntry[] = [
-  { type: 'cmd', colour: 'white',  text: 'dbt run --select pipeline.ingestion.*',      hold: 2400 },
-  { type: 'out', colour: 'green',  text: '✔  3 of 3 models completed  (0 errors)',       hold: 2000 },
-  { type: 'cmd', colour: 'white',  text: 'terraform apply -auto-approve',                 hold: 2400 },
-  { type: 'out', colour: 'cyan',   text: '↑  Apply complete  |  6 added, 0 destroyed',    hold: 2000 },
-  { type: 'cmd', colour: 'white',  text: 'kubectl rollout status deploy/api-gateway',      hold: 2400 },
-  { type: 'out', colour: 'green',  text: '✔  deployment "api-gateway" rolled out',         hold: 2200 },
-  { type: 'cmd', colour: 'white',  text: 'python src/jobs/streaming_ingest.py',            hold: 2000 },
+  { type: 'cmd', colour: 'white', text: 'dbt run --select pipeline.ingestion.*', hold: 2400 },
+  { type: 'out', colour: 'green', text: '✔  3 of 3 models completed  (0 errors)', hold: 2000 },
+  { type: 'cmd', colour: 'white', text: 'terraform apply -auto-approve', hold: 2400 },
+  { type: 'out', colour: 'cyan', text: '↑  Apply complete  |  6 added, 0 destroyed', hold: 2000 },
+  { type: 'cmd', colour: 'white', text: 'kubectl rollout status deploy/api-gateway', hold: 2400 },
+  { type: 'out', colour: 'green', text: '✔  deployment "api-gateway" rolled out', hold: 2200 },
+  { type: 'cmd', colour: 'white', text: 'python src/jobs/streaming_ingest.py', hold: 2000 },
   { type: 'out', colour: 'yellow', text: '⚑  Kafka consumer ready  |  topic: events.raw', hold: 2200 },
-  { type: 'out', colour: 'green',  text: '✔  Ingested 1.2 M events  (avg latency 4 ms)',  hold: 2600 },
-  { type: 'cmd', colour: 'white',  text: 'pytest tests/ -q --tb=short',                   hold: 2400 },
-  { type: 'out', colour: 'green',  text: '✔  42 passed, 0 failed  in 3.18 s',             hold: 2200 },
+  { type: 'out', colour: 'green', text: '✔  Ingested 1.2 M events  (avg latency 4 ms)', hold: 2600 },
+  { type: 'cmd', colour: 'white', text: 'pytest tests/ -q --tb=short', hold: 2400 },
+  { type: 'out', colour: 'green', text: '✔  42 passed, 0 failed  in 3.18 s', hold: 2200 },
 ];
 
 const colourClass: Record<TerminalEntry['colour'], string> = {
-  green:  'text-emerald-400',
-  cyan:   'text-sky-400',
+  green: 'text-emerald-400',
+  cyan: 'text-sky-400',
   yellow: 'text-amber-400',
-  red:    'text-rose-400',
-  muted:  'text-white/30',
-  white:  'text-white/75',
+  red: 'text-rose-400',
+  muted: 'text-white/55',
+  white: 'text-white/80',
 };
 
 const TypingTerminal = () => {
@@ -136,7 +136,9 @@ const TypingTerminal = () => {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.7, duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
-      className="w-full max-w-[420px] mx-auto"
+      className="w-full max-w-[420px] mx-auto px-2 sm:px-0"
+      role="status"
+      aria-label="Terminal simulation showing engineering commands"
     >
       <div
         className="rounded-xl overflow-hidden"
@@ -157,7 +159,7 @@ const TypingTerminal = () => {
           <span className="w-[9px] h-[9px] rounded-full bg-[#ff5f57]/80" />
           <span className="w-[9px] h-[9px] rounded-full bg-[#febc2e]/80" />
           <span className="w-[9px] h-[9px] rounded-full bg-[#28c840]/80" />
-          <span className="flex-1 text-center font-mono text-[9px] tracking-wide select-none" style={{ color: 'rgba(255,255,255,0.22)' }}>
+          <span className="flex-1 text-center font-mono text-[9px] tracking-wide select-none" style={{ color: 'rgba(255,255,255,0.50)' }} aria-hidden="true">
             ~/projects/emc — zsh
           </span>
           <span className="w-[38px]" />
@@ -169,7 +171,7 @@ const TypingTerminal = () => {
               <span className="shrink-0" style={{ color: 'rgba(139,92,246,0.8)' }}>❯&nbsp;</span>
             )}
             {entry.type === 'out' && (
-              <span style={{ color: 'rgba(255,255,255,0.12)' }} className="mr-2.5 shrink-0">│</span>
+              <span style={{ color: 'rgba(255,255,255,0.40)' }} className="mr-2.5 shrink-0" aria-hidden="true">│</span>
             )}
             <AnimatePresence mode="wait">
               <motion.span
@@ -209,9 +211,9 @@ const TypingTerminal = () => {
 /* -------------------------------------------------------------------------- */
 
 const SOCIALS = [
-  { icon: Github,   href: "https://github.com/emmanuelrichard01",         label: "GitHub" },
-  { icon: Linkedin, href: "https://www.linkedin.com/in/emmanuelrichard01", label: "LinkedIn" },
-  { icon: Twitter,  href: "https://twitter.com/_mrebuka",                  label: "X / Twitter" },
+  { icon: Github, href: "https://github.com/emmanuelrichard01", label: "GitHub" },
+  { icon: Linkedin, href: "https://linkedin.com/in/e-mc", label: "LinkedIn" },
+  { icon: Twitter, href: "https://x.com/_mrebuka", label: "X" },
 ];
 
 
@@ -238,13 +240,14 @@ export default function Hero() {
     <section
       id="home"
       data-section="home"
+      aria-label="Hero introduction"
       className="relative min-h-[100svh] flex flex-col items-center justify-center px-4 overflow-hidden group/hero"
       onMouseMove={handleMouseMove}
     >
       {/* ── Background ── */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
-        <div className="absolute top-[-18%] right-[-8%] w-[550px] h-[550px] rounded-full bg-primary/[0.05] blur-[200px]" />
-        <div className="absolute bottom-[-12%] left-[-10%] w-[450px] h-[450px] rounded-full bg-blue-500/[0.04] blur-[200px]" />
+        <div className="absolute top-[-18%] right-[-8%] w-[300px] h-[300px] sm:w-[550px] sm:h-[550px] rounded-full bg-primary/[0.05] blur-[200px]" />
+        <div className="absolute bottom-[-12%] left-[-10%] w-[250px] h-[250px] sm:w-[450px] sm:h-[450px] rounded-full bg-blue-500/[0.04] blur-[200px]" />
       </div>
 
       {/* Mouse spotlight */}
@@ -258,7 +261,7 @@ export default function Hero() {
       {/* ── Content ── */}
       <motion.div
         style={{ y, opacity, scale }}
-        className="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto pt-24 md:pt-16"
+        className="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto pt-16 sm:pt-24 md:pt-16 px-1"
       >
         {/* Badge: availability + role */}
         <motion.div
@@ -271,7 +274,7 @@ export default function Hero() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-50" />
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
           </span>
-          <span className="text-[10px] font-mono tracking-[0.15em] text-white/45 uppercase">
+          <span className="text-[10px] font-mono tracking-[0.15em] text-white/60 uppercase">
             Data Engineer · Cloud Architect
           </span>
         </motion.div>
@@ -281,7 +284,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.0, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="text-[2.5rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-[-0.02em] text-white leading-[1.08] mb-6"
+          className="text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-[-0.02em] text-white leading-[1.08] mb-6"
         >
           I engineer data{' '}
           <br className="hidden sm:block" />
@@ -293,7 +296,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
-          className="text-[15px] md:text-base text-white/35 leading-[1.7] mb-10 max-w-[440px] font-light"
+          className="text-[15px] md:text-base text-white/60 leading-[1.7] mb-10 max-w-[440px] font-light"
         >
           Building the invisible pipelines that power decision engines,
           production infrastructure, and resilient software.
@@ -304,11 +307,11 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-wrap justify-center gap-3.5 mb-12"
+          className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-3.5 mb-12 w-full sm:w-auto"
         >
           <button
             onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
-            className="group/btn relative px-8 py-3.5 rounded-full font-medium text-[13px] bg-white text-black transition-all duration-300 flex items-center gap-2 overflow-hidden hover:scale-[1.02] active:scale-[0.98]"
+            className="group/btn relative px-8 py-3.5 rounded-full font-medium text-[13px] bg-white text-black transition-all duration-300 flex items-center justify-center gap-2 overflow-hidden hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto"
             style={{
               boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.3)',
             }}
@@ -322,7 +325,7 @@ export default function Hero() {
             href="/resume.pdf"
             target="_blank"
             rel="noopener noreferrer"
-            className="group/btn px-6 py-3 rounded-full font-medium text-[13px] border border-white/[0.08] bg-white/[0.02] text-white/60 hover:text-white/90 hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-300 flex items-center gap-2 backdrop-blur-md hover:scale-[1.02] active:scale-[0.98]"
+            className="group/btn px-6 py-3 rounded-full font-medium text-[13px] border border-white/[0.08] bg-white/[0.02] text-white/60 hover:text-white/90 hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-md hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto"
           >
             Download CV
             <Download className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:-translate-y-0.5" />
@@ -349,7 +352,7 @@ export default function Hero() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={s.label}
-            className="p-1.5 text-white/30 transition-all duration-300 hover:text-white hover:scale-110"
+            className="p-1.5 text-white/55 transition-all duration-300 hover:text-white hover:scale-110"
           >
             <s.icon className="w-4 h-4" />
           </a>
@@ -366,14 +369,14 @@ export default function Hero() {
           document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true }));
         }}
       >
-        <Command className="w-3 h-3 text-white/25" />
-        <span className="font-mono text-[9px] text-white/25 tracking-wide">K</span>
+        <Command className="w-3 h-3 text-white/50" />
+        <span className="font-mono text-[9px] text-white/50 tracking-wide">K</span>
       </motion.button>
 
       {/* ── Scroll Indicator ── */}
       <motion.div
         style={{ opacity: useTransform(scrollY, [0, 150], [0.3, 0]) }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none hidden sm:block"
       >
         <div className="w-[18px] h-7 rounded-full border border-white/[0.08] flex items-start justify-center p-1">
           <motion.div

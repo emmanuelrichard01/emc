@@ -1,15 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import {
-  Sparkles,
-  Code2,
-  Coffee,
-  Heart,
-  Zap,
-  Crown,
-  Terminal,
-  Rocket
-} from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                                                      */
@@ -20,175 +10,84 @@ interface EasterEggProps {
   onComplete: () => void;
 }
 
-interface FloatingSymbolProps {
-  delay: number;
-  repeatDelay: number;
-  x: string;
-  y: string;
-  children: React.ReactNode;
-}
-
 /* -------------------------------------------------------------------------- */
-/* STABLE RANDOM DATA — generated once per module, not per render            */
+/* TERMINAL LINES — the "boot sequence" the user sees                         */
 /* -------------------------------------------------------------------------- */
 
-// FIX: Math.random() was called directly inside FloatingSymbol's render,
-// causing repeatDelay to change on every re-render and reset the animation.
-// These values are now stable constants generated at module load time.
-const FLOATING_SYMBOLS = [
-  { id: 0, delay: 0, repeatDelay: 1.2, x: '15%', y: '15%', icon: Code2, size: 64 },
-  { id: 1, delay: 1, repeatDelay: 2.1, x: '85%', y: '25%', icon: Heart, size: 40 },
-  { id: 2, delay: 0.5, repeatDelay: 0.8, x: '25%', y: '75%', icon: Coffee, size: 48 },
-  { id: 3, delay: 2, repeatDelay: 1.7, x: '75%', y: '65%', icon: Rocket, size: 56 },
+const BOOT_LINES = [
+  { text: "$ sudo access --override", type: "cmd" as const, delay: 0 },
+  { text: "[AUTH] Verifying konami sequence...", type: "log" as const, delay: 0.3 },
+  { text: "[AUTH] Sequence valid. Elevating privileges.", type: "log" as const, delay: 0.8 },
+  { text: "[SYS] Loading hidden partition...", type: "log" as const, delay: 1.3 },
+  { text: "██████████████████████████████ 100%", type: "bar" as const, delay: 1.6 },
+  { text: "", type: "blank" as const, delay: 2.2 },
+  { text: "ACCESS GRANTED", type: "success" as const, delay: 2.4 },
+  { text: "", type: "blank" as const, delay: 2.7 },
+];
+
+const FACTS = [
+  "First line of code written: 2016 — it was a PHP contact form.",
+  "Favorite debugging tool: console.log (yes, really).",
+  "Most rows processed in one pipeline: 1.5M+ records.",
+  "Coffee preference: black, no sugar, strong.",
+  "Keyboard: mechanical, cherry MX brown switches.",
+  "IDE: VS Code with Catppuccin Mocha theme.",
+  "Favorite design system: shadcn/ui.",
+  "This portfolio has 0 dependencies on Tailwind — just vanilla CSS tokens.",
+  "The ⌘K palette took 3 iterations to get right.",
+  "Fun fact: 'E·MC' is a play on E=mc².",
 ];
 
 /* -------------------------------------------------------------------------- */
-/* SUB-COMPONENTS                                                             */
-/* -------------------------------------------------------------------------- */
-
-// 1. Particle Explosion Engine
-const ConfettiBurst = () => {
-  const particles = useMemo(() => {
-    return Array.from({ length: 50 }).map((_, i) => {
-      const angle = Math.random() * 360;
-      const velocity = 150 + Math.random() * 250;
-      const size = 3 + Math.random() * 5;
-      const spin = Math.random() * 360;
-
-      return {
-        id: i,
-        angle: angle * (Math.PI / 180),
-        velocity,
-        size,
-        color: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ffffff'][Math.floor(Math.random() * 6)],
-        delay: Math.random() * 0.1,
-        spin,
-        isCircle: Math.random() > 0.6,
-      };
-    });
-  }, []);
-
-  return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          initial={{ x: 0, y: 0, scale: 0, opacity: 1, rotate: 0 }}
-          animate={{
-            x: Math.cos(p.angle) * p.velocity,
-            y: Math.sin(p.angle) * p.velocity,
-            scale: [0, 1.5, 0],
-            opacity: [1, 1, 0],
-            rotate: p.spin,
-          }}
-          transition={{
-            duration: 1.5,
-            ease: [0.22, 1, 0.36, 1],
-            delay: p.delay,
-          }}
-          style={{
-            width: p.size,
-            height: p.size,
-            backgroundColor: p.color,
-            position: 'absolute',
-            borderRadius: p.isCircle ? '50%' : '2px',
-            boxShadow: `0 0 ${p.size * 2}px ${p.color}`,
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-// 2. Floating Background Symbol
-// FIX: repeatDelay is now received as a stable prop, not computed in render.
-const FloatingSymbol = ({ delay, repeatDelay, x, y, children }: FloatingSymbolProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{
-      opacity: [0, 0.3, 0],
-      y: -60,
-      rotate: [0, 20, -20, 0],
-    }}
-    transition={{
-      duration: 5,
-      delay,
-      ease: 'easeInOut',
-      repeat: Infinity,
-      repeatDelay,
-    }}
-    className="absolute text-white/10 pointer-events-none z-0"
-    style={{ left: x, bottom: y }}
-  >
-    {children}
-  </motion.div>
-);
-
-/* -------------------------------------------------------------------------- */
-/* MAIN COMPONENT                                                             */
+/* COMPONENT                                                                  */
 /* -------------------------------------------------------------------------- */
 
 const EasterEgg = ({ isActive, onComplete }: EasterEggProps) => {
-  const [showMessage, setShowMessage] = useState(false);
+  const [visibleLines, setVisibleLines] = useState(0);
+  const [showFact, setShowFact] = useState(false);
 
-  // Parallax tilt
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotateX = useTransform(y, [-100, 100], [10, -10]);
-  const rotateY = useTransform(x, [-100, 100], [-10, 10]);
+  const fact = useMemo(
+    () => FACTS[Math.floor(Math.random() * FACTS.length)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isActive]
+  );
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    x.set(e.clientX - rect.left - rect.width / 2);
-    y.set(e.clientY - rect.top - rect.height / 2);
-  };
-
-  // FIX: wrapped in useCallback so the reference is stable across renders,
-  // preventing the useEffect cleanup/re-attach on every render cycle.
-  const handleDismiss = useCallback(() => {
-    setShowMessage(false);
+  const dismiss = useCallback(() => {
+    setVisibleLines(0);
+    setShowFact(false);
     onComplete();
   }, [onComplete]);
 
-  // FIX 1: ESC key listener — previously [ESC] to dismiss was shown in the UI
-  // but no keydown handler existed. Now properly bound while isActive.
-  // FIX 2: Timers are cancelled on cleanup to avoid stale state updates
-  // after the component unmounts or isActive flips back to false.
+  // Sequence the lines
   useEffect(() => {
     if (!isActive) {
-      setShowMessage(false);
+      setVisibleLines(0);
+      setShowFact(false);
       return;
     }
 
-    const t1 = setTimeout(() => setShowMessage(true), 300);
-    const t2 = setTimeout(handleDismiss, 5000);
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleDismiss();
+    BOOT_LINES.forEach((line, i) => {
+      timers.push(setTimeout(() => setVisibleLines(i + 1), line.delay * 1000));
+    });
+
+    // Show the fact after boot completes
+    timers.push(setTimeout(() => setShowFact(true), 3000));
+
+    // Auto-dismiss after 8s
+    timers.push(setTimeout(dismiss, 8000));
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismiss();
     };
-
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKey);
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      document.removeEventListener('keydown', handleKeyDown);
+      timers.forEach(clearTimeout);
+      document.removeEventListener("keydown", handleKey);
     };
-  }, [isActive, handleDismiss]);
-
-  const achievements = useMemo(() => [
-    { title: 'Developer Mode', subtitle: 'Cheat Code Activated', icon: Terminal },
-    { title: 'Konami Code', subtitle: 'Retro Gamer Detected', icon: Crown },
-    { title: 'System Override', subtitle: 'Access Granted', icon: Code2 },
-    { title: 'God Mode', subtitle: 'Unlimited Power', icon: Zap },
-  ], []);
-
-  // Stable random pick — runs once per mount, not on every render.
-  const activeAchievement = useMemo(
-    () => achievements[Math.floor(Math.random() * achievements.length)],
-    [achievements]
-  );
-  const Icon = activeAchievement.icon;
+  }, [isActive, dismiss]);
 
   if (!isActive) return null;
 
@@ -198,87 +97,89 @@ const EasterEgg = ({ isActive, onComplete }: EasterEggProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        // FIX: perspective-1000 is not a valid Tailwind v3 utility and silently
-        // does nothing. Using the arbitrary-value syntax instead, or inline style.
-        // FIX: Added onClick for backdrop-click-to-dismiss (standard modal UX).
         className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md"
-        style={{ perspective: '1000px' }}
-        onMouseMove={handleMouseMove}
-        onClick={handleDismiss}
+        onClick={dismiss}
       >
-        {/* Background floating symbols */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {FLOATING_SYMBOLS.map((s) => {
-            const SIcon = s.icon;
-            return (
-              <FloatingSymbol key={s.id} delay={s.delay} repeatDelay={s.repeatDelay} x={s.x} y={s.y}>
-                <SIcon size={s.size} />
-              </FloatingSymbol>
-            );
-          })}
-        </div>
-
-        <ConfettiBurst />
-
-        {/* FIX: stopPropagation prevents card clicks from bubbling to the
-            backdrop dismiss handler — otherwise clicking inside the card closes it. */}
         <motion.div
-          style={{ rotateX, rotateY, z: 100 }}
-          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          initial={{ scale: 0.95, opacity: 0, y: 12 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 50 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-          className="relative z-10"
+          exit={{ scale: 0.95, opacity: 0, y: 12 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-[460px] max-w-[90vw] rounded-2xl border border-white/[0.08] bg-[#0a0a0a] shadow-[0_24px_80px_rgba(0,0,0,0.7)] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative w-[340px] bg-neutral-900 border border-white/10 rounded-3xl p-8 text-center shadow-2xl overflow-hidden group">
+          {/* Top glow */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent pointer-events-none" />
 
-            {/* FIX: animate-shimmer was a non-existent Tailwind animation.
-                Replaced with a framer-motion animate that achieves the same
-                moving-gradient-border effect without needing a global keyframe. */}
-            <motion.div
-              className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.3) 50%, transparent 100%)',
-                backgroundSize: '200% 100%',
-                transition: 'opacity 0.5s',
-              }}
-              animate={{ backgroundPosition: ['200% 0%', '-200% 0%'] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
-            />
-
-            {/* Glow blob */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
-
-            {/* Icon */}
-            <div className="relative mb-6 mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)]">
-              <Icon className="w-10 h-10 text-primary drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+          {/* Terminal header */}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
             </div>
+            <span className="ml-2 text-[10px] font-mono text-white/50">
+              emc@portfolio ~ /secret
+            </span>
+          </div>
 
-            {/* Text */}
-            <AnimatePresence mode="wait">
-              {showMessage && (
+          {/* Terminal body */}
+          <div className="px-5 py-5 font-mono text-[12px] leading-relaxed min-h-[200px]">
+            {BOOT_LINES.slice(0, visibleLines).map((line, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.15 }}
+                className={`mb-1 ${
+                  line.type === "cmd"
+                    ? "text-emerald-400"
+                    : line.type === "success"
+                    ? "text-primary font-bold text-sm tracking-wider"
+                    : line.type === "bar"
+                    ? "text-primary/60"
+                    : line.type === "blank"
+                    ? "h-2"
+                    : "text-white/55"
+                }`}
+              >
+                {line.text}
+              </motion.div>
+            ))}
+
+            {/* Cursor blink while loading */}
+            {visibleLines < BOOT_LINES.length && (
+              <motion.span
+                animate={{ opacity: [1, 0] }}
+                transition={{ duration: 0.6, repeat: Infinity }}
+                className="inline-block w-2 h-3.5 bg-emerald-400/80 mt-1"
+              />
+            )}
+
+            {/* Fun fact reveal */}
+            <AnimatePresence>
+              {showFact && (
                 <motion.div
-                  key="message"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="mt-4 pt-4 border-t border-white/[0.06]"
                 >
-                  <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
-                    {activeAchievement.title}
-                  </h2>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/5 text-[10px] font-mono uppercase tracking-widest text-primary-foreground/80">
-                    <Sparkles className="w-3 h-3" />
-                    {activeAchievement.subtitle}
+                  <div className="text-[9px] text-white/40 uppercase tracking-[0.2em] mb-2">
+                    // Random fact unlocked
                   </div>
+                  <p className="text-white/60 text-[13px] font-sans leading-relaxed">
+                    "{fact}"
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
 
-            {/* Footer — ESC now actually works */}
-            <div className="mt-8 text-[10px] text-neutral-500 font-mono">
-              [ESC] or click outside to dismiss
-            </div>
+          {/* Footer */}
+          <div className="px-5 py-2.5 border-t border-white/[0.04] flex items-center justify-between text-[9px] font-mono text-white/40">
+            <span>↑ ↑ ↓ ↓ ← → ← → B A</span>
+            <span>[ESC] dismiss</span>
           </div>
         </motion.div>
       </motion.div>

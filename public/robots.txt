@@ -1,0 +1,30 @@
+# Emmanuel Moghalu — Portfolio
+# Search Everywhere Optimization: Allow all major crawlers
+
+User-agent: *
+Allow: /
+
+# AI Engine Crawlers — explicitly permitted
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+# Sitemap
+Sitemap: https://em-webapp.vercel.app/sitemap.xml

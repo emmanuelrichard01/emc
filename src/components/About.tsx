@@ -168,8 +168,8 @@ const TechMarquee = () => {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#080808] to-transparent z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#080808] to-transparent z-10" />
+      <div className="absolute left-0 top-0 bottom-0 w-8 sm:w-12 bg-gradient-to-r from-background to-transparent z-10" />
+      <div className="absolute right-0 top-0 bottom-0 w-8 sm:w-12 bg-gradient-to-l from-background to-transparent z-10" />
       <div
         className="flex flex-none gap-2.5 pr-2.5 items-center marquee-strip"
         style={{ animationPlayState: isPaused ? "paused" : "running" }}
@@ -177,9 +177,9 @@ const TechMarquee = () => {
         {[...TECH_STACK, ...TECH_STACK].map((tech, i) => (
           <div
             key={`${tech.name}-${i}`}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-white/35 whitespace-nowrap transition-all duration-300 hover:border-white/[0.12] hover:text-white/60 hover:bg-white/[0.04] cursor-default"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-white/55 whitespace-nowrap transition-all duration-300 hover:border-white/[0.12] hover:text-white/70 hover:bg-white/[0.04] cursor-default"
           >
-            <tech.icon className="w-3.5 h-3.5" />
+            <tech.icon className="w-3.5 h-3.5" aria-hidden="true" />
             <span className="text-[10px] font-mono tracking-wider">{tech.name}</span>
           </div>
         ))}
@@ -198,9 +198,9 @@ const TechMarquee = () => {
 const DeliverablesModule = () => (
   <GlassCard className="col-span-1 md:col-span-2" spotlight>
     <div className="p-5">
-      <div className="flex items-center gap-2 text-white/30 mb-4">
-        <Terminal className="w-3.5 h-3.5 text-primary/50" />
-        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/40">What I Build</span>
+      <div className="flex items-center gap-2 text-white/50 mb-4">
+        <Terminal className="w-3.5 h-3.5 text-primary/50" aria-hidden="true" />
+        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/55">What I Build</span>
       </div>
       <div className="space-y-2">
         {DELIVERABLES.map((item) => (
@@ -209,7 +209,7 @@ const DeliverablesModule = () => (
             className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] transition-all duration-300 hover:border-white/[0.1] hover:bg-white/[0.04] group cursor-default"
           >
             <ArrowUpRight className="w-3.5 h-3.5 text-primary/40 group-hover:text-primary/70 transition-colors shrink-0" />
-            <span className="text-[13px] text-white/50 group-hover:text-white/70 tracking-wide transition-colors">{item}</span>
+            <span className="text-[13px] text-white/60 group-hover:text-white/80 tracking-wide transition-colors">{item}</span>
           </div>
         ))}
       </div>
@@ -224,20 +224,20 @@ const MetricsModule = () => (
   <GlassCard className="col-span-1 md:col-span-2 p-0">
     <div className="grid grid-cols-3 divide-x divide-white/[0.04]">
       {METRICS.map((m) => (
-        <div key={m.label} className="p-4 md:p-5 flex flex-col justify-between min-h-[120px]">
-          <div className="flex items-center gap-1.5 text-white/30 mb-auto">
-            <m.icon className="w-3 h-3 shrink-0" />
-            <span className="text-[8px] md:text-[9px] font-mono tracking-[0.15em] uppercase text-white/35 truncate">
+        <div key={m.label} className="p-3 sm:p-4 md:p-5 flex flex-col justify-between min-h-[100px] sm:min-h-[120px]">
+          <div className="flex items-center gap-1.5 text-white/50 mb-auto">
+            <m.icon className="w-3 h-3 shrink-0" aria-hidden="true" />
+            <span className="text-[8px] md:text-[9px] font-mono tracking-[0.15em] uppercase text-white/50 truncate">
               {m.label.split(" ").slice(0, 2).join(" ")}
             </span>
           </div>
           <div>
             <div className="flex items-baseline gap-0.5">
-              <span className="text-2xl md:text-3xl lg:text-4xl font-light tracking-tight text-white/90">
+              <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light tracking-tight text-white/90">
                 <AnimatedCounter target={m.value} suffix={m.suffix} />
               </span>
             </div>
-            <span className="text-[9px] md:text-[10px] font-light text-white/25 leading-tight mt-0.5 block">
+            <span className="text-[9px] md:text-[10px] font-light text-white/50 leading-tight mt-0.5 block">
               {m.label.split(" ").slice(2).join(" ")}
             </span>
             <div className="mt-2 h-0.5 rounded-full bg-white/[0.04] overflow-hidden">
@@ -263,11 +263,11 @@ const MetricsModule = () => (
 const StackModule = () => (
   <GlassCard className="col-span-1 md:col-span-2 p-5 flex flex-col justify-center">
     <div className="mb-4 flex items-center justify-between">
-      <div className="flex items-center gap-2 text-white/30">
-        <Cpu className="w-3.5 h-3.5" />
-        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/40">Core Stack</span>
+      <div className="flex items-center gap-2 text-white/50">
+        <Cpu className="w-3.5 h-3.5" aria-hidden="true" />
+        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/55">Core Stack</span>
       </div>
-      <span className="text-[9px] font-mono text-white/20 tracking-wide">{TECH_STACK.length} tools</span>
+      <span className="text-[9px] font-mono text-white/50 tracking-wide">{TECH_STACK.length} tools</span>
     </div>
     <div className="-mx-5">
       <TechMarquee />
@@ -281,7 +281,7 @@ const StackModule = () => (
 
 const About: React.FC = () => {
   return (
-    <section id="about" data-section="about" className="pt-12 pb-24 md:pt-20 md:pb-32 relative">
+    <section id="about" data-section="about" className="pt-12 pb-24 md:pt-20 md:pb-32 relative" aria-label="About Emmanuel Moghalu">
       <div className="container px-4 md:px-6 max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
 
@@ -316,7 +316,7 @@ const About: React.FC = () => {
                 <h3 className="text-base md:text-lg font-medium tracking-tight text-white/85">Emmanuel Moghalu</h3>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {ROLES.map((role) => (
-                    <span key={role} className="text-[9px] font-mono tracking-wider px-2 py-0.5 rounded-full bg-white/[0.03] text-white/40 border border-white/[0.05]">
+                    <span key={role} className="text-[9px] font-mono tracking-wider px-2 py-0.5 rounded-full bg-white/[0.03] text-white/55 border border-white/[0.05]">
                       {role}
                     </span>
                   ))}
@@ -331,8 +331,8 @@ const About: React.FC = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <div className="flex items-center gap-2 text-white/25 font-mono text-[9px] tracking-[0.2em] uppercase mb-5">
-                <Terminal className="w-3 h-3 text-primary/50" />
+              <div className="flex items-center gap-2 text-white/50 font-mono text-[9px] tracking-[0.2em] uppercase mb-5">
+                <Terminal className="w-3 h-3 text-primary/50" aria-hidden="true" />
                 <span>About</span>
               </div>
 
@@ -342,7 +342,7 @@ const About: React.FC = () => {
             </motion.div>
 
             {/* Bio — one paragraph, personal and specific */}
-            <div className="text-sm md:text-[15px] text-white/40 leading-relaxed max-w-lg mt-6 font-light">
+            <div className="text-sm md:text-[15px] text-white/60 leading-relaxed max-w-lg mt-6 font-light">
               <RevealText text="I've spent 4 years building the infrastructure nobody sees — the pipelines, the deployment configs, the monitoring that pages you before users notice. I care about correctness over cleverness and systems that stay boring in production." />
             </div>
           </div>

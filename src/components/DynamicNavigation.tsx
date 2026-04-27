@@ -33,7 +33,7 @@ const LogoAnimated = () => {
   }, []);
 
   return (
-    <div className="relative w-7 h-7 cursor-pointer text-white/90" aria-label="Home Logo">
+    <div className="relative w-7 h-7 cursor-pointer text-white/90" role="img" aria-label="E·MC Logo — Go to home">
       <motion.svg
         viewBox="0 0 200 200"
         className="w-full h-full"
@@ -83,7 +83,7 @@ const NavItem = ({
     className={`relative px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-300 ${
       isActive
         ? 'text-white'
-        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
+        : 'text-white/60 hover:text-white/90 hover:bg-white/[0.04]'
     }`}
   >
     {isActive && (
@@ -153,6 +153,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
         }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         className="fixed top-5 left-0 right-0 mx-auto z-50 hidden md:flex justify-center px-4"
+        aria-label="Main navigation"
       >
         <div
           className={`flex items-center gap-1 px-2.5 py-2 rounded-[2rem] border border-white/[0.08] backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden transition-colors duration-500 ${
@@ -193,7 +194,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
           <button
             onClick={onOpenCommandPalette}
             aria-label="Open command palette"
-            className="flex items-center gap-1 rounded-lg px-2 py-1 bg-white/[0.03] border border-white/[0.04] text-white/35 hover:text-white/70 hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-300 relative z-10"
+            className="flex items-center gap-1 rounded-lg px-2 py-1 bg-white/[0.03] border border-white/[0.04] text-white/55 hover:text-white/80 hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-300 relative z-10"
           >
             <Command className="h-3 w-3" />
             <kbd className="text-[9px] font-mono tracking-wide">K</kbd>
@@ -206,9 +207,10 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 28, mass: 0.8, delay: 0.2 }}
-        className="fixed bottom-5 inset-x-0 z-50 md:hidden flex justify-center px-4 pointer-events-none"
+        className="fixed inset-x-0 z-50 md:hidden flex justify-center px-4 pointer-events-none"
+        style={{ bottom: 'max(20px, env(safe-area-inset-bottom, 20px))' }}
       >
-        <div className="pointer-events-auto flex items-center gap-0.5 p-1.5 rounded-2xl bg-black/70 border border-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <div className="pointer-events-auto flex items-center gap-0.5 p-1.5 rounded-2xl bg-black/70 border border-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]" role="navigation" aria-label="Mobile navigation">
           {navItems.map((item) => {
             const isActive = activeSection === item.href;
             return (
@@ -218,7 +220,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                 aria-label={item.label}
                 whileTap={{ scale: 0.85 }}
                 className={`relative p-2.5 rounded-xl transition-all duration-300 ${
-                  isActive ? 'text-white' : 'text-white/30 hover:text-white/60'
+                  isActive ? 'text-white' : 'text-white/55 hover:text-white/70'
                 }`}
               >
                 {isActive && (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Components
 import Hero from '../components/Hero';
@@ -22,6 +22,18 @@ const Index = () => {
   useKonamiCode(() => {
     setIsEasterEggActive(true);
   });
+
+  // Console hint for developers who open DevTools
+  useEffect(() => {
+    console.log(
+      "%c👋 Hey, you found the console.",
+      "color: #8b5cf6; font-size: 14px; font-weight: bold;"
+    );
+    console.log(
+      "%cTry the Konami Code. You know the one.",
+      "color: #666; font-size: 11px;"
+    );
+  }, []);
 
   const seoMetadata: SEOMetadata = {
     title: "Emmanuel Moghalu | Data Engineer & System Architect",
@@ -50,7 +62,7 @@ const Index = () => {
   };
 
   return (
-    <div className="bg-[#050505] min-h-screen relative selection:bg-primary/20 selection:text-primary">
+    <div className="bg-[#050505] min-h-screen relative selection:bg-primary/20 selection:text-primary overflow-x-hidden max-w-full">
       {/* Global Background Grid for continuous flow */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none">
         <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] [background-size:24px_24px]" />

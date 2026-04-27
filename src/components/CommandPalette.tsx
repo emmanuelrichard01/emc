@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, ArrowRight, Home, User, Briefcase, Mail, FileText,
-} from 'lucide-react';
+  Github, Linkedin, Twitter, Copy, ExternalLink, Sparkles,
+} from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES & DATA                                                               */
@@ -11,10 +12,10 @@ import {
 interface CommandItem {
   id: string;
   title: string;
-  description: string;
+  subtitle: string;
   icon: React.ElementType;
   action: () => void;
-  category: 'Navigation';
+  category: string;
   keywords: string[];
 }
 
@@ -28,118 +29,193 @@ interface CommandPaletteProps {
 /* -------------------------------------------------------------------------- */
 
 const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const scrollToSection = useCallback((id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      onClose();
-    }
+  const scrollToSection = useCallback(
+    (id: string) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  const copyEmail = useCallback(() => {
+    navigator.clipboard.writeText("emma.moghalu@gmail.com");
+    onClose();
   }, [onClose]);
 
-  const commands: CommandItem[] = useMemo(() => [
-    {
-      id: 'nav-home',
-      title: 'Home',
-      description: 'Return to the top',
-      icon: Home,
-      action: () => scrollToSection('home'),
-      category: 'Navigation',
-      keywords: ['home', 'top', 'start', 'hero'],
-    },
-    {
-      id: 'nav-about',
-      title: 'About',
-      description: 'Philosophy & stack',
-      icon: User,
-      action: () => scrollToSection('about'),
-      category: 'Navigation',
-      keywords: ['about', 'bio', 'me', 'stack', 'tech'],
-    },
-    {
-      id: 'nav-work',
-      title: 'Work',
-      description: 'Engineering case studies',
-      icon: Briefcase,
-      action: () => scrollToSection('projects'),
-      category: 'Navigation',
-      keywords: ['projects', 'work', 'case studies', 'portfolio'],
-    },
-    {
-      id: 'nav-experience',
-      title: 'Experience',
-      description: 'Professional history',
-      icon: FileText,
-      action: () => scrollToSection('experience'),
-      category: 'Navigation',
-      keywords: ['jobs', 'history', 'cv', 'resume'],
-    },
-    {
-      id: 'nav-contact',
-      title: 'Contact',
-      description: 'Get in touch',
-      icon: Mail,
-      action: () => scrollToSection('contact'),
-      category: 'Navigation',
-      keywords: ['email', 'reach', 'touch', 'hire'],
-    },
-  ], [scrollToSection]);
+  const commands: CommandItem[] = useMemo(
+    () => [
+      // Navigation
+      {
+        id: "home",
+        title: "Home",
+        subtitle: "Back to top",
+        icon: Home,
+        action: () => scrollToSection("home"),
+        category: "Navigate",
+        keywords: ["home", "top", "start"],
+      },
+      {
+        id: "about",
+        title: "About",
+        subtitle: "Philosophy & stack",
+        icon: User,
+        action: () => scrollToSection("about"),
+        category: "Navigate",
+        keywords: ["about", "bio", "stack", "tech"],
+      },
+      {
+        id: "work",
+        title: "Projects",
+        subtitle: "Case studies & systems",
+        icon: Briefcase,
+        action: () => scrollToSection("projects"),
+        category: "Navigate",
+        keywords: ["work", "projects", "portfolio", "case"],
+      },
+      {
+        id: "experience",
+        title: "Experience",
+        subtitle: "Career timeline",
+        icon: FileText,
+        action: () => scrollToSection("experience"),
+        category: "Navigate",
+        keywords: ["experience", "jobs", "resume", "cv"],
+      },
+      {
+        id: "contact",
+        title: "Contact",
+        subtitle: "Get in touch",
+        icon: Mail,
+        action: () => scrollToSection("contact"),
+        category: "Navigate",
+        keywords: ["contact", "email", "hire", "reach"],
+      },
+      // Actions
+      {
+        id: "copy-email",
+        title: "Copy Email",
+        subtitle: "emma.moghalu@gmail.com",
+        icon: Copy,
+        action: copyEmail,
+        category: "Actions",
+        keywords: ["copy", "email", "clipboard"],
+      },
+      // Links
+      {
+        id: "github",
+        title: "GitHub",
+        subtitle: "github.com/emmanuelrichard01",
+        icon: Github,
+        action: () => { window.open("https://github.com/emmanuelrichard01", "_blank"); onClose(); },
+        category: "Links",
+        keywords: ["github", "code", "source"],
+      },
+      {
+        id: "linkedin",
+        title: "LinkedIn",
+        subtitle: "linkedin.com/in/e-mc",
+        icon: Linkedin,
+        action: () => { window.open("https://www.linkedin.com/in/e-mc/", "_blank"); onClose(); },
+        category: "Links",
+        keywords: ["linkedin", "profile", "career"],
+      },
+      {
+        id: "twitter",
+        title: "X / Twitter",
+        subtitle: "x.com/_mrebuka",
+        icon: Twitter,
+        action: () => { window.open("https://x.com/_mrebuka", "_blank"); onClose(); },
+        category: "Links",
+        keywords: ["twitter", "x", "social"],
+      },
+      // Hidden — only appears when searching for it
+      {
+        id: "easter-egg",
+        title: "???",
+        subtitle: "You found something. Try the Konami Code.",
+        icon: Sparkles,
+        action: () => {
+          onClose();
+          // Simulate Konami sequence via keyboard dispatch
+          const keys = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+          keys.forEach((k, i) => setTimeout(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: k })), i * 30));
+        },
+        category: "Hidden",
+        keywords: ["secret", "konami", "easter", "hidden", "cheat"],
+      },
+    ],
+    [scrollToSection, copyEmail, onClose]
+  );
 
-  // Filtering
-  const filteredCommands = useMemo(() => {
-    if (!search) return commands;
+  // Filter — hidden items only appear when their keywords match
+  const filtered = useMemo(() => {
+    if (!search) return commands.filter((c) => c.category !== "Hidden");
     const q = search.toLowerCase();
-    return commands.filter(cmd =>
-      cmd.title.toLowerCase().includes(q) ||
-      cmd.description.toLowerCase().includes(q) ||
-      cmd.keywords.some(k => k.includes(q)),
+    return commands.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        c.subtitle.toLowerCase().includes(q) ||
+        c.keywords.some((k) => k.includes(q))
     );
   }, [search, commands]);
 
-  // Keyboard navigation
+  // Group by category
+  const grouped = useMemo(() => {
+    const map = new Map<string, CommandItem[]>();
+    filtered.forEach((c) => {
+      if (!map.has(c.category)) map.set(c.category, []);
+      map.get(c.category)!.push(c);
+    });
+    return map;
+  }, [filtered]);
+
+  // Keyboard
   useEffect(() => {
     if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % filteredCommands.length);
-      } else if (e.key === 'ArrowUp') {
+        setSelectedIndex((i) => (i + 1) % filtered.length);
+      } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 + filteredCommands.length) % filteredCommands.length);
-      } else if (e.key === 'Enter') {
+        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length);
+      } else if (e.key === "Enter") {
         e.preventDefault();
-        filteredCommands[selectedIndex]?.action();
-      } else if (e.key === 'Escape') {
+        filtered[selectedIndex]?.action();
+      } else if (e.key === "Escape") {
         onClose();
       }
     };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, [isOpen, filtered, selectedIndex, onClose]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, filteredCommands, selectedIndex, onClose]);
-
-  // Reset selection on search change
   useEffect(() => setSelectedIndex(0), [search]);
-
-  // Reset search on open
+  useEffect(() => { if (isOpen) { setSearch(""); setTimeout(() => inputRef.current?.focus(), 50); } }, [isOpen]);
   useEffect(() => {
-    if (isOpen) setSearch('');
+    if (isOpen) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "unset";
+    return () => { document.body.style.overflow = "unset"; };
   }, [isOpen]);
 
-  // Lock body scroll
+  // Scroll selected into view
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [isOpen]);
+    if (!listRef.current) return;
+    const el = listRef.current.querySelector(`[data-index="${selectedIndex}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
 
   if (!isOpen) return null;
+
+  let flatIndex = -1;
 
   return (
     <AnimatePresence>
@@ -147,108 +223,132 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4"
+        transition={{ duration: 0.15 }}
+        className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4"
       >
         {/* Backdrop */}
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
         {/* Modal */}
         <motion.div
-          initial={{ scale: 0.95, opacity: 0, y: -20 }}
+          initial={{ scale: 0.96, opacity: 0, y: -10 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: -20 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-          className="relative w-full max-w-[520px] bg-[#050505]/70 backdrop-blur-3xl border border-white/[0.08] shadow-[0_20px_60px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden flex flex-col max-h-[55vh] ring-1 ring-white/[0.02]"
+          exit={{ scale: 0.96, opacity: 0, y: -10 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full max-w-[520px] bg-[#0a0a0a] border border-white/[0.08] shadow-[0_24px_80px_rgba(0,0,0,0.7)] rounded-2xl overflow-hidden flex flex-col max-h-[60vh]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Command palette"
         >
           {/* Top glow */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.15] to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent pointer-events-none" />
 
-          {/* Search */}
-          <div className="relative flex items-center px-5 py-4 border-b border-white/[0.06] gap-3 bg-white/[0.01]">
-            <Search className="w-4.5 h-4.5 text-white/40 shrink-0" />
+          {/* Search input */}
+          <div className="flex items-center px-5 py-4 border-b border-white/[0.06] gap-3">
+            <Search className="w-4 h-4 text-white/30 shrink-0" />
             <input
-              autoFocus
+              ref={inputRef}
               type="text"
-              placeholder="Where do you want to go?"
-              className="flex-1 bg-transparent border-none outline-none text-[15px] text-white/90 placeholder:text-white/25 tracking-wide font-medium"
+              placeholder="Type a command or search..."
+              className="flex-1 bg-transparent border-none outline-none text-sm text-white/85 placeholder:text-white/40 font-medium"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <kbd className="hidden sm:inline-flex items-center h-5 px-1.5 text-[9px] font-mono text-white/30 bg-white/[0.04] rounded border border-white/[0.06] tracking-widest">
+            <kbd className="hidden sm:inline-flex h-5 px-1.5 text-[9px] font-mono text-white/25 bg-white/[0.04] rounded border border-white/[0.06]">
               ESC
             </kbd>
           </div>
 
           {/* Results */}
-          <div className="overflow-y-auto py-2 px-2 scrollbar-hide">
-            {filteredCommands.length === 0 ? (
-              <div className="py-10 text-center">
-                <p className="text-sm text-white/30">No results found.</p>
+          <div ref={listRef} className="overflow-y-auto py-1.5 px-1.5 flex-1" role="listbox" aria-label="Command results">
+            {filtered.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-sm text-white/25">No results found.</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-0.5">
-                {filteredCommands.map((command, i) => {
-                  const isSelected = selectedIndex === i;
-                  return (
-                    <button
-                      key={command.id}
-                      onClick={command.action}
-                      onMouseEnter={() => setSelectedIndex(i)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                        isSelected
-                          ? 'bg-white/[0.06]'
-                          : 'hover:bg-white/[0.03]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div
-                          className={`p-2 rounded-lg transition-colors duration-200 ${
-                            isSelected
-                              ? 'bg-primary/20 text-primary'
-                              : 'bg-white/[0.03] text-white/35'
-                          }`}
-                        >
-                          <command.icon className="w-4 h-4" />
-                        </div>
-                        <div className="text-left">
+              Array.from(grouped.entries()).map(([category, items]) => (
+                <div key={category} className="mb-1">
+                  <div className="px-3 pt-2.5 pb-1.5 text-[9px] font-mono text-white/40 uppercase tracking-[0.2em]" role="presentation">
+                    {category}
+                  </div>
+                  {items.map((cmd) => {
+                    flatIndex++;
+                    const idx = flatIndex;
+                    const selected = selectedIndex === idx;
+                    return (
+                      <button
+                        key={cmd.id}
+                        data-index={idx}
+                        onClick={cmd.action}
+                        onMouseEnter={() => setSelectedIndex(idx)}
+                        role="option"
+                        aria-selected={selected}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-150 group ${
+                          selected ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
                           <div
-                            className={`text-[13px] font-medium tracking-wide transition-colors duration-200 ${
-                              isSelected ? 'text-white' : 'text-white/65'
+                            className={`p-1.5 rounded-md transition-colors duration-150 ${
+                              selected
+                                ? "bg-primary/20 text-primary"
+                                : "bg-white/[0.03] text-white/30"
                             }`}
                           >
-                            {command.title}
+                            <cmd.icon className="w-3.5 h-3.5" />
                           </div>
-                          <div className="text-[11px] text-white/30 mt-0.5 tracking-wide">
-                            {command.description}
+                          <div className="text-left">
+                            <div
+                              className={`text-[13px] font-medium transition-colors duration-150 ${
+                                selected ? "text-white" : "text-white/60"
+                              }`}
+                            >
+                              {cmd.title}
+                            </div>
+                            <div className="text-[10px] text-white/45 mt-0.5">
+                              {cmd.subtitle}
+                            </div>
                           </div>
                         </div>
-                      </div>
-
-                      {isSelected && (
-                        <motion.div
-                          initial={{ opacity: 0, x: -4 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          className="pr-1 text-white/40"
-                        >
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </motion.div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                        {selected && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -4 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.1 }}
+                          >
+                            {cmd.category === "Links" ? (
+                              <ExternalLink className="w-3 h-3 text-white/30" />
+                            ) : (
+                              <ArrowRight className="w-3 h-3 text-white/30" />
+                            )}
+                          </motion.div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
             )}
           </div>
 
-          {/* Footer */}
-          <div className="px-5 py-2.5 bg-white/[0.01] border-t border-white/[0.05] flex items-center gap-4 text-[9px] text-white/25 font-mono tracking-widest uppercase">
+          {/* Footer hints */}
+          <div className="px-4 py-2.5 border-t border-white/[0.04] flex items-center gap-5 text-[9px] text-white/40 font-mono tracking-wide">
             <span className="flex items-center gap-1.5">
-              <kbd className="bg-white/[0.04] border border-white/[0.06] rounded px-1 text-white/40 tracking-normal font-sans text-[10px] flex items-center h-4">↑↓</kbd>
+              <kbd className="bg-white/[0.04] border border-white/[0.06] rounded px-1 text-[10px] h-4 inline-flex items-center">↑↓</kbd>
               navigate
             </span>
             <span className="flex items-center gap-1.5">
-              <kbd className="bg-white/[0.04] border border-white/[0.06] rounded px-1.5 text-white/40 tracking-normal font-sans text-[10px] flex items-center h-4">↵</kbd>
+              <kbd className="bg-white/[0.04] border border-white/[0.06] rounded px-1.5 text-[10px] h-4 inline-flex items-center">↵</kbd>
               select
+            </span>
+            <span className="flex items-center gap-1.5">
+              <kbd className="bg-white/[0.04] border border-white/[0.06] rounded px-1.5 text-[10px] h-4 inline-flex items-center">esc</kbd>
+              close
             </span>
           </div>
         </motion.div>
