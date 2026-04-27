@@ -227,6 +227,10 @@ export default function Hero() {
   const y = useTransform(scrollY, [0, 500], [0, 80]);
   const scale = useTransform(scrollY, [0, 500], [1, 0.97]);
 
+  // Portrait parallax — moves slower than content for depth
+  const portraitY = useTransform(scrollY, [0, 500], [0, 40]);
+  const portraitScale = useTransform(scrollY, [0, 500], [1, 1.04]);
+
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -249,6 +253,36 @@ export default function Hero() {
         <div className="absolute top-[-18%] right-[-8%] w-[300px] h-[300px] sm:w-[550px] sm:h-[550px] rounded-full bg-primary/[0.05] blur-[200px]" />
         <div className="absolute bottom-[-12%] left-[-10%] w-[250px] h-[250px] sm:w-[450px] sm:h-[450px] rounded-full bg-blue-500/[0.04] blur-[200px]" />
       </div>
+
+      {/* ── Atmospheric Portrait ── */}
+      <motion.div
+        className="absolute inset-0 z-[1] pointer-events-none overflow-hidden select-none"
+        style={{ y: portraitY, scale: portraitScale }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        aria-hidden="true"
+      >
+        {/* Primary glow behind portrait */}
+        <div className="absolute top-[15%] left-1/2 -translate-x-1/3 w-[400px] h-[400px] md:w-[500px] md:h-[500px] rounded-full bg-primary/[0.04] blur-[120px]" />
+
+        {/* Portrait image with mask + blend */}
+        <div
+          className="absolute top-[6%] sm:top-[4%] left-1/2 -translate-x-1/2 md:-translate-x-[15%] w-[320px] h-[420px] sm:w-[400px] sm:h-[520px] md:w-[480px] md:h-[620px] lg:w-[540px] lg:h-[700px]"
+          style={{
+            maskImage: 'radial-gradient(ellipse 70% 60% at 50% 35%, black 20%, transparent 70%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 35%, black 20%, transparent 70%)',
+          }}
+        >
+          <img
+            src="/profile.png"
+            alt=""
+            className="w-full h-full object-cover object-top grayscale opacity-[0.18] md:opacity-[0.22] mix-blend-luminosity"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+      </motion.div>
 
       {/* Mouse spotlight */}
       <motion.div
