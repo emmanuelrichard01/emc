@@ -337,13 +337,13 @@ const About: React.FC = () => {
               </div>
 
               <h2 className="text-2xl md:text-3xl lg:text-[2.1rem] font-medium tracking-tight mb-8 leading-[1.25] text-white/80">
-                Obsessed with the <span className="text-white/95">boring stuff;</span> correctness, clarity, and things that work at <span className="text-white/95">3 AM.</span>
+                I build <span className="text-white/95">reliable infrastructure</span> — data pipelines, cloud systems, and backend services that won't break at <span className="text-white/95">3 AM.</span>
               </h2>
             </motion.div>
 
             {/* Bio — one paragraph, personal and specific */}
             <div className="text-sm md:text-[15px] text-white/60 leading-relaxed max-w-lg mt-6 font-light">
-              <RevealText text="I've spent 4 years building the infrastructure nobody sees — the pipelines, the deployment configs, the monitoring that pages you before users notice. I care about correctness over cleverness and systems that stay boring in production." />
+              <RevealText text="Over the past 4 years, I’ve focused on the parts users don’t see — data pipelines, deployment systems, and monitoring that catches issues early. I prioritize clarity, correctness, and systems that remain stable in production." />
             </div>
           </div>
 
