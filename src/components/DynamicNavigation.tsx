@@ -80,6 +80,7 @@ const NavItem = ({
 }) => (
   <button
     onClick={onClick}
+    aria-current={isActive ? "page" : undefined}
     className={`relative px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-300 ${
       isActive
         ? 'text-white'
@@ -164,12 +165,14 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent pointer-events-none" />
 
           {/* Logo */}
-          <div
+          <button
+            type="button"
+            aria-label="Go to home"
             className="flex items-center px-2 cursor-pointer relative z-10"
             onClick={() => scrollToSection('home')}
           >
             <LogoAnimated />
-          </div>
+          </button>
 
           {/* Divider */}
           <div className="w-px h-4 bg-white/[0.06] mx-1" />

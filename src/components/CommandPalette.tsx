@@ -181,6 +181,9 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   useEffect(() => {
     if (!isOpen) return;
     const handle = (e: KeyboardEvent) => {
+      if (!filtered.length && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter")) {
+        return;
+      }
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((i) => (i + 1) % filtered.length);

@@ -33,19 +33,13 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
       <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
       <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1" />
       <meta name="bingbot" content="index, follow" />
-      <meta name="revisit-after" content="7 days" />
       <meta name="language" content="English" />
       <meta name="author" content="Emmanuel C. Moghalu" />
 
       {/* 3. AI Engine & Attribution Meta */}
       <meta name="generator" content="Vite + React" />
-      <meta name="article:author" content="Emmanuel C. Moghalu" />
-      <meta name="citation_author" content="Emmanuel Moghalu" />
 
-      {/* 4. Keywords */}
-      {keywords.length > 0 && (
-        <meta name="keywords" content={keywords.join(', ')} />
-      )}
+
 
       {/* 5. Canonical URL */}
       {canonical && <link rel="canonical" href={canonical} />}
@@ -78,9 +72,7 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
       <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/site.webmanifest" />
 
-      {/* 9. Fonts Preloading (Inter Variable) */}
-      <link rel="preconnect" href="https://rsms.me/" />
-      <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+
 
       {/* 10. DNS Prefetch for external resources */}
       <link rel="dns-prefetch" href="https://fonts.googleapis.com" />

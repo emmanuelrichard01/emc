@@ -2,15 +2,13 @@ import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AnimatePresence, motion } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
-// Components with relative paths to avoid alias resolution issues
-import { ThemeProvider } from "./components/ThemeProvider";
+// import { ThemeProvider } from "./components/ThemeProvider";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Navbar from "./components/DynamicNavigation";
 import Footer from "./components/Footer";
@@ -21,23 +19,16 @@ const Index = lazy(() => import("./pages/Index"));
 // const ProjectsArchive = lazy(() => import("./pages/ProjectsArchive"));
 // const Blog = lazy(() => import("./pages/Blog"));
 // const BlogPost = lazy(() => import("./pages/BlogPost"));
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
-    },
-  },
-});
 
 // Bootloader for route code-splitting — sequenced boot screen
 const BootLoader = () => {
   const bootLines = [
     { text: "Loading modules", delay: 0 },
-    { text: "Initializing renderer", delay: 0.6 },
-    { text: "System ready", delay: 1.2 },
+    { text: "Initializing renderer", delay: 0.15 },
+    { text: "System ready", delay: 0.3 },
   ];
 
   return (
@@ -103,7 +94,7 @@ const BootLoader = () => {
             className="h-full bg-gradient-to-r from-primary/60 to-primary/20 rounded-full"
             initial={{ width: "0%" }}
             animate={{ width: "100%" }}
-            transition={{ duration: 1.8, ease: "easeInOut" }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
           />
         </div>
       </div>
@@ -150,9 +141,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
     <HelmetProvider>
-      <ThemeProvider>
         <TooltipProvider delayDuration={0}>
           <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
             <Toaster />
@@ -167,6 +156,7 @@ const App = () => (
                     <Route path="/projects" element={<ProjectsArchive />} /> Redirect/Alias */}
                     {/* <Route path="/blog" element={<Blog />} /> */}
                     {/* <Route path="/blog/:slug" element={<BlogPost />} /> */}
+                    <Route path="/projects/:id" element={<ProjectDetail />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
@@ -176,9 +166,7 @@ const App = () => (
             <SpeedInsights />
           </ErrorBoundary>
         </TooltipProvider>
-      </ThemeProvider>
     </HelmetProvider>
-  </QueryClientProvider>
 );
 
 export default App;

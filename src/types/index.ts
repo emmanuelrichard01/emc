@@ -1,70 +1,46 @@
 // Portfolio Types - System Architecture Definitions 2026
 
-import { LucideIcon } from "lucide-react";
-
 /* -------------------------------------------------------------------------- */
 /* PROJECT SCHEMA                                                             */
 /* -------------------------------------------------------------------------- */
 
-export interface ArchitecturePoint {
+export interface ProjectMetric {
+  label: string;
+  value: string;
+}
+
+export interface Decision {
   title: string;
   detail: string;
 }
 
-export interface DiagramStep {
-  icon: LucideIcon;
-  label: string;
-}
-
-export interface ProjectDiagram {
-  steps: DiagramStep[];
-}
-
 export interface Project {
   id: string;
+  tier: "flagship" | "production" | "system";
   title: string;
   subtitle: string;
-  role: string;
+  category: string;
   timeline: string;
-
-  // 1. Narrative Core
-  problem: string;
-  system: string;
-
-  // 2. Engineering Deep Dive
-  architecture: ArchitecturePoint[];
-  tradeoffs: string[];
-
-  // 3. Technical Specs
+  github: string | null;
+  liveUrl: string | null;
+  metrics: ProjectMetric[];
+  description: string;
+  decisions: Decision[];
   stack: string[];
-  diagram: ProjectDiagram;
-
-  // Optional / Legacy
-  github?: string;
-  demo?: string;
 }
 
 /* -------------------------------------------------------------------------- */
 /* EXPERIENCE SCHEMA                                                          */
 /* -------------------------------------------------------------------------- */
 
-export interface Decision {
-  label: string;
-  text: string;
-}
-
-export interface Experience {
+export interface ExperienceItem {
   id: string;
   company: string;
   role: string;
+  type: string;
   period: string;
-
-  // Operational Context
-  scope: string;
-  impact: string[];
-
-  // Seniority Signal
-  decision: Decision;
+  summary: string;
+  highlights: string[];
   stack: string[];
 }
 
@@ -88,7 +64,6 @@ export interface SEOMetadata {
     card: string;
     site: string;
     creator: string;
-    // Added optional properties to support overrides
     title?: string;
     description?: string;
     image?: string;

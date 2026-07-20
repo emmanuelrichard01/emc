@@ -17,7 +17,7 @@ const StructuredData = () => {
     "alternateName": "Emmanuel Richard Moghalu",
     "jobTitle": "Lead Data Engineer & System Architect",
     "url": origin,
-    "image": `${origin}/avatar.jpg`,
+    "image": `${origin}/profile.png`,
     "description": "Data Engineer & System Architect specializing in distributed data systems, cloud architecture (AWS, GCP, Azure), and high-performance software engineering. 4+ years building production infrastructure, ETL pipelines, and scalable backend systems.",
     "knowsAbout": [
       "Data Engineering",
@@ -70,7 +70,7 @@ const StructuredData = () => {
       "name": "Emmanuel Moghalu",
       "url": origin
     },
-    "dateModified": new Date().toISOString().split('T')[0],
+    "dateModified": "2026-07-20",
     "inLanguage": "en",
     "speakable": {
       "@type": "SpeakableSpecification",
@@ -228,9 +228,9 @@ const StructuredData = () => {
       <script type="application/ld+json">
         {JSON.stringify(websiteSchema)}
       </script>
-      <script type="application/ld+json">
+      {/* <script type="application/ld+json">
         {JSON.stringify(faqSchema)}
-      </script>
+      </script> */}
       <script type="application/ld+json">
         {JSON.stringify(projectListSchema)}
       </script>

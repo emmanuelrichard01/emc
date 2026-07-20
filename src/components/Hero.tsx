@@ -140,8 +140,12 @@ const TypingTerminal = () => {
       role="status"
       aria-label="Terminal simulation showing engineering commands"
     >
+      <span className="sr-only" aria-live="polite">
+        Terminal output: {entry.text}
+      </span>
       <div
         className="rounded-xl overflow-hidden"
+        aria-hidden="true"
         style={{
           background: 'rgba(10,10,14,0.65)',
           border: '1px solid rgba(255,255,255,0.06)',
@@ -304,10 +308,6 @@ export default function Hero() {
           transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] backdrop-blur-md mb-7"
         >
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-50" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-          </span>
           <span className="text-[10px] font-mono tracking-[0.15em] text-white/60 uppercase">
             Data Engineer · Cloud Architect
           </span>

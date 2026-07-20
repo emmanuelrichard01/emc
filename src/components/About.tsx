@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValue, useMotionTemplate } from "framer-motion";
 import {
   Terminal, Activity, GitCommit, Cpu, ArrowUpRight, Gauge, Database,
 } from "lucide-react";
@@ -85,14 +85,16 @@ const GlassCard = ({
   className?: string;
   spotlight?: boolean;
 }) => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = React.useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!spotlight || !cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
-    setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    mouseX.set(e.clientX - rect.left);
+    mouseY.set(e.clientY - rect.top);
   };
 
   return (
@@ -106,11 +108,11 @@ const GlassCard = ({
       className={`rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-xl overflow-hidden relative hover:border-white/[0.1] transition-colors duration-500 ${className}`}
     >
       {spotlight && (
-        <div
+        <motion.div
           className="pointer-events-none absolute -inset-px rounded-2xl transition-opacity duration-500"
           style={{
             opacity: isHovered ? 1 : 0,
-            background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(168,85,247,0.05), transparent 40%)`,
+            background: useMotionTemplate`radial-gradient(400px circle at ${mouseX}px ${mouseY}px, rgba(168,85,247,0.05), transparent 40%)`,
           }}
         />
       )}
@@ -177,6 +179,7 @@ const TechMarquee = () => {
         {[...TECH_STACK, ...TECH_STACK].map((tech, i) => (
           <div
             key={`${tech.name}-${i}`}
+            aria-hidden={i >= TECH_STACK.length ? "true" : undefined}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-white/55 whitespace-nowrap transition-all duration-300 hover:border-white/[0.12] hover:text-white/70 hover:bg-white/[0.04] cursor-default"
           >
             <tech.icon className="w-3.5 h-3.5" aria-hidden="true" />
