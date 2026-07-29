@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useMotionTemplate, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Download, Github, Linkedin, Twitter, Command } from 'lucide-react';
+import { Terminal, Github, Linkedin, ArrowRight, Download, Command } from "lucide-react";
+import { XLogo } from "@/components/ui/XLogo";
 
 /* -------------------------------------------------------------------------- */
 /* ROTATING WORD                                                              */
@@ -217,7 +218,7 @@ const TypingTerminal = () => {
 const SOCIALS = [
   { icon: Github, href: "https://github.com/emmanuelrichard01", label: "GitHub" },
   { icon: Linkedin, href: "https://linkedin.com/in/e-mc", label: "LinkedIn" },
-  { icon: Twitter, href: "https://x.com/mrebr", label: "X" },
+  { icon: XLogo, href: "https://x.com/mrebr", label: "X" },
 ];
 
 

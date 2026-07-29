@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, ArrowRight, Home, User, Briefcase, Mail, FileText,
-  Github, Linkedin, Twitter, Copy, ExternalLink, Sparkles,
+  Github, Linkedin, Copy, ExternalLink, Sparkles,
 } from "lucide-react";
+import { XLogo } from "@/components/ui/XLogo";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES & DATA                                                               */
@@ -131,7 +132,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         id: "twitter",
         title: "X / Twitter",
         subtitle: "x.com/mrebr",
-        icon: Twitter,
+        icon: XLogo,
         action: () => { window.open("https://x.com/mrebr", "_blank"); onClose(); },
         category: "Links",
         keywords: ["twitter", "x", "social"],

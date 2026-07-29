@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import {
-  Github, Linkedin, Twitter,
+  Github, Linkedin,
   ArrowUpRight, Copy, CheckCircle2,
   Terminal, Send, AlertCircle, Download, Mail,
 } from "lucide-react";
+import { XLogo } from "@/components/ui/XLogo";
 
 /* -------------------------------------------------------------------------- */
 /* 1. DATA                                                                    */
@@ -27,7 +28,7 @@ const SOCIAL_LINKS = [
     id: "twitter",
     label: "X",
     href: "https://x.com/mrebr",
-    icon: Twitter,
+    icon: XLogo,
   },
 ];
 
