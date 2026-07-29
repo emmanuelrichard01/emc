@@ -221,9 +221,10 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                 key={item.label}
                 onClick={() => scrollToSection(item.href)}
                 aria-label={item.label}
+                aria-current={isActive ? "page" : undefined}
                 whileTap={{ scale: 0.85 }}
-                className={`relative p-2.5 rounded-xl transition-all duration-300 ${
-                  isActive ? 'text-white' : 'text-white/55 hover:text-white/70'
+                className={`relative min-w-[48px] min-h-[48px] flex items-center justify-center rounded-xl transition-all duration-300 ${
+                  isActive ? 'text-white' : 'text-white/60 hover:text-white/80'
                 }`}
               >
                 {isActive && (

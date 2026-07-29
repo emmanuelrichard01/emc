@@ -129,7 +129,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       <Navbar onOpenCommandPalette={() => setIsCmdOpen(true)} />
       <CommandPalette isOpen={isCmdOpen} onClose={() => setIsCmdOpen(false)} />
 
-      <main id="main-content" className="flex-1 relative" role="main" aria-label="Portfolio content">
+      <main id="main-content" className="flex-1 relative" aria-label="Portfolio content">
         <AnimatePresence mode="wait">
           {children}
         </AnimatePresence>
@@ -143,7 +143,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
     <HelmetProvider>
         <TooltipProvider delayDuration={0}>
-          <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
+          <ErrorBoundary showDetails={import.meta.env.DEV}>
             <Toaster />
             <Sonner position="top-center" />
 

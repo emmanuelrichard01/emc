@@ -302,7 +302,7 @@ const SystemCard = ({ project, index }: { project: Project; index: number }) => 
 const TierLabel = ({ label }: { label: string }) => (
   <div className="flex items-center gap-3 mb-6">
     <div className="h-px flex-1 bg-gradient-to-r from-white/[0.06] to-transparent" />
-    <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/50">
+    <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/60">
       {label}
     </span>
     <div className="h-px flex-1 bg-gradient-to-l from-white/[0.06] to-transparent" />
@@ -334,7 +334,7 @@ const Projects: React.FC = () => {
             </div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white/90">
               Recent{" "}
-              <span className="text-white/55">Work</span>
+              <span className="text-white/60">Work</span>
             </h2>
           </motion.div>
 
@@ -343,7 +343,7 @@ const Projects: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-white/55 max-w-sm text-sm leading-relaxed font-light"
+            className="text-white/60 max-w-sm text-sm leading-relaxed font-light"
           >
             Real systems I've designed and built — focusing on
             architecture decisions and engineering tradeoffs.

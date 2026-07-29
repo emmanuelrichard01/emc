@@ -89,6 +89,41 @@ const EasterEgg = ({ isActive, onComplete }: EasterEggProps) => {
     };
   }, [isActive, dismiss]);
 
+  // Focus trap
+  const modalRef = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isActive || !modalRef.current) return;
+    const modal = modalRef.current;
+    
+    // Focus the modal itself when opened
+    modal.focus();
+    
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) {
+        e.preventDefault();
+        return;
+      }
+      
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    
+    document.addEventListener("keydown", handleTab);
+    return () => document.removeEventListener("keydown", handleTab);
+  }, [isActive]);
+
   if (!isActive) return null;
 
   return (
@@ -101,6 +136,8 @@ const EasterEgg = ({ isActive, onComplete }: EasterEggProps) => {
         onClick={dismiss}
       >
         <motion.div
+          ref={modalRef}
+          tabIndex={-1}
           initial={{ scale: 0.95, opacity: 0, y: 12 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 12 }}

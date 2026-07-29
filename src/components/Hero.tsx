@@ -356,10 +356,10 @@ export default function Hero() {
           </button>
 
           <a
-            href="/resume.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/Emmanuel_Moghalu_CV.pdf"
+            download="Emmanuel_Moghalu_CV.pdf"
             className="group/btn px-6 py-3 rounded-full font-medium text-[13px] border border-white/[0.08] bg-white/[0.02] text-white/60 hover:text-white/90 hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-md hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto"
+            aria-label="Download Emmanuel Moghalu's CV as PDF"
           >
             Download CV
             <Download className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:-translate-y-0.5" />
@@ -399,8 +399,9 @@ export default function Hero() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.1, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="absolute bottom-8 right-6 md:right-8 z-40 hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-white/[0.05] bg-white/[0.02] backdrop-blur-md cursor-pointer hover:border-white/[0.1] hover:bg-white/[0.04] transition-all duration-300"
+        aria-label="Open command palette (Ctrl+K)"
         onClick={() => {
-          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true }));
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
         }}
       >
         <Command className="w-3 h-3 text-white/50" />

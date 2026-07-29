@@ -228,9 +228,9 @@ const StructuredData = () => {
       <script type="application/ld+json">
         {JSON.stringify(websiteSchema)}
       </script>
-      {/* <script type="application/ld+json">
+      <script type="application/ld+json">
         {JSON.stringify(faqSchema)}
-      </script> */}
+      </script>
       <script type="application/ld+json">
         {JSON.stringify(projectListSchema)}
       </script>

@@ -62,7 +62,7 @@ const RoleRow = ({
         </h4>
 
         {/* Summary */}
-        <p className="text-[13px] text-white/55 leading-relaxed font-light max-w-2xl">
+        <p className="text-[13px] text-white/60 leading-relaxed font-light max-w-2xl">
           {role.summary}
         </p>
 
@@ -122,9 +122,9 @@ const Experience: React.FC = () => {
           </div>
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white/90 mb-4">
             Where I've{" "}
-            <span className="text-white/55">shipped.</span>
+            <span className="text-white/60">shipped.</span>
           </h2>
-          <p className="text-sm text-white/55 max-w-lg font-light leading-relaxed">
+          <p className="text-sm text-white/60 max-w-lg font-light leading-relaxed">
             From infrastructure consulting to full-stack products to backend systems engineering — each role narrowed my focus on what matters: systems that scale, decisions that hold.
           </p>
         </motion.div>

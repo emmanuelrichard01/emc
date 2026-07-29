@@ -216,6 +216,31 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     el?.scrollIntoView({ block: "nearest" });
   }, [selectedIndex]);
 
+  // Focus trap — keep Tab cycling within the modal
+  const modalRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isOpen || !modalRef.current) return;
+    const modal = modalRef.current;
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'input, button, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleTab);
+    return () => document.removeEventListener("keydown", handleTab);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   let flatIndex = -1;
@@ -239,6 +264,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
 
         {/* Modal */}
         <motion.div
+          ref={modalRef}
           initial={{ scale: 0.96, opacity: 0, y: -10 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.96, opacity: 0, y: -10 }}

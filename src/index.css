@@ -675,3 +675,12 @@ body,
   will-change: transform;
   animation: marquee-strip 40s linear infinite;
 }
+
+/* Stop marquee for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-strip,
+  .marquee-vert {
+    animation: none !important;
+    will-change: auto;
+  }
+}

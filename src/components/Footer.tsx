@@ -128,18 +128,21 @@ const Footer = () => {
 
           {/* Navigation links */}
           <nav className="flex flex-wrap items-center justify-center gap-4 sm:gap-6" aria-label="Footer navigation">
-            {LINKS.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative text-[11px] font-medium text-white/55 hover:text-white/80 transition-colors duration-300 group"
-              >
-                {link.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-primary/60 transition-all duration-300 group-hover:w-full" />
-              </a>
-            ))}
+            {LINKS.map((link) => {
+              const isExternal = link.href.startsWith("http");
+              return (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  className="relative text-[11px] font-medium text-white/60 hover:text-white/90 transition-colors duration-300 group py-2"
+                  aria-label={isExternal ? `${link.label} (opens in new tab)` : link.label}
+                >
+                  {link.label}
+                  <span className="absolute -bottom-1 left-0 w-0 h-px bg-primary/60 transition-all duration-300 group-hover:w-full" />
+                </a>
+              );
+            })}
           </nav>
 
           {/* Build signal */}

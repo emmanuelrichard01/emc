@@ -36,7 +36,12 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
       <meta name="language" content="English" />
       <meta name="author" content="Emmanuel C. Moghalu" />
 
-      {/* 3. AI Engine & Attribution Meta */}
+      {/* 3. Keywords */}
+      {keywords && keywords.length > 0 && (
+        <meta name="keywords" content={keywords.join(", ")} />
+      )}
+
+      {/* 4. AI Engine & Attribution Meta */}
       <meta name="generator" content="Vite + React" />
 
 

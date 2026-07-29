@@ -19,7 +19,7 @@ const NotFound = () => {
       <div className="max-w-xl w-full border border-neutral-200 dark:border-white/10 rounded-2xl bg-neutral-50/50 dark:bg-black/40 backdrop-blur-xl p-8 shadow-2xl relative overflow-hidden">
 
         {/* Decorative Noise */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+        <div className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "256px 256px" }} />
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-8 pb-4 border-b border-neutral-200 dark:border-white/5">

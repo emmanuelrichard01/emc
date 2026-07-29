@@ -203,7 +203,7 @@ const DeliverablesModule = () => (
     <div className="p-5">
       <div className="flex items-center gap-2 text-white/50 mb-4">
         <Terminal className="w-3.5 h-3.5 text-primary/50" aria-hidden="true" />
-        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/55">What I Build</span>
+        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/60">What I Build</span>
       </div>
       <div className="space-y-2">
         {DELIVERABLES.map((item) => (
@@ -228,9 +228,9 @@ const MetricsModule = () => (
     <div className="grid grid-cols-3 divide-x divide-white/[0.04]">
       {METRICS.map((m) => (
         <div key={m.label} className="p-3 sm:p-4 md:p-5 flex flex-col justify-between min-h-[100px] sm:min-h-[120px]">
-          <div className="flex items-center gap-1.5 text-white/50 mb-auto">
+          <div className="flex items-center gap-1.5 text-white/60 mb-auto">
             <m.icon className="w-3 h-3 shrink-0" aria-hidden="true" />
-            <span className="text-[8px] md:text-[9px] font-mono tracking-[0.15em] uppercase text-white/50 truncate">
+            <span className="text-[8px] md:text-[9px] font-mono tracking-[0.15em] uppercase text-white/60 truncate">
               {m.label.split(" ").slice(0, 2).join(" ")}
             </span>
           </div>
@@ -240,7 +240,7 @@ const MetricsModule = () => (
                 <AnimatedCounter target={m.value} suffix={m.suffix} />
               </span>
             </div>
-            <span className="text-[9px] md:text-[10px] font-light text-white/50 leading-tight mt-0.5 block">
+            <span className="text-[9px] md:text-[10px] font-light text-white/60 leading-tight mt-0.5 block">
               {m.label.split(" ").slice(2).join(" ")}
             </span>
             <div className="mt-2 h-0.5 rounded-full bg-white/[0.04] overflow-hidden">
@@ -268,7 +268,7 @@ const StackModule = () => (
     <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2 text-white/50">
         <Cpu className="w-3.5 h-3.5" aria-hidden="true" />
-        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/55">Core Stack</span>
+        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/60">Core Stack</span>
       </div>
       <span className="text-[9px] font-mono text-white/50 tracking-wide">{TECH_STACK.length} tools</span>
     </div>
@@ -283,6 +283,8 @@ const StackModule = () => (
 /* -------------------------------------------------------------------------- */
 
 const About: React.FC = () => {
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
   return (
     <section id="about" data-section="about" className="pt-12 pb-24 md:pt-20 md:pb-32 relative" aria-label="About Emmanuel Moghalu">
       <div className="container px-4 md:px-6 max-w-6xl mx-auto">
@@ -302,24 +304,24 @@ const About: React.FC = () => {
                 <div className="absolute -inset-1.5 bg-gradient-to-r from-emerald-500/20 via-primary/20 to-emerald-500/20 rounded-full blur-md opacity-0 group-hover/avatar:opacity-100 animate-[spin_4s_linear_infinite] transition-opacity duration-700" />
                 <div className="absolute -inset-0.5 bg-gradient-to-tr from-emerald-500/30 via-transparent to-primary/30 rounded-full opacity-0 group-hover/avatar:opacity-100 animate-[spin_3s_linear_infinite] transition-opacity duration-500" />
                 <div className="relative z-10 w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border border-white/[0.08] bg-[#050505] transition-transform duration-500 group-hover/avatar:scale-[1.03]">
-                  <img
-                    src={AVATAR_URL}
-                    alt="Emmanuel Moghalu"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-white/[0.02] text-xl font-bold text-white/50">EM</div>';
-                    }}
-                  />
+                  {avatarFailed ? (
+                    <div className="w-full h-full flex items-center justify-center bg-white/[0.02] text-xl font-bold text-white/60" aria-hidden="true">EM</div>
+                  ) : (
+                    <img
+                      src={AVATAR_URL}
+                      alt="Emmanuel Moghalu"
+                      className="w-full h-full object-cover"
+                      onError={() => setAvatarFailed(true)}
+                    />
+                  )}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-base md:text-lg font-medium tracking-tight text-white/85">Emmanuel Moghalu</h3>
+                <p className="text-base md:text-lg font-medium tracking-tight text-white/85">Emmanuel Moghalu</p>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {ROLES.map((role) => (
-                    <span key={role} className="text-[9px] font-mono tracking-wider px-2 py-0.5 rounded-full bg-white/[0.03] text-white/55 border border-white/[0.05]">
+                    <span key={role} className="text-[9px] font-mono tracking-wider px-2 py-0.5 rounded-full bg-white/[0.03] text-white/60 border border-white/[0.05]">
                       {role}
                     </span>
                   ))}
