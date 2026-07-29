@@ -130,9 +130,9 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       {
         id: "twitter",
         title: "X / Twitter",
-        subtitle: "x.com/_mrebuka",
+        subtitle: "x.com/mrebr",
         icon: Twitter,
-        action: () => { window.open("https://x.com/_mrebuka", "_blank"); onClose(); },
+        action: () => { window.open("https://x.com/mrebr", "_blank"); onClose(); },
         category: "Links",
         keywords: ["twitter", "x", "social"],
       },

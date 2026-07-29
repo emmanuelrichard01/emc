@@ -44,7 +44,7 @@ const StructuredData = () => {
     "sameAs": [
       "https://github.com/emmanuelrichard01",
       "https://www.linkedin.com/in/e-mc/",
-      "https://x.com/_mrebuka"
+      "https://x.com/mrebr"
     ],
     "address": {
       "@type": "PostalAddress",
@@ -156,60 +156,67 @@ const StructuredData = () => {
     "@type": "ItemList",
     "name": "Engineering Projects by Emmanuel Moghalu",
     "description": "Portfolio of data engineering, full-stack, and cloud architecture projects.",
-    "numberOfItems": 8,
+    "numberOfItems": 9,
     "itemListElement": [
       {
         "@type": "ListItem",
         "position": 1,
+        "name": "MMR Engine",
+        "description": "Cross-Border Mobile Money Reconciliation Engine",
+        "url": "https://github.com/emmanuelrichard01/mmr-engine"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
         "name": "Logistics Watchtower",
         "description": "Real-time cold chain fleet monitoring with event-driven streaming pipeline",
         "url": "https://github.com/emmanuelrichard01/logistics-watchtower"
       },
       {
         "@type": "ListItem",
-        "position": 2,
+        "position": 3,
         "name": "Modern Data Warehouse",
         "description": "1.5M+ record analytics platform with Medallion Architecture",
         "url": "https://github.com/emmanuelrichard01/modern-warehouse"
       },
       {
         "@type": "ListItem",
-        "position": 3,
+        "position": 4,
         "name": "MedVax Health",
         "description": "Production telemedicine and e-pharmacy platform",
         "url": "https://medvaxhealth.com"
       },
       {
         "@type": "ListItem",
-        "position": 4,
-        "name": "ULTRA-NEWS V2",
-        "description": "Production-grade news aggregation with full-text search",
+        "position": 5,
+        "name": "ULTRA-NEWS V3",
+        "description": "Story-centric news aggregation with semantic clustering",
         "url": "https://ultra-news.vercel.app/"
       },
       {
         "@type": "ListItem",
-        "position": 5,
+        "position": 6,
         "name": "Cloud Bill Hunter",
         "description": "FinOps intelligence platform for AWS cost optimization",
         "url": "https://github.com/emmanuelrichard01/cloud-bill-hunter"
       },
       {
         "@type": "ListItem",
-        "position": 6,
+        "position": 7,
         "name": "Crypto Data Pipeline",
         "description": "Market analytics ETL with dbt testing and Grafana dashboards",
         "url": "https://github.com/emmanuelrichard01/crypto-data-pipeline"
       },
       {
         "@type": "ListItem",
-        "position": 7,
+        "position": 8,
         "name": "CARITAS AI Scholar",
         "description": "RAG-based intelligent academic platform",
         "url": "https://caritas-ai-scholar.vercel.app/"
       },
       {
         "@type": "ListItem",
-        "position": 8,
+        "position": 9,
         "name": "Evanty",
         "description": "Event management platform with Stripe and Clerk",
         "url": "https://evanty.vercel.app/"

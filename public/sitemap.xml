@@ -33,6 +33,12 @@
   </url>
   <!-- Individual project detail pages -->
   <url>
+    <loc>https://em-webapp.vercel.app/projects/mmr-engine</loc>
+    <lastmod>2026-07-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://em-webapp.vercel.app/projects/logistics-watchtower</loc>
     <lastmod>2026-07-29</lastmod>
     <changefreq>monthly</changefreq>

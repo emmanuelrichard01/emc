@@ -9,7 +9,7 @@ import { ArrowUp, Terminal } from "lucide-react";
 const LINKS = [
   { label: "GitHub", href: "https://github.com/emmanuelrichard01" },
   { label: "LinkedIn", href: "https://www.linkedin.com/in/e-mc/" },
-  { label: "X", href: "https://x.com/_mrebuka" },
+  { label: "X", href: "https://x.com/mrebr" },
   { label: "Email", href: "mailto:emma.moghalu@gmail.com" },
 ];
 

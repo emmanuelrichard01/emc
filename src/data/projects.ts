@@ -3,6 +3,36 @@ import { Project } from "@/types";
 export const PROJECTS: Project[] = [
   /* ── TIER 1: FLAGSHIP ─────────────────────────────────────────────────── */
   {
+    id: "mmr-engine",
+    tier: "flagship",
+    title: "MMR Engine",
+    subtitle: "Cross-Border Mobile Money Reconciliation",
+    category: "Fintech Core System",
+    timeline: "2026",
+    github: "https://github.com/emmanuelrichard01/mmr-engine",
+    liveUrl: null,
+    metrics: [
+      { label: "Match Rate", value: "99.5%" },
+      { label: "Latency", value: "<10s" },
+      { label: "Data Pipeline", value: "Medallion" },
+    ],
+    description:
+      "A production-grade reconciliation engine that bridges the gap between disparate PSPs (Paystack, Flutterwave, M-Pesa). It ingests webhooks and polls APIs via HMAC-authenticated endpoints, normalises data into a canonical financial ledger, and matches transactions using a two-tier engine (exact primary + probabilistic secondary with trigram similarity). It detects anomalies like missing settlements, FX variance, and duplicate credits while maintaining a 99.5% match rate.",
+    decisions: [
+      {
+        title: "Medallion Data Architecture",
+        detail:
+          "Bronze (raw immutable Parquet) → Silver (canonical ACID in PostgreSQL) → Gold (business logic via dbt). This guarantees exactly-once processing semantics and full auditability for regulatory compliance.",
+      },
+      {
+        title: "Redpanda for Event Streaming",
+        detail:
+          "Provides Kafka-level durability and API compatibility but with 10x lower RAM usage, acting as the idempotent event queue between ingestion and storage.",
+      },
+    ],
+    stack: ["Python", "FastAPI", "Next.js", "PostgreSQL", "Redpanda", "Prefect", "dbt", "MinIO"],
+  },
+  {
     id: "logistics-watchtower",
     tier: "flagship",
     title: "Logistics Watchtower",
@@ -92,27 +122,32 @@ export const PROJECTS: Project[] = [
   {
     id: "ultra-news",
     tier: "production",
-    title: "ULTRA-NEWS V2",
-    subtitle: "Production-Grade News Aggregation",
-    category: "Full-Stack Product",
-    timeline: "2025",
+    title: "ULTRA-NEWS V3",
+    subtitle: "The Wire Room",
+    category: "News Intelligence",
+    timeline: "2025 — Present",
     github: "https://github.com/emmanuelrichard01/ULTRA-NEWS",
     liveUrl: "https://ultra-news.vercel.app/",
     metrics: [
-      { label: "Response", value: "<100ms" },
-      { label: "Search", value: "TSVector" },
-      { label: "Cache", value: "ISR 60s" },
+      { label: "Clustering", value: "pgvector" },
+      { label: "Ingestion", value: "35+ Feeds" },
+      { label: "Verification", value: "3-Tier" },
     ],
     description:
-      "An 'Information Instrument' built with Django 5 + Next.js. RSS ingestion with deep content scraping (Trafilatura), PostgreSQL full-text search eliminating ElasticSearch, and ISR edge caching at 60s revalidation for sub-100ms responses.",
+      "A story-centric news aggregation platform where multiple outlets covering the same event are semantically clustered into one 'Story' object. It features a three-tier verification lifecycle (Wire → Developing → Reporting) tracking how fast coverage accumulates, providing a consolidated intelligence feed without single-source bias.",
     decisions: [
       {
-        title: "GitHub Actions over Celery",
+        title: "Semantic Vectors over Exact Match",
         detail:
-          "Free-tier compatible ingestion — Actions triggers authenticated API endpoint every 30 min, spawning a background thread. Zero worker cost.",
+          "Three outlets write three different headlines for the same event. We use cosine similarity (≥ 0.80) with local bge-small-en-v1.5 embeddings to cluster stories, avoiding permanent single-source silos while eliminating API costs.",
+      },
+      {
+        title: "Django Ninja + Next.js App Router",
+        detail:
+          "Django Ninja provides typed, fast, auto-documented APIs for the backend, while Next.js handles server-side data fetching and ISR for edge caching.",
       },
     ],
-    stack: ["Python", "Django", "Next.js", "PostgreSQL", "Redis", "Docker"],
+    stack: ["Python", "Django", "Next.js", "PostgreSQL", "pgvector", "Celery", "Redis"],
   },
 
   /* ── TIER 3: SYSTEMS ──────────────────────────────────────────────────── */

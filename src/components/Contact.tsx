@@ -26,7 +26,7 @@ const SOCIAL_LINKS = [
   {
     id: "twitter",
     label: "X",
-    href: "https://x.com/_mrebuka",
+    href: "https://x.com/mrebr",
     icon: Twitter,
   },
 ];

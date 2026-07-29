@@ -217,7 +217,7 @@ const TypingTerminal = () => {
 const SOCIALS = [
   { icon: Github, href: "https://github.com/emmanuelrichard01", label: "GitHub" },
   { icon: Linkedin, href: "https://linkedin.com/in/e-mc", label: "LinkedIn" },
-  { icon: Twitter, href: "https://x.com/_mrebuka", label: "X" },
+  { icon: Twitter, href: "https://x.com/mrebr", label: "X" },
 ];
 
 
