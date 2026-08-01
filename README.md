@@ -2,7 +2,7 @@
 
 A performance-first, dark-mode portfolio built as a system interface rather than a traditional resume site. Engineered to demonstrate architectural judgment, not just list skills.
 
-**[Live →](https://em-webapp.vercel.app)**
+**[Live →](https://www.builtbyem.dev)**
 
 ---
 

@@ -612,14 +612,13 @@ const StaggeredReveal = ({ text, className = "" }: { text: string; className?: s
 
 /* -------------------------------------------------------------------------- */
 /* CIRCUIT-TRACE BACKGROUND (Canvas)                                          */
-/* Canvas-drawn traveling pulses that move along the same 48px grid the CSS   */
-/* background uses. Because both systems use real pixel coordinates from the  */
-/* same (0,0) origin, traces sit exactly on grid lines — guaranteed.         */
-/* Particles travel along grid lines and turn 90° at intersections, giving   */
-/* the feel of live circuitry flowing through the grid.                      */
+/* Senior-level data infrastructure visualization.                            */
+/* Unified canvas draws both the grid and the dynamic multi-class pulses.    */
+/* Grid nodes activate and decay as pulses pass through.                     */
+/* Hub nodes route data and spawn secondary relay signals.                    */
 /* -------------------------------------------------------------------------- */
 
-const GRID = 48; // Must match the CSS grid backgroundSize
+const GRID = 48; // Must match the original CSS grid spacing
 
 const CircuitCanvas = React.memo(() => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -629,139 +628,344 @@ const CircuitCanvas = React.memo(() => {
     const canvas = canvasRef.current;
     if (!canvas || prefersReduced) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
+
+    // Use IntersectionObserver to pause rendering when off-screen
+    let isVisible = true;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        isVisible = entries[0].isIntersecting;
+      },
+      { threshold: 0 }
+    );
+    observer.observe(canvas);
 
     let w = 0;
     let h = 0;
+    let gridCols = 0;
+    let gridRows = 0;
     let rafId = 0;
+    
+    // --- Node Grid System ---
+    // Flat array to store node activation levels (0.0 to 1.0)
+    let nodes = new Float32Array(0);
+    let hubs = new Set<number>();
+    
+    // --- Mouse Proximity ---
+    let mouseX = -1000;
+    let mouseY = -1000;
+    let isTouch = false;
 
-    /* ── Sizing (DPR-aware for sharpness) ── */
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = canvas.clientWidth;
-      h = canvas.clientHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isTouch) return;
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
     };
-    resize();
-    window.addEventListener('resize', resize);
+    const handleMouseLeave = () => {
+      mouseX = -1000;
+      mouseY = -1000;
+    };
+    const handleTouchStart = () => {
+      isTouch = true;
+    };
 
-    /* ── Theme color (re-read periodically for amber/purple switch) ── */
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+
+    /* ── Sizing (ResizeObserver for precision) ── */
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === canvas.parentElement) {
+          const { width, height } = entry.contentRect;
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          w = width;
+          h = height;
+          canvas.width = w * dpr;
+          canvas.height = h * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          
+          gridCols = Math.floor(w / GRID) + 2;
+          gridRows = Math.floor(h / GRID) + 2;
+          
+          const newNodes = new Float32Array(gridCols * gridRows);
+          nodes = newNodes;
+          
+          // Re-pick hubs
+          hubs.clear();
+          const hubCount = 6;
+          for(let i = 0; i < hubCount; i++) {
+             const col = Math.floor(Math.random() * (gridCols - 2)) + 1;
+             const row = Math.floor(Math.random() * (gridRows - 2)) + 1;
+             hubs.add(row * gridCols + col);
+          }
+        }
+      }
+    });
+    
+    if (canvas.parentElement) {
+       resizeObserver.observe(canvas.parentElement);
+    } else {
+       w = canvas.clientWidth;
+       h = canvas.clientHeight;
+    }
+
+
+    /* ── Theme color ── */
     let primaryHSL = '';
-    const readPrimary = () => {
-      primaryHSL = getComputedStyle(document.documentElement)
-        .getPropertyValue('--primary').trim();
+    let fgHSL = '';
+    const readTheme = () => {
+      const style = getComputedStyle(document.documentElement);
+      primaryHSL = style.getPropertyValue('--primary').trim();
+      fgHSL = style.getPropertyValue('--foreground').trim();
     };
-    readPrimary();
+    readTheme();
 
-    /* ── Pulse (particle) types ── */
+    /* ── Pulse (particle) classes ── */
     type Dir = 'up' | 'down' | 'left' | 'right';
+    type PulseClass = 'packet' | 'energy' | 'relay';
 
     interface Pulse {
+      active: boolean;
+      pClass: PulseClass;
       x: number;
       y: number;
       dir: Dir;
-      speed: number;
+      speed: number; // pixels per frame (at 60fps)
       trail: { x: number; y: number }[];
       maxTrail: number;
+      accum: number; // For sub-pixel movement
     }
 
-    const SPEEDS = [1, 2, 3]; // all divide 48 evenly — guaranteed grid hits
-    const PULSE_COUNT = 14;
+    const PULSE_POOL_SIZE = 30; // Pre-allocate
+    const pulses: Pulse[] = Array.from({ length: PULSE_POOL_SIZE }, () => ({
+      active: false, pClass: 'packet', x: 0, y: 0, dir: 'down', speed: 0, trail: [], maxTrail: 0, accum: 0
+    }));
+
     const TURN_CHANCE = 0.3;
 
     const randFrom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-    const perpDirs = (d: Dir): Dir[] =>
-      d === 'left' || d === 'right' ? ['up', 'down'] : ['left', 'right'];
+    const perpDirs = (d: Dir): Dir[] => d === 'left' || d === 'right' ? ['up', 'down'] : ['left', 'right'];
 
-    const spawnPulse = (): Pulse => {
-      const speed = randFrom(SPEEDS);
-      const maxTrail = 50 + Math.floor(Math.random() * 60);
-      const gridCols = Math.floor(w / GRID) + 1;
-      const gridRows = Math.floor(h / GRID) + 1;
+    const spawnPulse = (pClass: PulseClass, specificX?: number, specificY?: number, specificDir?: Dir) => {
+      // Find inactive pulse
+      const p = pulses.find(p => !p.active);
+      if (!p) return;
 
-      // Pick a random edge, start on a grid-snapped position
-      const edge = Math.floor(Math.random() * 4);
-      let x = 0, y = 0, dir: Dir = 'down';
+      p.active = true;
+      p.pClass = pClass;
+      p.trail = [];
+      p.accum = 0;
 
-      switch (edge) {
-        case 0: // top edge → moving down
-          x = Math.floor(Math.random() * gridCols) * GRID;
-          y = 0; dir = 'down'; break;
-        case 1: // right edge → moving left
-          x = (gridCols - 1) * GRID;
-          y = Math.floor(Math.random() * gridRows) * GRID;
-          dir = 'left'; break;
-        case 2: // bottom edge → moving up
-          x = Math.floor(Math.random() * gridCols) * GRID;
-          y = (gridRows - 1) * GRID; dir = 'up'; break;
-        case 3: // left edge → moving right
-          x = 0;
-          y = Math.floor(Math.random() * gridRows) * GRID;
-          dir = 'right'; break;
+      if (specificX !== undefined && specificY !== undefined && specificDir !== undefined) {
+         p.x = specificX;
+         p.y = specificY;
+         p.dir = specificDir;
+      } else {
+         // Pick random edge
+         const edge = Math.floor(Math.random() * 4);
+         const c = Math.floor(Math.random() * gridCols);
+         const r = Math.floor(Math.random() * gridRows);
+         
+         switch (edge) {
+           case 0: p.x = c * GRID; p.y = 0; p.dir = 'down'; break;
+           case 1: p.x = (gridCols - 1) * GRID; p.y = r * GRID; p.dir = 'left'; break;
+           case 2: p.x = c * GRID; p.y = (gridRows - 1) * GRID; p.dir = 'up'; break;
+           case 3: p.x = 0; p.y = r * GRID; p.dir = 'right'; break;
+         }
       }
 
-      return { x, y, dir, speed, trail: [], maxTrail };
+      if (pClass === 'packet') {
+         p.speed = 2 + Math.random() * 1;
+         p.maxTrail = 40 + Math.random() * 20;
+      } else if (pClass === 'energy') {
+         p.speed = 0.5 + Math.random() * 0.5;
+         p.maxTrail = 120 + Math.random() * 60;
+      } else if (pClass === 'relay') {
+         p.speed = 4 + Math.random() * 2;
+         p.maxTrail = 15 + Math.random() * 10;
+      }
     };
+    
+    // Initial spawns
+    for(let i=0; i<8; i++) spawnPulse('packet');
+    for(let i=0; i<4; i++) spawnPulse('energy');
 
-    const updatePulse = (p: Pulse) => {
-      // Record position
-      p.trail.push({ x: p.x, y: p.y });
-      if (p.trail.length > p.maxTrail) p.trail.shift();
+    const updatePulse = (p: Pulse, dtRatio: number) => {
+      if (!p.active) return;
+      
+      const frameSpeed = p.speed * dtRatio;
+      
+      p.accum += frameSpeed;
+      // Move by whole pixels when accumulator >= 1
+      const movePx = Math.floor(p.accum);
+      
+      if (movePx > 0) {
+        p.accum -= movePx;
+        
+        p.trail.push({ x: p.x, y: p.y });
+        if (p.trail.length > p.maxTrail) p.trail.shift();
+        
+        const prevCol = Math.floor(p.x / GRID);
+        const prevRow = Math.floor(p.y / GRID);
+        
+        switch (p.dir) {
+          case 'right': p.x += movePx; break;
+          case 'left':  p.x -= movePx; break;
+          case 'down':  p.y += movePx; break;
+          case 'up':    p.y -= movePx; break;
+        }
+        
+        const currCol = Math.floor(p.x / GRID);
+        const currRow = Math.floor(p.y / GRID);
+        
+        // Did we cross an intersection this step?
+        let hitX = -1, hitY = -1;
+        if (p.dir === 'right' && currCol > prevCol) { hitX = currCol * GRID; hitY = Math.round(p.y/GRID)*GRID; }
+        else if (p.dir === 'left' && currCol < prevCol) { hitX = prevCol * GRID; hitY = Math.round(p.y/GRID)*GRID; }
+        else if (p.dir === 'down' && currRow > prevRow) { hitX = Math.round(p.x/GRID)*GRID; hitY = currRow * GRID; }
+        else if (p.dir === 'up' && currRow < prevRow) { hitX = Math.round(p.x/GRID)*GRID; hitY = prevRow * GRID; }
 
-      // At a grid intersection → maybe turn 90°
-      if (p.x % GRID === 0 && p.y % GRID === 0 && Math.random() < TURN_CHANCE) {
-        p.dir = randFrom(perpDirs(p.dir));
+        if (hitX !== -1 && hitY !== -1) {
+           p.x = hitX;
+           p.y = hitY;
+           
+           const col = Math.round(hitX / GRID);
+           const row = Math.round(hitY / GRID);
+           const nodeIdx = row * gridCols + col;
+           
+           // Activate node
+           if (nodeIdx >= 0 && nodeIdx < nodes.length) {
+              nodes[nodeIdx] = 1.0; 
+              
+              // Hub logic
+              if (hubs.has(nodeIdx) && p.pClass === 'packet') {
+                 const activeRelays = pulses.filter(pp => pp.active && pp.pClass === 'relay').length;
+                 if (activeRelays < 6) {
+                    const rDir = randFrom(perpDirs(p.dir));
+                    spawnPulse('relay', hitX, hitY, rDir);
+                 }
+              }
+           }
+           
+           if (Math.random() < TURN_CHANCE) {
+              p.dir = randFrom(perpDirs(p.dir));
+           }
+        }
       }
 
-      // Advance
-      switch (p.dir) {
-        case 'right': p.x += p.speed; break;
-        case 'left':  p.x -= p.speed; break;
-        case 'down':  p.y += p.speed; break;
-        case 'up':    p.y -= p.speed; break;
-      }
-
-      // Respawn once fully off-screen (head + entire trail)
+      // Respawn off-screen
       const m = GRID * 2;
       const headOOB = p.x < -m || p.x > w + m || p.y < -m || p.y > h + m;
       if (headOOB && p.trail.every(t => t.x < -m || t.x > w + m || t.y < -m || t.y > h + m)) {
-        Object.assign(p, spawnPulse());
+        p.active = false;
+        if (p.pClass !== 'relay') {
+           spawnPulse(p.pClass);
+        }
       }
     };
 
-    /* ── Init + warm-up (so traces are mid-flow on first paint) ── */
-    const pulses: Pulse[] = Array.from({ length: PULSE_COUNT }, spawnPulse);
-    for (let i = 0; i < 300; i++) pulses.forEach(updatePulse);
+    /* ── Game Loop ── */
+    let lastTime = 0;
+    let frameCount = 0;
+    
+    // Warm up
+    const dtRatio = 1.0;
+    for (let i = 0; i < 300; i++) pulses.forEach(p => updatePulse(p, dtRatio));
 
-    /* ── Render ── */
-    let frame = 0;
+    const draw = (time: number) => {
+      rafId = requestAnimationFrame(draw);
+      
+      if (!isVisible) return;
+      
+      if (lastTime === 0) lastTime = time;
+      const dt = time - lastTime;
+      lastTime = time;
+      const stepDt = Math.min(dt, 50);
+      const ratio = stepDt / (1000 / 60);
 
-    const draw = () => {
       ctx.clearRect(0, 0, w, h);
 
-      // Re-read theme color every ~2 seconds (in case of amber↔purple switch)
-      if (frame++ % 120 === 0) readPrimary();
+      if (frameCount++ % 120 === 0) readTheme();
 
+      // --- Background Grid ---
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = `hsl(${fgHSL} / 0.05)`;
+      ctx.beginPath();
+      for (let x = 0; x <= w; x += GRID) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, h);
+      }
+      for (let y = 0; y <= h; y += GRID) {
+        ctx.moveTo(0, y); ctx.lineTo(w, y);
+      }
+      ctx.stroke();
+
+      // --- Nodes ---
+      const nodeDecay = 0.02 * ratio;
+      ctx.fillStyle = `hsl(${primaryHSL})`;
+      
+      for (let r = 0; r < gridRows; r++) {
+         for (let c = 0; c < gridCols; c++) {
+            const idx = r * gridCols + c;
+            const nx = c * GRID;
+            const ny = r * GRID;
+            
+            let proxVal = 0;
+            if (mouseX !== -1000) {
+               const dx = nx - mouseX;
+               const dy = ny - mouseY;
+               const dist = Math.sqrt(dx*dx + dy*dy);
+               if (dist < 120) {
+                  proxVal = 1.0 - (dist / 120);
+               }
+            }
+
+            let activation = nodes[idx] || 0;
+            
+            if (activation > 0 || proxVal > 0 || hubs.has(idx)) {
+               const baseAlpha = hubs.has(idx) ? 0.15 : 0;
+               const finalAlpha = Math.max(baseAlpha, activation * 0.8, proxVal * 0.3);
+               
+               if (finalAlpha > 0.01) {
+                  ctx.globalAlpha = finalAlpha;
+                  const radius = hubs.has(idx) ? 2.5 : 1.5;
+                  ctx.beginPath();
+                  ctx.arc(nx, ny, radius, 0, Math.PI * 2);
+                  ctx.fill();
+               }
+               
+               if (activation > 0) {
+                  nodes[idx] = Math.max(0, activation - nodeDecay);
+               }
+            }
+         }
+      }
+      ctx.globalAlpha = 1.0;
+
+      // --- Pulses ---
       for (const p of pulses) {
-        updatePulse(p);
-        const { trail } = p;
+        if (!p.active) continue;
+        updatePulse(p, ratio);
+        
+        const { trail, pClass } = p;
         if (trail.length < 2) continue;
 
-        // Draw trail in 4 opacity bands (tail → head = dim → bright)
-        const bands = 4;
+        const bands = pClass === 'energy' ? 2 : 4;
         const bandSize = Math.ceil(trail.length / bands);
+        
+        const maxAlpha = pClass === 'energy' ? 0.1 : (pClass === 'relay' ? 0.6 : 0.4);
+        const width = pClass === 'energy' ? 3 : 1.5;
 
         for (let b = 0; b < bands; b++) {
           const s = b * bandSize;
           const e = Math.min(s + bandSize + 1, trail.length);
           if (s >= trail.length) break;
 
-          const alpha = ((b + 1) / bands) * 0.4;
+          const alpha = ((b + 1) / bands) * maxAlpha;
           ctx.strokeStyle = `hsl(${primaryHSL} / ${alpha})`;
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = width;
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
           ctx.beginPath();
@@ -770,38 +974,60 @@ const CircuitCanvas = React.memo(() => {
           ctx.stroke();
         }
 
-        // Glowing head dot
-        const head = trail[trail.length - 1];
-        ctx.save();
-        ctx.shadowColor = `hsl(${primaryHSL})`;
-        ctx.shadowBlur = 8;
-        ctx.fillStyle = `hsl(${primaryHSL} / 0.9)`;
-        ctx.beginPath();
-        ctx.arc(head.x, head.y, 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        if (pClass !== 'energy') {
+           const head = trail[trail.length - 1];
+           ctx.save();
+           ctx.shadowColor = `hsl(${primaryHSL})`;
+           ctx.shadowBlur = pClass === 'packet' ? 8 : 4;
+           ctx.fillStyle = `hsl(${primaryHSL} / 0.9)`;
+           ctx.beginPath();
+           ctx.arc(head.x, head.y, pClass === 'packet' ? 2 : 1.5, 0, Math.PI * 2);
+           ctx.fill();
+           ctx.restore();
+        }
       }
-
-      rafId = requestAnimationFrame(draw);
+      
+      // --- Edge Vignette ---
+      ctx.globalCompositeOperation = 'destination-in';
+      const grad = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*0.2, w/2, h/2, Math.max(w,h)*0.6);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
     };
 
     rafId = requestAnimationFrame(draw);
 
     return () => {
       cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', resize);
+      observer.disconnect();
+      resizeObserver.disconnect();
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('touchstart', handleTouchStart);
     };
   }, [prefersReduced]);
 
-  if (prefersReduced) return null;
+  if (prefersReduced) {
+     return (
+        <div className="absolute inset-0 z-0 pointer-events-none" style={{
+           backgroundImage: 'linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)',
+           backgroundSize: '48px 48px',
+           opacity: 0.05
+        }} />
+     );
+  }
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="w-full h-full"
-      aria-hidden="true"
-      style={{ display: 'block' }}
-    />
+    <div className="absolute inset-0 z-0 pointer-events-auto" style={{ overflow: 'hidden' }}>
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full"
+        aria-hidden="true"
+        style={{ display: 'block' }}
+      />
+    </div>
   );
 });
 
@@ -825,11 +1051,7 @@ export default function Hero() {
     target: sectionRef,
     offset: ["start start", "end start"],
   });
-  const gridOpacity = useTransform(scrollYProgress, [0, 0.8], [0.05, 0]);
-  // Independent of the flat grid's opacity — the grid's 0.05 baseline is
-  // near-invisible by design, but the traces are meant to read as a subtle
-  // *living* signal, so they get their own slightly stronger fade curve.
-  const circuitOpacity = useTransform(scrollYProgress, [0, 0.8], [0.35, 0]);
+  const circuitOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
     <section
@@ -841,18 +1063,6 @@ export default function Hero() {
     >
       {/* ── Background ── */}
       <div className="absolute inset-0 z-0 pointer-events-none select-none noise-overlay" />
-      <motion.div
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{ opacity: gridOpacity }}
-      >
-        <div
-          className="w-full h-full"
-          style={{
-            backgroundImage: 'linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)',
-            backgroundSize: '48px 48px'
-          }}
-        />
-      </motion.div>
       <motion.div
         className="absolute inset-0 z-0 pointer-events-none"
         style={{ opacity: circuitOpacity }}

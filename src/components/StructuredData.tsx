@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { PROJECTS } from '@/data/projects';
 
 // Helper to safely get origin
-const getOrigin = () => typeof window !== 'undefined' ? window.location.origin : 'https://em-webapp.vercel.app';
+const getOrigin = () => typeof window !== 'undefined' ? window.location.origin : 'https://www.builtbyem.dev';
 
 // Bump this when profile/project content actually changes — not on every
 // deploy — so dateModified stays a meaningful signal rather than noise.

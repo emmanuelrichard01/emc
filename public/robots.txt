@@ -27,4 +27,4 @@ User-agent: Googlebot
 Allow: /
 
 # Sitemap
-Sitemap: https://em-webapp.vercel.app/sitemap.xml
+Sitemap: https://www.builtbyem.dev/sitemap.xml

@@ -16,7 +16,7 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
     twitter
   } = metadata;
 
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://em-webapp.vercel.app';
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.builtbyem.dev';
 
   return (
     <Helmet>
