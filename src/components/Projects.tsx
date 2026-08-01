@@ -88,10 +88,15 @@ const FlagshipCard = ({ project, index }: { project: Project; index: number }) =
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
+      transition={{
+        duration: 0.5,
+        delay: Math.min(index * 0.1, 0.3),
+        ease: [0.16, 1, 0.3, 1],
+      }}
       className="group relative w-full border border-border bg-card p-6 md:p-10 pb-9 hover:border-primary/40 transition-all duration-300 overflow-hidden"
       style={{ boxShadow: 'var(--shadow-sm)' }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md), var(--shadow-glow)'; }}
@@ -171,10 +176,15 @@ const ProductionCard = ({ project, index }: { project: Project; index: number })
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
+      transition={{
+        duration: 0.5,
+        delay: (index % 2) * 0.1,
+        ease: [0.16, 1, 0.3, 1],
+      }}
       className="group relative flex flex-col h-full border border-border bg-card p-6 md:p-8 pb-9 hover:border-primary/30 transition-all duration-300 overflow-hidden"
       style={{ boxShadow: 'var(--shadow-sm)' }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)'; }}
@@ -225,10 +235,15 @@ const SystemCard = ({ project, index }: { project: Project; index: number }) => 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
+      transition={{
+        duration: 0.5,
+        delay: (index % 3) * 0.08,
+        ease: [0.16, 1, 0.3, 1],
+      }}
       className="group relative flex flex-col h-full border border-border bg-card p-6 pb-9 hover:border-primary/30 transition-all duration-300 overflow-hidden"
       style={{ boxShadow: 'var(--shadow-sm)' }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)'; }}
@@ -286,7 +301,13 @@ const TierLabel = ({ label, num }: { label: string; num: string }) => {
   const isInView = useInView(ref, { once: true, amount: 0.5 });
 
   return (
-    <div ref={ref} className="flex items-center gap-4 mb-8 mt-16">
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 10 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="flex items-center gap-4 mb-8 mt-16"
+    >
       <span className="font-mono text-[13px] text-primary">{num}</span>
       <span className="text-[11px] font-mono tracking-[0.2em] uppercase text-foreground">
         {label}
@@ -295,9 +316,9 @@ const TierLabel = ({ label, num }: { label: string; num: string }) => {
         className="h-[1px] flex-1 bg-border origin-left"
         initial={{ scaleX: 0 }}
         animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
       />
-    </div>
+    </motion.div>
   );
 };
 
@@ -320,14 +341,20 @@ const FlagshipSpotlight = ({ project }: { project: Project }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       className="relative border border-primary/30 bg-card p-8 md:p-12 mb-8 overflow-hidden"
       style={{ boxShadow: 'var(--shadow-lg), var(--shadow-glow)' }}
     >
-      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary via-primary/60 to-transparent" />
+      <motion.div
+        initial={{ scaleX: 0 }}
+        whileInView={{ scaleX: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary via-primary/60 to-transparent origin-left"
+      />
 
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.2em] text-primary border border-primary/30 bg-primary/5 px-2.5 py-1">
@@ -358,14 +385,20 @@ const FlagshipSpotlight = ({ project }: { project: Project }) => {
         </div>
 
         {heroMetric && (
-          <div className="lg:col-span-4 flex flex-col items-center lg:items-end text-center lg:text-right">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-4 flex flex-col items-center lg:items-end text-center lg:text-right"
+          >
             <span className="text-5xl md:text-6xl font-mono font-bold text-primary tabular-nums">
               {parsed ? <AnimatedCounter target={parsed.target} suffix={parsed.suffix} /> : heroMetric.value}
             </span>
             <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-2">
               {heroMetric.label}
             </span>
-          </div>
+          </motion.div>
         )}
       </div>
     </motion.div>
@@ -439,7 +472,12 @@ const Projects: React.FC = () => {
 
         {/* Section Header */}
         <div className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          >
             <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px] tracking-[0.2em] uppercase mb-4">
               <Terminal className="w-4 h-4 text-primary" />
               <span>Module 02 // Engineering</span>
@@ -450,9 +488,10 @@ const Projects: React.FC = () => {
           </motion.div>
 
           <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="text-muted-foreground max-w-md text-[13px] leading-relaxed font-light"
           >
             Real systems designed and built for scale — focusing on data pipelines, architectural decisions, and resilient infrastructure.
@@ -463,7 +502,13 @@ const Projects: React.FC = () => {
         <FlagshipSpotlight project={spotlightProject} />
 
         {/* ── Tech Filter ── */}
-        <div className="flex flex-col gap-4 mb-4 pb-8 border-b border-border">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col gap-4 mb-4 pb-8 border-b border-border"
+        >
           <div className="flex flex-wrap items-center gap-2">
             <FilterChip label="All" active={selectedTech.length === 0} onClick={() => setSelectedTech([])} />
             {ALL_TECH.map((tech) => (
@@ -478,7 +523,7 @@ const Projects: React.FC = () => {
           <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
             Showing {visibleCount} of {filterablePool.length} systems
           </span>
-        </div>
+        </motion.div>
 
         {/* ── TIER 1: Flagship ── */}
         {visibleFlagships.length > 0 && (

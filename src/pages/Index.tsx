@@ -46,10 +46,10 @@ const Index = () => {
     ],
     canonical: typeof window !== 'undefined' ? window.location.href : undefined,
     openGraph: {
-      title: "Emmanuel Moghalu - Engineering Logs",
-      description: "A portfolio of system designs, architectural decisions, and production-grade software.",
-      image: `${typeof window !== 'undefined' ? window.location.origin : ''}/og-image.jpg`,
-      url: typeof window !== 'undefined' ? window.location.origin : '',
+      title: "Emmanuel Moghalu | Data Engineer & System Architect",
+      description: "Engineering resilient data pipelines, scalable cloud infrastructure, and production-grade software systems.",
+      image: typeof window !== 'undefined' ? `${window.location.origin}/og-image.jpg` : 'https://www.builtbyem.dev/og-image.jpg',
+      url: typeof window !== 'undefined' ? window.location.origin : 'https://www.builtbyem.dev',
       type: "website"
     },
     twitter: {

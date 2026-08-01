@@ -17,6 +17,9 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
   } = metadata;
 
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.builtbyem.dev';
+  const ogImageUrl = openGraph?.image
+    ? (openGraph.image.startsWith('http') ? openGraph.image : `${siteUrl}${openGraph.image.startsWith('/') ? '' : '/'}${openGraph.image}`)
+    : `${siteUrl}/og-image.jpg`;
 
   return (
     <Helmet>
@@ -55,7 +58,8 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
       <meta property="og:title" content={openGraph?.title || title} />
       <meta property="og:description" content={openGraph?.description || description} />
       <meta property="og:url" content={openGraph?.url || canonical || siteUrl} />
-      {openGraph?.image && <meta property="og:image" content={openGraph.image} />}
+      <meta property="og:image" content={ogImageUrl} />
+      <meta property="og:image:secure_url" content={ogImageUrl} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:image:alt" content="Emmanuel Moghalu — Data Engineer & System Architect Portfolio" />
@@ -67,7 +71,7 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
       <meta name="twitter:creator" content={twitter?.creator || '@_mrebuka'} />
       <meta name="twitter:title" content={twitter?.title || title} />
       <meta name="twitter:description" content={twitter?.description || description} />
-      {openGraph?.image && <meta name="twitter:image" content={openGraph.image} />}
+      <meta name="twitter:image" content={ogImageUrl} />
       <meta name="twitter:image:alt" content="Emmanuel Moghalu Portfolio" />
 
       {/* 8. Favicons & Manifest */}
