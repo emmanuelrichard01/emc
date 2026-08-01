@@ -22,7 +22,7 @@ const StructuredData = () => {
     "alternateName": "Emmanuel Richard Moghalu",
     "jobTitle": "Lead Data Engineer & System Architect",
     "url": origin,
-    "image": `${origin}/profile.png`,
+    "image": `${origin}/profile.webp`,
     "description": "Data Engineer & System Architect specializing in distributed data systems, cloud architecture (AWS, GCP, Azure), and high-performance software engineering. 4+ years building production infrastructure, ETL pipelines, and scalable backend systems.",
     "knowsAbout": [
       "Data Engineering",
