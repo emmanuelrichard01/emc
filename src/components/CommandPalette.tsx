@@ -2,9 +2,12 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, ArrowRight, Home, User, Briefcase, Mail, FileText,
-  Github, Linkedin, Copy, ExternalLink, Sparkles,
+  Github, Linkedin, Copy, ExternalLink, Sparkles, Palette, Download
 } from "lucide-react";
+import { toast } from "sonner";
 import { XLogo } from "@/components/ui/XLogo";
+import { useTheme } from "./ThemeProvider";
+import { scrollToSection as scrollToSectionBase } from "@/lib/scrollToSection";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES & DATA                                                               */
@@ -30,6 +33,7 @@ interface CommandPaletteProps {
 /* -------------------------------------------------------------------------- */
 
 const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
+  const { theme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -37,18 +41,30 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
 
   const scrollToSection = useCallback(
     (id: string) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth" });
-        onClose();
-      }
+      if (scrollToSectionBase(id)) onClose();
     },
     [onClose]
   );
 
   const copyEmail = useCallback(() => {
     navigator.clipboard.writeText("emma.moghalu@gmail.com");
+    toast.success("Email copied to clipboard", {
+      description: "emma.moghalu@gmail.com",
+    });
     onClose();
+  }, [onClose]);
+
+  const downloadCV = useCallback(() => {
+    onClose();
+    // Small delay to let palette close, then trigger the download
+    setTimeout(() => {
+      const a = document.createElement('a');
+      a.href = '/Emmanuel_Moghalu_CV.pdf';
+      a.download = 'Emmanuel_Moghalu_CV.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }, 150);
   }, [onClose]);
 
   const commands: CommandItem[] = useMemo(
@@ -109,6 +125,15 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         category: "Actions",
         keywords: ["copy", "email", "clipboard"],
       },
+      {
+        id: "download-cv",
+        title: "Download CV",
+        subtitle: "Emmanuel_Moghalu_CV.pdf · 208 KB",
+        icon: Download,
+        action: downloadCV,
+        category: "Actions",
+        keywords: ["download", "cv", "resume", "pdf", "curriculum"],
+      },
       // Links
       {
         id: "github",
@@ -137,15 +162,33 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         category: "Links",
         keywords: ["twitter", "x", "social"],
       },
+      // Theme
+      {
+        id: "theme-amber",
+        title: "Telemetry Amber",
+        subtitle: "Switch to default monochrome & amber theme",
+        icon: Palette,
+        action: () => { setTheme("amber"); onClose(); },
+        category: "Preferences",
+        keywords: ["theme", "color", "amber", "orange", "dark"],
+      },
+      {
+        id: "theme-purple",
+        title: "Tech Purple",
+        subtitle: "Switch to monochrome & purple theme",
+        icon: Palette,
+        action: () => { setTheme("purple"); onClose(); },
+        category: "Preferences",
+        keywords: ["theme", "color", "purple", "violet", "dark"],
+      },
       // Hidden — only appears when searching for it
       {
         id: "easter-egg",
         title: "???",
-        subtitle: "You found something. Try the Konami Code.",
+        subtitle: "Secret payload discovered. Enter KONAMI sequence.",
         icon: Sparkles,
         action: () => {
           onClose();
-          // Simulate Konami sequence via keyboard dispatch
           const keys = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
           keys.forEach((k, i) => setTimeout(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: k })), i * 30));
         },
@@ -153,7 +196,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         keywords: ["secret", "konami", "easter", "hidden", "cheat"],
       },
     ],
-    [scrollToSection, copyEmail, onClose]
+    [scrollToSection, copyEmail, downloadCV, onClose, setTheme]
   );
 
   // Filter — hidden items only appear when their keywords match
@@ -217,7 +260,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     el?.scrollIntoView({ block: "nearest" });
   }, [selectedIndex]);
 
-  // Focus trap — keep Tab cycling within the modal
+  // Focus trap
   const modalRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!isOpen || !modalRef.current) return;
@@ -259,52 +302,49 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          className="absolute inset-0 bg-background/80 backdrop-blur-sm"
           onClick={onClose}
         />
 
         {/* Modal */}
         <motion.div
           ref={modalRef}
-          initial={{ scale: 0.96, opacity: 0, y: -10 }}
+          initial={{ scale: 0.98, opacity: 0, y: -10 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.96, opacity: 0, y: -10 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-[520px] bg-[#0a0a0a] border border-white/[0.08] shadow-[0_24px_80px_rgba(0,0,0,0.7)] rounded-2xl overflow-hidden flex flex-col max-h-[60vh]"
+          exit={{ scale: 0.98, opacity: 0, y: -10 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="relative w-full max-w-[520px] bg-card border border-border shadow-2xl rounded-none flex flex-col max-h-[60vh]"
           role="dialog"
           aria-modal="true"
           aria-label="Command palette"
         >
-          {/* Top glow */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent pointer-events-none" />
-
           {/* Search input */}
-          <div className="flex items-center px-5 py-4 border-b border-white/[0.06] gap-3">
-            <Search className="w-4 h-4 text-white/30 shrink-0" />
+          <div className="flex items-center px-5 py-4 border-b border-border gap-3 bg-muted/30">
+            <Search className="w-4 h-4 text-primary shrink-0" />
             <input
               ref={inputRef}
               type="text"
-              placeholder="Type a command or search..."
-              className="flex-1 bg-transparent border-none outline-none text-sm text-white/85 placeholder:text-white/40 font-medium"
+              placeholder="Search commands..."
+              className="flex-1 bg-transparent border-none outline-none text-[13px] font-mono text-foreground placeholder:text-muted-foreground"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <kbd className="hidden sm:inline-flex h-5 px-1.5 text-[9px] font-mono text-white/25 bg-white/[0.04] rounded border border-white/[0.06]">
+            <kbd className="hidden sm:inline-flex px-2 py-0.5 text-[9px] font-mono text-muted-foreground border border-border uppercase tracking-widest">
               ESC
             </kbd>
           </div>
 
           {/* Results */}
-          <div ref={listRef} className="overflow-y-auto py-1.5 px-1.5 flex-1" role="listbox" aria-label="Command results">
+          <div ref={listRef} className="overflow-y-auto p-2 flex-1" role="listbox" aria-label="Command results">
             {filtered.length === 0 ? (
-              <div className="py-12 text-center">
-                <p className="text-sm text-white/25">No results found.</p>
+              <div className="py-12 text-center font-mono">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-widest">No results found.</p>
               </div>
             ) : (
               Array.from(grouped.entries()).map(([category, items]) => (
-                <div key={category} className="mb-1">
-                  <div className="px-3 pt-2.5 pb-1.5 text-[9px] font-mono text-white/40 uppercase tracking-[0.2em]" role="presentation">
-                    {category}
+                <div key={category} className="mb-2">
+                  <div className="px-3 pt-2 pb-1 text-[9px] font-mono text-primary uppercase tracking-[0.2em]" role="presentation">
+                    // {category}
                   </div>
                   {items.map((cmd) => {
                     flatIndex++;
@@ -318,45 +358,43 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                         onMouseEnter={() => setSelectedIndex(idx)}
                         role="option"
                         aria-selected={selected}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-150 group ${
-                          selected ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
+                        className={`w-full flex items-center justify-between px-3 py-2.5 transition-colors duration-0 group border-l-2 ${
+                          selected ? "bg-muted/50 border-primary" : "border-transparent hover:bg-muted/30"
                         }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                           <div
-                            className={`p-1.5 rounded-md transition-colors duration-150 ${
+                            className={`p-1.5 border transition-colors ${
                               selected
-                                ? "bg-primary/20 text-primary"
-                                : "bg-white/[0.03] text-white/30"
+                                ? "border-primary text-primary bg-primary/10"
+                                : "border-border text-muted-foreground"
                             }`}
                           >
                             <cmd.icon className="w-3.5 h-3.5" />
                           </div>
                           <div className="text-left">
                             <div
-                              className={`text-[13px] font-medium transition-colors duration-150 ${
-                                selected ? "text-white" : "text-white/60"
+                              className={`text-[13px] font-mono tracking-wide uppercase transition-colors ${
+                                selected ? "text-foreground" : "text-muted-foreground"
                               }`}
                             >
                               {cmd.title}
                             </div>
-                            <div className="text-[10px] text-white/45 mt-0.5">
+                            <div className="text-[10px] text-muted-foreground/70 mt-0.5">
                               {cmd.subtitle}
                             </div>
                           </div>
                         </div>
                         {selected && (
-                          <motion.div
-                            initial={{ opacity: 0, x: -4 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.1 }}
-                          >
+                          <div className="text-primary pr-2">
                             {cmd.category === "Links" ? (
-                              <ExternalLink className="w-3 h-3 text-white/30" />
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            ) : cmd.id === "download-cv" ? (
+                              <Download className="w-3.5 h-3.5" />
                             ) : (
-                              <ArrowRight className="w-3 h-3 text-white/30" />
+                              <ArrowRight className="w-3.5 h-3.5" />
                             )}
-                          </motion.div>
+                          </div>
                         )}
                       </button>
                     );
@@ -367,18 +405,14 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           </div>
 
           {/* Footer hints */}
-          <div className="px-4 py-2.5 border-t border-white/[0.04] flex items-center gap-5 text-[9px] text-white/40 font-mono tracking-wide">
-            <span className="flex items-center gap-1.5">
-              <kbd className="bg-white/[0.04] border border-white/[0.06] rounded px-1 text-[10px] h-4 inline-flex items-center">↑↓</kbd>
+          <div className="px-5 py-3 border-t border-border bg-muted/30 flex items-center gap-6 text-[9px] text-muted-foreground font-mono uppercase tracking-widest">
+            <span className="flex items-center gap-2">
+              <kbd className="border border-border px-1.5 py-0.5">↑↓</kbd>
               navigate
             </span>
-            <span className="flex items-center gap-1.5">
-              <kbd className="bg-white/[0.04] border border-white/[0.06] rounded px-1.5 text-[10px] h-4 inline-flex items-center">↵</kbd>
+            <span className="flex items-center gap-2">
+              <kbd className="border border-border px-1.5 py-0.5">↵</kbd>
               select
-            </span>
-            <span className="flex items-center gap-1.5">
-              <kbd className="bg-white/[0.04] border border-white/[0.06] rounded px-1.5 text-[10px] h-4 inline-flex items-center">esc</kbd>
-              close
             </span>
           </div>
         </motion.div>

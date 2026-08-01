@@ -1,8 +1,13 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { PROJECTS } from '@/data/projects';
 
 // Helper to safely get origin
 const getOrigin = () => typeof window !== 'undefined' ? window.location.origin : 'https://em-webapp.vercel.app';
+
+// Bump this when profile/project content actually changes — not on every
+// deploy — so dateModified stays a meaningful signal rather than noise.
+const CONTENT_LAST_UPDATED = "2026-07-31";
 
 const StructuredData = () => {
   const origin = getOrigin();
@@ -70,7 +75,7 @@ const StructuredData = () => {
       "name": "Emmanuel Moghalu",
       "url": origin
     },
-    "dateModified": "2026-07-20",
+    "dateModified": CONTENT_LAST_UPDATED,
     "inLanguage": "en",
     "speakable": {
       "@type": "SpeakableSpecification",
@@ -136,7 +141,7 @@ const StructuredData = () => {
         "name": "What projects has Emmanuel Moghalu built?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Notable projects include: Logistics Watchtower (real-time cold chain fleet monitoring with Redpanda and Quix Streams), Modern Data Warehouse (1.5M+ record analytics platform with Dagster, dbt, and DuckDB), MedVax Health (production telemedicine platform with NestJS), and ULTRA-NEWS V2 (news aggregation engine with Django and Next.js). All projects emphasize production-grade engineering, observability, and architectural decision-making."
+          "text": "Notable projects include: MMR Engine (cross-border mobile money reconciliation with a two-tier matching engine), Logistics Watchtower (real-time cold chain fleet monitoring with Redpanda and Quix Streams), Modern Data Warehouse (1.5M+ record analytics platform with Dagster, dbt, and DuckDB), MedVax Health (production telemedicine platform with NestJS), and ULTRA-NEWS V3 (news aggregation engine with Django and Next.js). All projects emphasize production-grade engineering, observability, and architectural decision-making."
         }
       },
       {
@@ -150,78 +155,22 @@ const StructuredData = () => {
     ]
   };
 
-  // 5. ItemList Schema — enumerates projects for AI engines
+  // 5. ItemList Schema — enumerates projects for AI engines.
+  // Generated from PROJECTS (src/data/projects.ts) so this can never drift
+  // out of sync with the actual project list rendered on the page.
   const projectListSchema = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     "name": "Engineering Projects by Emmanuel Moghalu",
     "description": "Portfolio of data engineering, full-stack, and cloud architecture projects.",
-    "numberOfItems": 9,
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "MMR Engine",
-        "description": "Cross-Border Mobile Money Reconciliation Engine",
-        "url": "https://github.com/emmanuelrichard01/mmr-engine"
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": "Logistics Watchtower",
-        "description": "Real-time cold chain fleet monitoring with event-driven streaming pipeline",
-        "url": "https://github.com/emmanuelrichard01/logistics-watchtower"
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
-        "name": "Modern Data Warehouse",
-        "description": "1.5M+ record analytics platform with Medallion Architecture",
-        "url": "https://github.com/emmanuelrichard01/modern-warehouse"
-      },
-      {
-        "@type": "ListItem",
-        "position": 4,
-        "name": "MedVax Health",
-        "description": "Production telemedicine and e-pharmacy platform",
-        "url": "https://medvaxhealth.com"
-      },
-      {
-        "@type": "ListItem",
-        "position": 5,
-        "name": "ULTRA-NEWS V3",
-        "description": "Story-centric news aggregation with semantic clustering",
-        "url": "https://ultra-news.vercel.app/"
-      },
-      {
-        "@type": "ListItem",
-        "position": 6,
-        "name": "Cloud Bill Hunter",
-        "description": "FinOps intelligence platform for AWS cost optimization",
-        "url": "https://github.com/emmanuelrichard01/cloud-bill-hunter"
-      },
-      {
-        "@type": "ListItem",
-        "position": 7,
-        "name": "Crypto Data Pipeline",
-        "description": "Market analytics ETL with dbt testing and Grafana dashboards",
-        "url": "https://github.com/emmanuelrichard01/crypto-data-pipeline"
-      },
-      {
-        "@type": "ListItem",
-        "position": 8,
-        "name": "CARITAS AI Scholar",
-        "description": "RAG-based intelligent academic platform",
-        "url": "https://caritas-ai-scholar.vercel.app/"
-      },
-      {
-        "@type": "ListItem",
-        "position": 9,
-        "name": "Evanty",
-        "description": "Event management platform with Stripe and Clerk",
-        "url": "https://evanty.vercel.app/"
-      }
-    ]
+    "numberOfItems": PROJECTS.length,
+    "itemListElement": PROJECTS.map((project, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": project.title,
+      "description": project.subtitle,
+      "url": project.liveUrl || project.github || `${origin}/projects/${project.id}`
+    }))
   };
 
   return (

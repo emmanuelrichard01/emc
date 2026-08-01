@@ -103,6 +103,7 @@ export const PROJECTS: Project[] = [
     timeline: "2025 — Present",
     github: null,
     liveUrl: "https://medvaxhealth.com",
+    image: "/images/medvax.png",
     metrics: [
       { label: "Stack", value: "NestJS + Next.js" },
       { label: "Auth", value: "JWT + RBAC" },
@@ -128,6 +129,7 @@ export const PROJECTS: Project[] = [
     timeline: "2025 — Present",
     github: "https://github.com/emmanuelrichard01/ULTRA-NEWS",
     liveUrl: "https://ultra-news.vercel.app/",
+    image: "/images/ultra-news.png",
     metrics: [
       { label: "Clustering", value: "pgvector" },
       { label: "Ingestion", value: "35+ Feeds" },
@@ -151,6 +153,35 @@ export const PROJECTS: Project[] = [
   },
 
   /* ── TIER 3: SYSTEMS ──────────────────────────────────────────────────── */
+  {
+    id: "global-rate-limiter",
+    tier: "system",
+    title: "Global Rate Limiter as a Service",
+    subtitle: "High-availability API quota management",
+    category: "API Infrastructure",
+    timeline: "2026",
+    github: null,
+    liveUrl: null,
+    metrics: [
+      { label: "Concurrency", value: "Race-proof (Lua)" },
+      { label: "Fail-safe", value: "Local Fallback" },
+    ],
+    description:
+      "A high-availability rate limiter for outbound calls to quota-constrained third-party APIs. It uses a token bucket algorithm stored in Redis and checked atomically via Lua scripts. Features include a circuit breaker that falls back to a local in-memory token bucket during Redis outages (deliberate fail-open), and a fully decoupled background logging queue to Postgres to keep the hot path fast.",
+    decisions: [
+      {
+        title: "Atomic Redis Lua Script",
+        detail:
+          "Checked and consumed atomically in a single Lua script run via EVALSHA. Concurrent callers from different instances can never race each other because Redis executes Lua single-threaded.",
+      },
+      {
+        title: "Decoupled Hot Path Logging",
+        detail:
+          "The limit check never awaits a database write. It fires an in-memory enqueue and returns immediately. A background timer batches and flushes to Postgres, followed by a separate rollup job for dashboard trends.",
+      },
+    ],
+    stack: ["TypeScript", "Node.js", "Redis", "Lua", "PostgreSQL", "Docker"],
+  },
   {
     id: "cloud-bill-hunter",
     tier: "system",
@@ -196,6 +227,7 @@ export const PROJECTS: Project[] = [
     timeline: "2025",
     github: "https://github.com/emmanuelrichard01/caritas-ai-scholar",
     liveUrl: "https://caritas-ai-scholar.vercel.app/",
+    image: "/images/caritas-scholar.png",
     metrics: [
       { label: "AI", value: "RAG Pipeline" },
       { label: "Demo", value: "Live" },
@@ -214,6 +246,7 @@ export const PROJECTS: Project[] = [
     timeline: "2025",
     github: "https://github.com/emmanuelrichard01/Evanty",
     liveUrl: "https://evanty.vercel.app/",
+    image: "/images/evanty.png",
     metrics: [
       { label: "Payments", value: "Stripe" },
       { label: "Auth", value: "Clerk" },

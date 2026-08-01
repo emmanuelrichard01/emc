@@ -23,6 +23,7 @@ export interface Project {
   timeline: string;
   github: string | null;
   liveUrl: string | null;
+  image?: string;
   metrics: ProjectMetric[];
   description: string;
   decisions: Decision[];

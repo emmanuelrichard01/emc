@@ -2,22 +2,10 @@ import React, { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Terminal } from "lucide-react";
 
-import { ExperienceItem } from "@/types";
 import { EXPERIENCE } from "@/data/experience";
 
 /* -------------------------------------------------------------------------- */
-/* 2. ANIMATION                                                               */
-/* -------------------------------------------------------------------------- */
-
-const ease = [0.16, 1, 0.3, 1] as const;
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
-};
-
-/* -------------------------------------------------------------------------- */
-/* 3. ROLE ROW                                                                */
+/* ROLE ROW                                                                   */
 /* -------------------------------------------------------------------------- */
 
 const RoleRow = ({
@@ -35,56 +23,62 @@ const RoleRow = ({
   return (
     <motion.div
       ref={ref}
-      initial="hidden"
-      animate={inView ? "visible" : "hidden"}
-      variants={fadeUp}
-      className={`group grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 md:gap-8 py-6 sm:py-8 md:py-10 ${
-        !isLast ? "border-b border-white/[0.04]" : ""
+      initial={{ opacity: 0, y: 10 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+      transition={{ duration: 0.5, delay: index * 0.08 }}
+      className={`group grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 py-8 md:py-12 ${
+        !isLast ? "border-b border-border" : ""
       }`}
     >
-      {/* Left: metadata */}
-      <div className="md:col-span-3 flex flex-col gap-1">
-        <h3 className="text-[15px] font-semibold text-white/80 group-hover:text-white transition-colors duration-300">
-          {role.company}
-        </h3>
-        <div className="flex items-center gap-2 text-[11px] font-mono text-white/50">
-          <span>{role.period}</span>
-          <span className="text-white/40" aria-hidden="true">·</span>
-          <span className="text-white/50">{role.type}</span>
+      {/* Left: Metadata / Ledger info */}
+      <div className="lg:col-span-4 flex flex-col gap-1.5">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="font-mono text-[10px] text-primary border border-primary/20 bg-primary/5 px-1.5 py-0.5">0{index + 1}</span>
+          <h3 className="text-xl font-bold text-foreground">
+            {role.company}
+          </h3>
+        </div>
+
+        <div className="flex flex-col gap-1 lg:pl-5">
+          <span className="text-[13px] font-mono uppercase tracking-widest text-foreground/80">
+            {role.role}
+          </span>
+          <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground mt-1">
+            <span>[ {role.period} ]</span>
+            <span className="text-primary/60">·</span>
+            <span>{role.type}</span>
+          </div>
         </div>
       </div>
 
-      {/* Right: content */}
-      <div className="md:col-span-9 space-y-3">
-        {/* Role title */}
-        <h4 className="text-[15px] font-medium text-white/70 group-hover:text-white/90 transition-colors duration-300">
-          {role.role}
-        </h4>
-
-        {/* Summary */}
-        <p className="text-[13px] text-white/60 leading-relaxed font-light max-w-2xl">
+      {/* Right: Content */}
+      <div className="lg:col-span-8 space-y-4 pt-1">
+        <p className="text-[13px] text-foreground/80 leading-relaxed font-light">
           {role.summary}
         </p>
 
-        {/* Highlights — max 2, short, scannable */}
-        <ul className="space-y-1.5 pt-1">
-          {role.highlights.map((h, i) => (
-            <li
-              key={i}
-              className="flex items-start gap-2 text-[12px] text-white/50 font-light"
-            >
-              <span className="mt-[6px] h-1 w-1 rounded-full bg-emerald-500/50 shrink-0" />
-              {h}
-            </li>
-          ))}
-        </ul>
+        {role.highlights.length > 0 && (
+          <ul className="space-y-2 mt-4">
+            {role.highlights.map((h, i) => (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -6 }}
+                animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
+                transition={{ duration: 0.4, delay: index * 0.08 + (i + 1) * 0.08 }}
+                className="flex items-start gap-3 text-[13px] text-muted-foreground font-light leading-relaxed"
+              >
+                <span className="mt-1.5 w-1 h-1 bg-primary shrink-0" />
+                {h}
+              </motion.li>
+            ))}
+          </ul>
+        )}
 
-        {/* Stack */}
-        <div className="flex flex-wrap gap-1.5 pt-2">
+        <div className="flex flex-wrap gap-2 pt-4">
           {role.stack.map((t) => (
             <span
               key={t}
-              className="text-[10px] font-mono text-white/50 bg-white/[0.02] px-2 py-0.5 rounded border border-white/[0.04]"
+              className="text-[10px] font-mono text-muted-foreground border border-border px-2 py-0.5 uppercase tracking-widest hover:border-primary/30 hover:text-foreground transition-colors cursor-default"
             >
               {t}
             </span>
@@ -96,7 +90,7 @@ const RoleRow = ({
 };
 
 /* -------------------------------------------------------------------------- */
-/* 4. MAIN                                                                    */
+/* MAIN                                                                       */
 /* -------------------------------------------------------------------------- */
 
 const Experience: React.FC = () => {
@@ -104,33 +98,36 @@ const Experience: React.FC = () => {
     <section
       id="experience"
       data-section="experience"
-      className="py-20 sm:py-24 md:py-32 relative overflow-hidden"
+      className="py-24 relative overflow-hidden"
       aria-label="Work experience"
     >
-      <div className="container px-4 md:px-6 max-w-5xl mx-auto">
+      <div className="container px-6 md:px-12 lg:px-24 max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.8, ease }}
-          className="mb-14 md:mb-20"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border pb-8"
         >
-          <div className="flex items-center gap-2 text-primary/60 font-mono text-[10px] tracking-[0.2em] uppercase mb-4">
-            <Terminal className="w-3.5 h-3.5" />
-            <span>Experience</span>
+          <div>
+            <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px] tracking-[0.2em] uppercase mb-4">
+              <Terminal className="w-4 h-4 text-primary" />
+              <span>Module 03 // Career Ledger</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+              Production <span className="text-muted-foreground font-mono font-normal">History</span>
+            </h2>
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white/90 mb-4">
-            Where I've{" "}
-            <span className="text-white/60">shipped.</span>
-          </h2>
-          <p className="text-sm text-white/60 max-w-lg font-light leading-relaxed">
-            From infrastructure consulting to full-stack products to backend systems engineering — each role narrowed my focus on what matters: systems that scale, decisions that hold.
+          <p className="text-muted-foreground max-w-md text-[13px] leading-relaxed font-light">
+            Roles that narrowed my focus on systems that scale and engineering decisions that hold up in production.
           </p>
         </motion.div>
 
-        {/* Roles */}
-        <div>
+        {/* Roles Ledger */}
+        <div className="relative border border-border bg-card/20 px-6 sm:px-10">
+          {/* Top gradient accent */}
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
           {EXPERIENCE.map((role, i) => (
             <RoleRow
               key={role.id}

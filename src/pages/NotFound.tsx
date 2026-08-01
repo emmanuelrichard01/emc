@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Terminal, Activity } from "lucide-react";
+import { ArrowLeft, Terminal, Activity } from "lucide-react";
 import { motion } from "framer-motion";
 
 const NotFound = () => {
@@ -16,16 +16,23 @@ const NotFound = () => {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center bg-background p-6 pt-20 font-mono selection:bg-red-500/20">
-      <div className="max-w-xl w-full border border-neutral-200 dark:border-white/10 rounded-2xl bg-neutral-50/50 dark:bg-black/40 backdrop-blur-xl p-8 shadow-2xl relative overflow-hidden">
+      <div className="max-w-xl w-full border border-border bg-card p-8 relative overflow-hidden"
+        style={{ boxShadow: 'var(--shadow-lg)' }}
+      >
+
+        {/* Top accent */}
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
 
         {/* Decorative Noise */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "256px 256px" }} />
+        <div className="absolute inset-0 pointer-events-none noise-overlay" />
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8 pb-4 border-b border-neutral-200 dark:border-white/5">
-          <div className="w-3 h-3 rounded-full bg-red-500/80 animate-pulse" />
-          <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-          <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+        <div className="flex items-center gap-3 mb-8 pb-4 border-b border-border">
+          <div className="flex gap-1">
+            <div className="w-1.5 h-1.5 bg-red-500/80 status-live" />
+            <div className="w-1.5 h-1.5 bg-border" />
+            <div className="w-1.5 h-1.5 bg-border" />
+          </div>
           <span className="ml-auto text-[10px] text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             <Activity className="w-3 h-3" />
             Signal Lost
@@ -33,7 +40,7 @@ const NotFound = () => {
         </div>
 
         {/* Content */}
-        <div className="space-y-6">
+        <div className="space-y-6 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -47,7 +54,7 @@ const NotFound = () => {
             </p>
           </motion.div>
 
-          <div className="bg-neutral-900 rounded-lg p-4 text-xs text-neutral-400 overflow-x-auto border border-neutral-800">
+          <div className="bg-muted border border-border p-4 text-xs text-muted-foreground overflow-x-auto">
             <code className="block mb-2 text-red-400">
               Error: Destination host unreachable
             </code>
@@ -68,7 +75,7 @@ const NotFound = () => {
           <div className="pt-4 flex flex-col sm:flex-row gap-4">
             <Link
               to="/"
-              className="group flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
+              className="btn-structural group flex items-center justify-center gap-2"
             >
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
               Return to Base
@@ -76,7 +83,7 @@ const NotFound = () => {
 
             <button
               onClick={() => window.location.reload()}
-              className="group flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/5 text-sm font-medium transition-colors"
+              className="btn-ghost-structural group flex items-center justify-center gap-2"
             >
               <Terminal className="w-4 h-4 text-muted-foreground" />
               Retry Connection
@@ -85,9 +92,9 @@ const NotFound = () => {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 pt-4 flex justify-between items-center text-[10px] text-muted-foreground border-t border-neutral-200 dark:border-white/5">
+        <div className="mt-8 pt-4 flex justify-between items-center text-[10px] text-muted-foreground border-t border-border">
           <span>ID: {id}</span>
-          <span>Sys_Err</span>
+          <span>SYS_ERR</span>
         </div>
 
       </div>

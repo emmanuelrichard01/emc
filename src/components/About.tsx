@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, useScroll, useTransform, useMotionValue, useMotionTemplate } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import {
-  Terminal, Activity, GitCommit, Cpu, ArrowUpRight, Gauge, Database,
+  Terminal, Activity, Cpu, ArrowRight, Gauge, Database,
 } from "lucide-react";
 import {
   SiPython, SiTypescript, SiReact, SiPostgresql,
@@ -10,13 +10,14 @@ import {
   SiSnowflake, SiApachespark,
   SiApacheairflow
 } from "react-icons/si";
+import { StructuralCard } from "@/components/ui/StructuralCard";
+import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 
 /* -------------------------------------------------------------------------- */
 /* DATA                                                                       */
 /* -------------------------------------------------------------------------- */
 
-const AVATAR_URL = "https://i.ibb.co/Nzy2pvp/avatar.jpg";
-const ROLES = ["Data Engineer", "Software Developer", "Cloud Architect"];
+const ROLES = ["Data Engineering", "Systems Architecture", "Cloud Infrastructure"];
 
 const TECH_STACK = [
   { name: "Python", icon: SiPython },
@@ -34,16 +35,16 @@ const TECH_STACK = [
 ];
 
 const DELIVERABLES = [
-  "ETL pipelines & data warehouses",
-  "Cloud infrastructure (IaC)",
-  "Stream processing systems",
-  "Backend APIs & microservices",
+  "Scalable Data Pipelines & ETL/ELT",
+  "Cloud Infrastructure Automation (IaC)",
+  "Distributed Systems & Event Streaming",
+  "High-Availability APIs & Microservices",
 ];
 
 const METRICS = [
-  { value: 12, suffix: "M+", label: "Events processed daily", icon: Activity, barWidth: '80%', gradient: 'linear-gradient(90deg, rgba(139,92,246,0.5), rgba(139,92,246,0.15))' },
-  { value: 99, suffix: ".9%", label: "Pipeline uptime", icon: Gauge, barWidth: '95%', gradient: 'linear-gradient(90deg, rgba(52,211,153,0.5), rgba(52,211,153,0.15))' },
-  { value: 3, suffix: "", label: "Data platforms built", icon: Database, barWidth: '60%', gradient: 'linear-gradient(90deg, rgba(56,189,248,0.5), rgba(56,189,248,0.15))' },
+  { value: 12, suffix: "M+", label: "Events/Day" },
+  { value: 99, suffix: ".9%", label: "Uptime" },
+  { value: 4, suffix: "", label: "Data Platforms" },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -51,7 +52,7 @@ const METRICS = [
 /* -------------------------------------------------------------------------- */
 
 const RevealText = ({ text, className = "" }: { text: string; className?: string }) => {
-  const container = React.useRef(null);
+  const container = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: container, offset: ["start 0.95", "start 0.55"] });
 
   const words = text.split(" ");
@@ -68,93 +69,12 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
   };
 
   return (
-    <p ref={container} className={`flex flex-wrap ${className}`}>
+    <div ref={container} className={`flex flex-wrap ${className}`}>
       {words.map((word, i) => (
         <Word key={i} word={word} index={i} total={words.length} />
       ))}
-    </p>
+    </div>
   );
-};
-
-const GlassCard = ({
-  children,
-  className = "",
-  spotlight = false,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  spotlight?: boolean;
-}) => {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const cardRef = React.useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!spotlight || !cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    mouseX.set(e.clientX - rect.left);
-    mouseY.set(e.clientY - rect.top);
-  };
-
-  return (
-    <motion.div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className={`rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-xl overflow-hidden relative hover:border-white/[0.1] transition-colors duration-500 ${className}`}
-    >
-      {spotlight && (
-        <motion.div
-          className="pointer-events-none absolute -inset-px rounded-2xl transition-opacity duration-500"
-          style={{
-            opacity: isHovered ? 1 : 0,
-            background: useMotionTemplate`radial-gradient(400px circle at ${mouseX}px ${mouseY}px, rgba(168,85,247,0.05), transparent 40%)`,
-          }}
-        />
-      )}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
-      <div className="relative z-10 h-full w-full">{children}</div>
-    </motion.div>
-  );
-};
-
-/* -------------------------------------------------------------------------- */
-/* ANIMATED COUNTER                                                           */
-/* -------------------------------------------------------------------------- */
-
-const AnimatedCounter = ({ target, suffix = "" }: { target: number; suffix?: string }) => {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const hasAnimated = useRef(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true;
-          const duration = 1400;
-          const startTime = performance.now();
-          const animate = (now: number) => {
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            setCount(Math.round(eased * target));
-            if (progress < 1) requestAnimationFrame(animate);
-          };
-          requestAnimationFrame(animate);
-        }
-      },
-      { threshold: 0.3 },
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [target]);
-
-  return <span ref={ref}>{count}{suffix}</span>;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -163,119 +83,101 @@ const AnimatedCounter = ({ target, suffix = "" }: { target: number; suffix?: str
 
 const TechMarquee = () => {
   const [isPaused, setIsPaused] = useState(false);
+  const marqueeRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(marqueeRef, { once: true, amount: 0.3 });
 
   return (
-    <div
-      className="relative flex overflow-hidden w-full"
+    <motion.div
+      ref={marqueeRef}
+      initial={{ opacity: 0 }}
+      animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+      transition={{ duration: 0.6 }}
+      className="relative flex overflow-hidden w-full border-t border-b border-border py-4 my-6"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="absolute left-0 top-0 bottom-0 w-8 sm:w-12 bg-gradient-to-r from-background to-transparent z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-8 sm:w-12 bg-gradient-to-l from-background to-transparent z-10" />
+      <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-card to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-card to-transparent z-10 pointer-events-none" />
       <div
-        className="flex flex-none gap-2.5 pr-2.5 items-center marquee-strip"
+        className="flex flex-none gap-4 pr-4 items-center marquee-strip"
         style={{ animationPlayState: isPaused ? "paused" : "running" }}
       >
         {[...TECH_STACK, ...TECH_STACK].map((tech, i) => (
           <div
             key={`${tech.name}-${i}`}
-            aria-hidden={i >= TECH_STACK.length ? "true" : undefined}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-white/55 whitespace-nowrap transition-all duration-300 hover:border-white/[0.12] hover:text-white/70 hover:bg-white/[0.04] cursor-default"
+            className="flex items-center gap-2 px-3 py-1.5 border border-border text-muted-foreground whitespace-nowrap hover:text-foreground hover:border-foreground/30 hover:scale-[1.02] transition-all cursor-default"
           >
             <tech.icon className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="text-[10px] font-mono tracking-wider">{tech.name}</span>
+            <span className="text-[10px] font-mono tracking-widest uppercase">{tech.name}</span>
           </div>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/* BENTO MODULES (3 total — narrative: What I do → Proof → Tools)             */
+/* BENTO MODULES                                                              */
 /* -------------------------------------------------------------------------- */
 
-/**
- * 1. What I Deliver — concrete, hirable outcomes.
- */
-const DeliverablesModule = () => (
-  <GlassCard className="col-span-1 md:col-span-2" spotlight>
-    <div className="p-5">
-      <div className="flex items-center gap-2 text-white/50 mb-4">
-        <Terminal className="w-3.5 h-3.5 text-primary/50" aria-hidden="true" />
-        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/60">What I Build</span>
+const DeliverablesModule = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.3 });
+
+  return (
+    <StructuralCard className="col-span-1 md:col-span-2">
+      <div ref={ref} className="flex items-center gap-3 mb-6">
+        <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
+        <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground">Core Competencies</span>
       </div>
-      <div className="space-y-2">
-        {DELIVERABLES.map((item) => (
-          <div
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {DELIVERABLES.map((item, i) => (
+          <motion.div
             key={item}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] transition-all duration-300 hover:border-white/[0.1] hover:bg-white/[0.04] group cursor-default"
+            initial={{ opacity: 0, x: -8 }}
+            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -8 }}
+            transition={{ duration: 0.4, delay: i * 0.1 }}
+            className="flex items-start gap-3 group"
           >
-            <ArrowUpRight className="w-3.5 h-3.5 text-primary/40 group-hover:text-primary/70 transition-colors shrink-0" />
-            <span className="text-[13px] text-white/60 group-hover:text-white/80 tracking-wide transition-colors">{item}</span>
-          </div>
+            <ArrowRight className="w-4 h-4 text-primary shrink-0 mt-0.5 group-hover:translate-x-1 transition-transform" />
+            <span className="text-[13px] text-foreground/80 leading-snug">{item}</span>
+          </motion.div>
         ))}
       </div>
-    </div>
-  </GlassCard>
-);
+    </StructuralCard>
+  );
+};
 
-/**
- * 2. Metrics — three specific stats side-by-side.
- */
 const MetricsModule = () => (
-  <GlassCard className="col-span-1 md:col-span-2 p-0">
-    <div className="grid grid-cols-3 divide-x divide-white/[0.04]">
+  <StructuralCard className="col-span-1 md:col-span-2">
+    {/* Accent gradient line */}
+    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+    <div className="grid grid-cols-3 divide-x divide-border">
       {METRICS.map((m) => (
-        <div key={m.label} className="p-3 sm:p-4 md:p-5 flex flex-col justify-between min-h-[100px] sm:min-h-[120px]">
-          <div className="flex items-center gap-1.5 text-white/60 mb-auto">
-            <m.icon className="w-3 h-3 shrink-0" aria-hidden="true" />
-            <span className="text-[8px] md:text-[9px] font-mono tracking-[0.15em] uppercase text-white/60 truncate">
-              {m.label.split(" ").slice(0, 2).join(" ")}
-            </span>
+        <div key={m.label} className="flex flex-col items-center justify-center py-4 px-2 text-center">
+          <div className="text-2xl md:text-3xl font-mono text-foreground mb-1">
+            <AnimatedCounter target={m.value} suffix={m.suffix} />
           </div>
-          <div>
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light tracking-tight text-white/90">
-                <AnimatedCounter target={m.value} suffix={m.suffix} />
-              </span>
-            </div>
-            <span className="text-[9px] md:text-[10px] font-light text-white/60 leading-tight mt-0.5 block">
-              {m.label.split(" ").slice(2).join(" ")}
-            </span>
-            <div className="mt-2 h-0.5 rounded-full bg-white/[0.04] overflow-hidden">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ background: m.gradient }}
-                initial={{ width: 0 }}
-                whileInView={{ width: m.barWidth }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.2, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              />
-            </div>
-          </div>
+          <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+            {m.label}
+          </span>
         </div>
       ))}
     </div>
-  </GlassCard>
+  </StructuralCard>
 );
 
-/**
- * 3. Core Stack — curated 12-tool marquee.
- */
 const StackModule = () => (
-  <GlassCard className="col-span-1 md:col-span-2 p-5 flex flex-col justify-center">
-    <div className="mb-4 flex items-center justify-between">
-      <div className="flex items-center gap-2 text-white/50">
-        <Cpu className="w-3.5 h-3.5" aria-hidden="true" />
-        <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/60">Core Stack</span>
+  <StructuralCard className="col-span-1 md:col-span-2 p-0 border-none bg-transparent">
+    <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center gap-3">
+        <Cpu className="w-4 h-4 text-primary" aria-hidden="true" />
+        <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground">Tech Telemetry</span>
       </div>
-      <span className="text-[9px] font-mono text-white/50 tracking-wide">{TECH_STACK.length} tools</span>
+      <span className="text-[10px] font-mono text-primary tracking-widest">[{TECH_STACK.length} NODES]</span>
     </div>
-    <div className="-mx-5">
-      <TechMarquee />
-    </div>
-  </GlassCard>
+    <TechMarquee />
+  </StructuralCard>
 );
 
 /* -------------------------------------------------------------------------- */
@@ -286,82 +188,68 @@ const About: React.FC = () => {
   const [avatarFailed, setAvatarFailed] = useState(false);
 
   return (
-    <section id="about" data-section="about" className="pt-12 pb-24 md:pt-20 md:pb-32 relative" aria-label="About Emmanuel Moghalu">
-      <div className="container px-4 md:px-6 max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+    <section id="about" data-section="about" className="py-24 relative border-t border-border" aria-label="About">
+      <div className="container px-6 md:px-12 lg:px-24 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
 
           {/* LEFT COLUMN */}
-          <div className="relative z-10 lg:col-span-5 lg:sticky lg:top-32 h-fit">
-
-            {/* Identity Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="flex items-center gap-5 mb-10"
-            >
-              <div className="relative shrink-0 group/avatar cursor-pointer">
-                <div className="absolute -inset-1.5 bg-gradient-to-r from-emerald-500/20 via-primary/20 to-emerald-500/20 rounded-full blur-md opacity-0 group-hover/avatar:opacity-100 animate-[spin_4s_linear_infinite] transition-opacity duration-700" />
-                <div className="absolute -inset-0.5 bg-gradient-to-tr from-emerald-500/30 via-transparent to-primary/30 rounded-full opacity-0 group-hover/avatar:opacity-100 animate-[spin_3s_linear_infinite] transition-opacity duration-500" />
-                <div className="relative z-10 w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border border-white/[0.08] bg-[#050505] transition-transform duration-500 group-hover/avatar:scale-[1.03]">
+          <div className="lg:col-span-5 h-fit">
+            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+              {/* Identity Header */}
+              <div className="flex items-center gap-6 mb-12">
+                <div className="w-16 h-16 shrink-0 aspect-square border border-border overflow-hidden bg-muted relative group">
                   {avatarFailed ? (
-                    <div className="w-full h-full flex items-center justify-center bg-white/[0.02] text-xl font-bold text-white/60" aria-hidden="true">EM</div>
+                    <div className="w-full h-full flex items-center justify-center font-mono text-sm text-muted-foreground">EM</div>
                   ) : (
                     <img
-                      src={AVATAR_URL}
+                      src="/images/avatar.jpg"
                       alt="Emmanuel Moghalu"
-                      className="w-full h-full object-cover"
+                      width={64}
+                      height={64}
+                      loading="eager"
+                      decoding="async"
+                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                       onError={() => setAvatarFailed(true)}
                     />
                   )}
                 </div>
-              </div>
-
-              <div>
-                <p className="text-base md:text-lg font-medium tracking-tight text-white/85">Emmanuel Moghalu</p>
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  {ROLES.map((role) => (
-                    <span key={role} className="text-[9px] font-mono tracking-wider px-2 py-0.5 rounded-full bg-white/[0.03] text-white/60 border border-white/[0.05]">
-                      {role}
-                    </span>
-                  ))}
+                <div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">Emmanuel Moghalu</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {ROLES.map((role) => (
+                      <span key={role} className="text-[9px] font-mono uppercase tracking-widest text-primary border border-border px-2 py-0.5">
+                        {role}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </motion.div>
 
-            {/* Heading — personal, not philosophical */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-            >
-              <div className="flex items-center gap-2 text-white/50 font-mono text-[9px] tracking-[0.2em] uppercase mb-5">
-                <Terminal className="w-3 h-3 text-primary/50" aria-hidden="true" />
-                <span>About</span>
+              {/* Heading */}
+              <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px] tracking-[0.2em] uppercase mb-6">
+                <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
+                <span>Module 01 // Overview</span>
               </div>
 
-              <h2 className="text-2xl md:text-3xl lg:text-[2.1rem] font-medium tracking-tight mb-8 leading-[1.25] text-white/80">
-                I build <span className="text-white/95">reliable infrastructure</span> — data pipelines, cloud systems, and backend services that won't break at <span className="text-white/95">3 AM.</span>
+              <h2 className="text-3xl font-bold text-foreground leading-tight mb-8">
+                I architect the resilient backend systems that power millions of daily operations.
               </h2>
-            </motion.div>
 
-            {/* Bio — one paragraph, personal and specific */}
-            <div className="text-sm md:text-[15px] text-white/60 leading-relaxed max-w-lg mt-6 font-light">
-              <RevealText text="Over the past 4 years, I’ve focused on the parts users don’t see — data pipelines, deployment systems, and monitoring that catches issues early. I prioritize clarity, correctness, and systems that remain stable in production." />
-            </div>
+              <RevealText
+                text="With over 4 years of engineering experience, I specialize in designing high-throughput data pipelines, cloud infrastructure, and mission-critical backend systems. My approach is rooted in structural clarity, rigorous data integrity, and building platforms that remain highly available under heavy operational load."
+                className="text-[14px] text-muted-foreground leading-relaxed font-light"
+              />
+            </motion.div>
           </div>
 
-          {/* RIGHT COLUMN: 3 modules — What I do → Proof → Tools */}
+          {/* RIGHT COLUMN */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="relative z-10 lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-3 auto-rows-max"
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-6"
           >
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/[0.03] blur-[120px] rounded-full pointer-events-none -z-10" />
-
             <DeliverablesModule />
             <MetricsModule />
             <StackModule />

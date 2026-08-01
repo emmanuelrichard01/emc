@@ -1,59 +1,28 @@
 import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence, useInView } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Github, Linkedin,
-  ArrowUpRight, Copy, CheckCircle2,
-  Terminal, Send, AlertCircle, Download, Mail,
+  ArrowRight, Copy, CheckCircle2,
+  Terminal, Send, AlertCircle
 } from "lucide-react";
 import { XLogo } from "@/components/ui/XLogo";
+import { CVDownloadButton } from "@/components/ui/CVDownloadButton";
 
 /* -------------------------------------------------------------------------- */
-/* 1. DATA                                                                    */
+/* DATA                                                                       */
 /* -------------------------------------------------------------------------- */
 
 const SOCIAL_LINKS = [
-  {
-    id: "github",
-    label: "GitHub",
-    href: "https://github.com/emmanuelrichard01",
-    icon: Github,
-  },
-  {
-    id: "linkedin",
-    label: "LinkedIn",
-    href: "https://www.linkedin.com/in/e-mc/",
-    icon: Linkedin,
-  },
-  {
-    id: "twitter",
-    label: "X",
-    href: "https://x.com/mrebr",
-    icon: XLogo,
-  },
+  { id: "github", label: "GitHub", href: "https://github.com/emmanuelrichard01", icon: Github },
+  { id: "linkedin", label: "LinkedIn", href: "https://www.linkedin.com/in/e-mc/", icon: Linkedin },
+  { id: "twitter", label: "X", href: "https://x.com/mrebr", icon: XLogo },
 ];
 
 const EMAIL = "emma.moghalu@gmail.com";
-const FORMSPREE_ENDPOINT =
-  import.meta.env.VITE_FORMSPREE_ENDPOINT ?? "https://formspree.io/f/xwvwpaaz";
+const FORMSPREE_ENDPOINT = import.meta.env.VITE_FORMSPREE_ENDPOINT ?? "https://formspree.io/f/xwvwpaaz";
 
 /* -------------------------------------------------------------------------- */
-/* 2. ANIMATION                                                               */
-/* -------------------------------------------------------------------------- */
-
-const ease = [0.16, 1, 0.3, 1] as const;
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease } },
-};
-
-/* -------------------------------------------------------------------------- */
-/* 3. CONTACT FORM                                                            */
+/* CONTACT FORM                                                               */
 /* -------------------------------------------------------------------------- */
 
 interface FieldErrors {
@@ -62,22 +31,33 @@ interface FieldErrors {
   message?: string;
 }
 
+const MAX_MESSAGE_LENGTH = 1000;
+
+// Minimum time (ms) a real human takes to read the form and fill it out.
+// Bots that fetch-and-post immediately fall under this and get silently dropped.
+const MIN_FILL_TIME_MS = 1500;
+
 const ContactForm = () => {
   const [formState, setFormState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
+  const [honeypot, setHoneypot] = useState("");
   const [focused, setFocused] = useState<string | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const mountedAt = useRef<number | null>(null);
+  useEffect(() => {
+    mountedAt.current = Date.now();
+  }, []);
 
   const validate = (): FieldErrors => {
     const errs: FieldErrors = {};
-    if (!formData.name.trim()) errs.name = "Name is required.";
+    if (!formData.name.trim()) errs.name = "Required.";
     if (!formData.email.trim()) {
-      errs.email = "Email is required.";
+      errs.email = "Required.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errs.email = "Please enter a valid email address.";
+      errs.email = "Invalid format.";
     }
-    if (!formData.message.trim()) errs.message = "Message is required.";
+    if (!formData.message.trim()) errs.message = "Required.";
     return errs;
   };
 
@@ -95,6 +75,19 @@ const ContactForm = () => {
     setTouched({ name: true, email: true, message: true });
 
     if (Object.keys(fieldErrors).length > 0) return;
+
+    // Bot heuristics: a filled honeypot or an inhumanly fast submit both
+    // silently "succeed" without ever hitting Formspree, so bots get no
+    // signal that they were caught while real users are never blocked.
+    const isLikelyBot = honeypot.trim().length > 0 || mountedAt.current === null || Date.now() - mountedAt.current < MIN_FILL_TIME_MS;
+    if (isLikelyBot) {
+      setFormState("success");
+      setFormData({ name: "", email: "", message: "" });
+      setTouched({});
+      setErrors({});
+      setTimeout(() => setFormState("idle"), 4000);
+      return;
+    }
 
     setFormState("submitting");
     try {
@@ -120,29 +113,43 @@ const ContactForm = () => {
   };
 
   const fieldClass = (name: string) =>
-    `w-full bg-transparent text-white/90 text-sm placeholder:text-white/50 outline-none transition-all duration-300 border-b ${
+    `w-full bg-card text-foreground text-[13px] placeholder:text-muted-foreground/50 outline-none transition-all border ${
       touched[name] && errors[name as keyof FieldErrors]
-        ? "border-red-400/60"
+        ? "border-destructive focus:border-destructive"
         : focused === name
-        ? "border-primary/50 placeholder:text-white/50"
-        : "border-white/[0.08] hover:border-white/[0.15]"
-    } pb-3 pt-1`;
+        ? "border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]"
+        : "border-border hover:border-muted-foreground"
+    } p-3 rounded-none`;
 
-  const showError = (field: keyof FieldErrors) =>
-    touched[field] && errors[field];
+  const showError = (field: keyof FieldErrors) => touched[field] && errors[field];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-7" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+      {/* Honeypot — invisible to real users, catnip for bots. */}
+      <div className="absolute left-[-9999px] w-px h-px overflow-hidden" aria-hidden="true">
+        <label htmlFor="contact-company">Company</label>
+        <input
+          id="contact-company"
+          name="company"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+        />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="contact-name" className="text-[10px] font-mono text-white/60 uppercase tracking-[0.15em] mb-2 block">
-            Name <span className="text-red-400" aria-hidden="true">*</span>
+          <label htmlFor="contact-name" className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2 flex items-center justify-between">
+            <span>Name</span>
+            {showError("name") && <span className="text-destructive tracking-normal normal-case">{errors.name}</span>}
           </label>
           <input
             id="contact-name"
             type="text"
             name="name"
-            placeholder="Your name"
+            placeholder="John Doe"
             required
             autoComplete="name"
             value={formData.name}
@@ -150,25 +157,18 @@ const ContactForm = () => {
             onFocus={() => setFocused("name")}
             onBlur={() => handleBlur("name")}
             className={fieldClass("name")}
-            aria-required="true"
-            aria-invalid={showError("name") ? "true" : undefined}
-            aria-describedby={showError("name") ? "name-error" : undefined}
           />
-          {showError("name") && (
-            <p id="name-error" className="text-red-400 text-xs mt-1.5 flex items-center gap-1" role="alert">
-              <AlertCircle className="w-3 h-3 shrink-0" /> {errors.name}
-            </p>
-          )}
         </div>
         <div>
-          <label htmlFor="contact-email" className="text-[10px] font-mono text-white/60 uppercase tracking-[0.15em] mb-2 block">
-            Email <span className="text-red-400" aria-hidden="true">*</span>
+          <label htmlFor="contact-email" className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2 flex items-center justify-between">
+            <span>Email</span>
+            {showError("email") && <span className="text-destructive tracking-normal normal-case">{errors.email}</span>}
           </label>
           <input
             id="contact-email"
             type="email"
             name="email"
-            placeholder="you@company.com"
+            placeholder="john@example.com"
             required
             autoComplete="email"
             value={formData.email}
@@ -176,76 +176,66 @@ const ContactForm = () => {
             onFocus={() => setFocused("email")}
             onBlur={() => handleBlur("email")}
             className={fieldClass("email")}
-            aria-required="true"
-            aria-invalid={showError("email") ? "true" : undefined}
-            aria-describedby={showError("email") ? "email-error" : undefined}
           />
-          {showError("email") && (
-            <p id="email-error" className="text-red-400 text-xs mt-1.5 flex items-center gap-1" role="alert">
-              <AlertCircle className="w-3 h-3 shrink-0" /> {errors.email}
-            </p>
-          )}
         </div>
       </div>
 
       <div>
-        <label htmlFor="contact-message" className="text-[10px] font-mono text-white/60 uppercase tracking-[0.15em] mb-2 block">
-          Message <span className="text-red-400" aria-hidden="true">*</span>
+        <label htmlFor="contact-message" className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2 flex items-center justify-between">
+          <span>Message</span>
+          <span className="flex items-center gap-2">
+            {showError("message") && <span className="text-destructive tracking-normal normal-case">{errors.message}</span>}
+            <span className={`tracking-normal normal-case ${formData.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+              {formData.message.length}/{MAX_MESSAGE_LENGTH}
+            </span>
+          </span>
         </label>
         <textarea
           id="contact-message"
           name="message"
-          placeholder="Tell me about your project..."
-          rows={4}
+          placeholder="Tell me about your project or opportunity..."
+          rows={5}
           required
+          maxLength={MAX_MESSAGE_LENGTH}
           value={formData.message}
           onChange={(e) => setFormData((p) => ({ ...p, message: e.target.value }))}
           onFocus={() => setFocused("message")}
           onBlur={() => handleBlur("message")}
           className={`${fieldClass("message")} resize-none`}
-          aria-required="true"
-          aria-invalid={showError("message") ? "true" : undefined}
-          aria-describedby={showError("message") ? "message-error" : undefined}
         />
-        {showError("message") && (
-          <p id="message-error" className="text-red-400 text-xs mt-1.5 flex items-center gap-1" role="alert">
-            <AlertCircle className="w-3 h-3 shrink-0" /> {errors.message}
-          </p>
-        )}
       </div>
 
-      {/* Status region — announced to screen readers */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {formState === "submitting" && "Sending your message..."}
-        {formState === "success" && "Message sent successfully!"}
-        {formState === "error" && "Failed to send message. Please try again."}
+        {formState === "submitting" && "Sending message..."}
+        {formState === "success" && "Message sent successfully."}
+        {formState === "error" && "Failed to send message."}
       </div>
 
       <button
         type="submit"
         disabled={formState === "submitting"}
-        className="group/btn inline-flex items-center gap-2.5 text-sm font-medium text-white/70 hover:text-white transition-colors duration-300 disabled:opacity-40 disabled:cursor-not-allowed min-h-[48px] px-2"
+        className="btn-structural w-full sm:w-auto min-w-[160px] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <AnimatePresence mode="wait">
           {formState === "submitting" ? (
             <motion.span key="s" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-              <div className="w-3.5 h-3.5 border-[1.5px] border-white/20 border-t-white/70 rounded-full animate-spin" role="status" aria-label="Sending" />
-              Sending...
+              <div className="w-3.5 h-3.5 border-2 border-background/20 border-t-background rounded-full animate-spin" />
+              <span>Sending</span>
             </motion.span>
           ) : formState === "success" ? (
             <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-emerald-400">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Message sent
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Sent</span>
             </motion.span>
           ) : formState === "error" ? (
-            <motion.span key="err" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-red-400">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Failed — try again
+            <motion.span key="err" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-4 h-4" />
+              <span>Failed — Retry</span>
             </motion.span>
           ) : (
-            <motion.span key="go" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-              Send message
-              <Send className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+            <motion.span key="go" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 group">
+              <span>Send Message</span>
+              <Send className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </motion.span>
           )}
         </AnimatePresence>
@@ -255,12 +245,10 @@ const ContactForm = () => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* 4. MAIN                                                                    */
+/* MAIN                                                                       */
 /* -------------------------------------------------------------------------- */
 
 const Contact: React.FC = () => {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -269,7 +257,6 @@ const Contact: React.FC = () => {
       await navigator.clipboard.writeText(EMAIL);
       setCopied(true);
     } catch {
-      // Fallback: open mailto instead
       window.location.href = `mailto:${EMAIL}`;
     }
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -283,127 +270,92 @@ const Contact: React.FC = () => {
   }, []);
 
   return (
-    <section id="contact" data-section="contact" className="py-20 sm:py-24 md:py-32 relative overflow-hidden" aria-label="Contact information">
-      <div ref={ref} className="container px-4 md:px-6 max-w-5xl mx-auto">
-        <motion.div
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-          variants={stagger}
-        >
+    <section id="contact" data-section="contact" className="py-24 relative overflow-hidden" aria-label="Contact information">
+      <div className="container px-6 md:px-12 lg:px-24 max-w-7xl mx-auto">
+        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+
           {/* Header */}
-          <motion.div variants={fadeUp} className="mb-12 sm:mb-16 md:mb-20">
-            <div className="flex items-center gap-2 text-primary/60 font-mono text-[10px] tracking-[0.2em] uppercase mb-4">
-              <Terminal className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Contact</span>
+          <div className="mb-16 border-b border-border pb-8">
+            <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px] tracking-[0.2em] uppercase mb-4">
+              <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
+              <span>Module 04 // Connect</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white/90 mb-4">
-              Let's work{" "}
-              <span className="text-white/60">together.</span>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">
+              Let's <span className="text-muted-foreground font-mono font-normal">Talk</span>
             </h2>
-            <p className="text-sm text-white/60 max-w-md font-light leading-relaxed">
-              Have a project in mind or looking for an engineer?
-              I'd love to hear about it.
+            <p className="text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
+              Open to discussing data engineering challenges, architectural scaling, or new opportunities.
             </p>
-          </motion.div>
+          </div>
 
-          {/* Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 sm:gap-16 lg:gap-20">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
 
-            {/* Left: email + socials */}
-            <motion.div variants={stagger} className="lg:col-span-4 space-y-10">
-              {/* Email — direct mailto link + copy button */}
-              <motion.div variants={fadeUp}>
-                <div className="text-[10px] font-mono text-white/60 uppercase tracking-[0.15em] mb-3">
-                  Email
+            {/* Left: Info */}
+            <div className="lg:col-span-4 space-y-10">
+
+              {/* Email */}
+              <div>
+                <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-4">
+                  // Email
                 </div>
-                <div className="flex items-center gap-3">
-                  <a
-                    href={`mailto:${EMAIL}`}
-                    className="text-base font-medium text-white/70 hover:text-white transition-colors duration-300 border-b border-transparent hover:border-white/20 pb-0.5"
-                  >
-                    {EMAIL}
-                  </a>
+                <div
+                  className={`flex items-center justify-between border bg-card px-4 py-3 group overflow-hidden gap-2 transition-all ${
+                    copied ? 'border-emerald-500/50' : 'border-border hover:border-muted-foreground'
+                  }`}
+                >
+                  <span className="text-[13px] sm:text-sm font-mono text-foreground truncate">{EMAIL}</span>
                   <button
                     onClick={handleCopy}
-                    className="p-2 rounded-lg hover:bg-white/[0.04] transition-colors duration-300 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                    aria-label={copied ? "Email copied to clipboard" : "Copy email to clipboard"}
+                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    aria-label="Copy email address"
                   >
                     <AnimatePresence mode="wait">
                       {copied ? (
-                        <motion.div key="c" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <motion.div key="c" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }}>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                         </motion.div>
                       ) : (
                         <motion.div key="p" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                          <Copy className="w-4 h-4 text-white/50 hover:text-white/70 transition-colors" />
+                          <Copy className="w-4 h-4" />
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </button>
                 </div>
-                {/* Live region for copy confirmation */}
-                <div aria-live="polite" className="sr-only">
-                  {copied ? "Email address copied to clipboard" : ""}
-                </div>
-              </motion.div>
+              </div>
 
-              {/* Social links */}
-              <motion.div variants={fadeUp}>
-                <div className="text-[10px] font-mono text-white/60 uppercase tracking-[0.15em] mb-3">
-                  Elsewhere
+              {/* Socials */}
+              <div>
+                <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-4">
+                  // Socials
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-2">
                   {SOCIAL_LINKS.map((link) => (
                     <a
                       key={link.id}
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group inline-flex items-center gap-2 py-2 text-sm text-white/60 hover:text-white/90 transition-colors duration-300 w-fit min-h-[44px]"
-                      aria-label={`${link.label} (opens in new tab)`}
+                      className="group flex items-center justify-between border border-border bg-card px-4 py-3 hover:border-primary/40 transition-all"
                     >
-                      <link.icon className="w-4 h-4" aria-hidden="true" />
-                      <span>{link.label}</span>
-                      <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 translate-x-0.5 group-hover:opacity-50 group-hover:translate-y-0 group-hover:translate-x-0 transition-all duration-300" aria-hidden="true" />
+                      <div className="flex items-center gap-3 text-muted-foreground group-hover:text-foreground transition-colors">
+                        <link.icon className="w-4 h-4" />
+                        <span className="text-[13px] uppercase tracking-wider font-mono">{link.label}</span>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                     </a>
                   ))}
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Resume download */}
-              <motion.div variants={fadeUp}>
-                <div className="text-[10px] font-mono text-white/60 uppercase tracking-[0.15em] mb-3">
-                  Resume
-                </div>
-                <a
-                  href="/Emmanuel_Moghalu_CV.pdf"
-                  download="Emmanuel_Moghalu_CV.pdf"
-                  className="group inline-flex items-center gap-2 py-2 text-sm text-white/60 hover:text-white/90 transition-colors duration-300 min-h-[44px]"
-                  aria-label="Download Emmanuel Moghalu's CV as PDF"
-                >
-                  <Download className="w-4 h-4" aria-hidden="true" />
-                  <span>Download CV</span>
-                  <span className="text-[9px] font-mono text-white/40 ml-1">(PDF)</span>
-                </a>
-              </motion.div>
+              {/* Download CV */}
+              <CVDownloadButton variant="card" />
+            </div>
 
-              {/* Availability */}
-              <motion.div
-                variants={fadeUp}
-                className="flex items-center gap-2 text-[11px] text-white/60 font-mono"
-              >
-                <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                </span>
-                Available for work
-              </motion.div>
-            </motion.div>
-
-            {/* Right: form */}
-            <motion.div variants={fadeUp} className="lg:col-span-8">
+            {/* Right: Form */}
+            <div className="lg:col-span-8">
               <ContactForm />
-            </motion.div>
+            </div>
 
           </div>
         </motion.div>

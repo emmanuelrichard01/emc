@@ -8,40 +8,57 @@ export const EXPERIENCE: ExperienceItem[] = [
     type: "Contract",
     period: "Jan — Feb 2026",
     summary:
-      "Built core e-pharmacy and telemedicine features for a production health platform — prescription lifecycle management, role-based access, and real-time data flow across patient-facing UI.",
+      "Architected a secure e-prescription portal supporting prescription management, authentication, and payment processing workflows for doctors and patients on a production health platform.",
     highlights: [
-      "E-prescription portal with RBAC for doctors, patients, and admin",
-      "Dry-run validation for session booking — separates payment intent from creation",
+      "Designed and built the e-pharmacy backend with strict RBAC for doctors, patients, and admin roles",
+      "Optimized data flow and state management for real-time updates, improving user engagement across the platform",
+      "Implemented strict validation and error handling; investigated production issues via structured debugging and root cause analysis",
     ],
-    stack: ["NestJS", "PostgreSQL", "Redis", "BullMQ", "Paystack"],
+    stack: ["Python", "FastAPI", "NestJS", "Prisma", "TypeScript", "PostgreSQL", "Docker"],
   },
   {
     id: "setraco",
-    company: "SETRACO",
+    company: "SETRACO Nigeria",
     role: "Data Operations & Systems Engineer",
     type: "Full-time",
     period: "Mar — Oct 2024",
     summary:
-      "Bridged raw engineering data and management decision-making for a construction firm. Built internal tooling that replaced manual Excel workflows with a centralized web dashboard and maintained 99.9% data accuracy across SQL systems.",
+      "Designed centralized reporting solutions that replaced manual Excel workflows for a construction firm — reducing reporting effort by ~40% while maintaining 99.9% data accuracy across production systems.",
     highlights: [
-      "Built a Next.js dashboard to replace Excel reporting — accelerated manager decision cycles",
-      "Automated data entry reduced repetitive processing by ~40%",
+      "Built SQL-powered dashboards that improved operational visibility and accelerated management decision-making",
+      "Diagnosed and resolved SQL pipeline failures and data inconsistencies, improving overall operational reliability",
+      "Optimized SQL queries and backend processes to improve reporting performance and scalability",
     ],
-    stack: ["SQL", "Next.js", "Excel VBA", "Networking"],
+    stack: ["Python", "SQL", "React", "Next.js", "PostgreSQL", "Data Analysis"],
+  },
+  {
+    id: "freelance",
+    company: "Independent Consultant",
+    role: "Freelance Software & Data Engineer",
+    type: "Freelance",
+    period: "Oct 2020 — Mar 2024",
+    summary:
+      "Delivered web development and data solutions for independent and small-business clients, managing full project lifecycles from proposal through delivery — sustained throughout a full-time engineering degree.",
+    highlights: [
+      "Authored client-facing technical proposals and scoped project requirements end-to-end",
+      "Designed and shipped a personal portfolio site (React, TypeScript, Tailwind CSS, Framer Motion)",
+      "Maintained continuous hands-on engineering work throughout a full-time B.Eng. program",
+    ],
+    stack: ["Python", "TypeScript", "React", "SQL", "Tailwind CSS"],
   },
   {
     id: "tac-africa",
     company: "TAC AFRICA",
-    role: "Full-Stack Engineer",
+    role: "Full-Stack Software Engineer",
     type: "Part-time",
     period: "Aug 2019 — Aug 2020",
     summary:
-      "Lead developer for production platforms serving 50k+ monthly active users. Provisioned AWS/DigitalOcean infrastructure, optimized database queries to cut API latency by ~45%, and drove a 20% engagement increase through mobile-first UI.",
+      "Developed and maintained web applications serving 50,000+ users. Optimized backend APIs and SQL queries, reducing response latency by ~45% through structured debugging, log analysis, and database optimization.",
     highlights: [
-      "React/TypeScript frontend + Node.js/Python microservices for modular feature expansion",
-      "Tuned indexes and query profiling to resolve bottlenecks at the 50k+ MAU scale",
+      "Collaborated with designers and product teams to implement new features and improve application performance",
+      "Investigated and resolved production issues through log analysis and database query profiling",
     ],
-    stack: ["React", "Node.js", "AWS", "Python", "TypeScript"],
+    stack: ["Python", "JavaScript", "SQL", "REST APIs", "PostgreSQL"],
   },
   {
     id: "afrihub",
@@ -50,25 +67,11 @@ export const EXPERIENCE: ExperienceItem[] = [
     type: "Part-time",
     period: "Oct 2018 — Oct 2020",
     summary:
-      "Full-stack development from database normalization to frontend integration. Designed relational schemas handling 20k+ daily queries, built mobile-first interfaces, and managed Git-based CI workflows.",
+      "Designed and implemented software solutions for academic and business clients using modern web technologies. Supported deployment, system integration, and maintenance of enterprise applications.",
     highlights: [
-      "Normalized MySQL/Oracle schemas supporting 20k+ queries/day",
-      "Structured code review process and Git-based CI integration for team collaboration",
+      "Diagnosed and resolved application, database, and integration issues in production environments",
+      "Built secure database structures and backend business logic for client projects",
     ],
-    stack: ["Python", "Django", "React", "MySQL", "Linux"],
-  },
-  {
-    id: "notap",
-    company: "NOTAP",
-    role: "IT Infrastructure Consultant",
-    type: "Internship",
-    period: "Oct 2018 — Mar 2019",
-    summary:
-      "Enterprise IT consulting — designed deployment plans for SMEs, established proactive audit protocols, and trained staff on tooling. Shifted the organization's approach from reactive troubleshooting to scheduled preventive maintenance.",
-    highlights: [
-      "IT deployment plans improved operational efficiency by ~15%",
-      "Standardized audit protocols reduced system downtime across departments",
-    ],
-    stack: ["Network Admin", "System Security", "PHP"],
+    stack: ["Python", "SQL", "JavaScript", "MySQL", "HTML/CSS"],
   },
 ];

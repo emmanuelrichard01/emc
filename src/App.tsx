@@ -1,5 +1,4 @@
 import React, { Suspense, lazy } from "react";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
@@ -8,7 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
-// import { ThemeProvider } from "./components/ThemeProvider";
+import { ThemeProvider } from "./components/ThemeProvider";
+import { LOGO_PATHS } from "./components/ui/LogoMark";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Navbar from "./components/DynamicNavigation";
 import Footer from "./components/Footer";
@@ -26,76 +26,93 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 // Bootloader for route code-splitting — sequenced boot screen
 const BootLoader = () => {
   const bootLines = [
-    { text: "Loading modules", delay: 0 },
-    { text: "Initializing renderer", delay: 0.15 },
-    { text: "System ready", delay: 0.3 },
+    { text: "Mounting core modules...", delay: 0 },
+    { text: "Establishing secure connection...", delay: 0.15 },
+    { text: "Resolving dependencies...", delay: 0.3 },
   ];
 
   return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505]">
-      <div className="flex flex-col items-center gap-6">
-        {/* Logo mark — draws in */}
-        <motion.svg
-          viewBox="0 0 200 200"
-          className="w-8 h-8 text-white/60"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
+    <div className="h-[100svh] w-full flex flex-col items-center justify-center bg-background relative overflow-hidden font-mono selection:bg-primary/20">
+      {/* Background grid overlay */}
+      <div className="absolute inset-0 z-0 pointer-events-none noise-overlay" />
+      <div
+        className="absolute inset-0 z-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)',
+          backgroundSize: '48px 48px'
+        }}
+      />
+
+      <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-[280px]">
+        {/* Logo mark */}
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="flex items-center justify-center w-12 h-12 border border-border bg-card/50 relative"
+          style={{ boxShadow: 'var(--shadow-md), var(--shadow-glow)' }}
         >
-          <motion.path
-            d="M154.2,43.5v69.4c0,1.4,1,2.5,2.4,2.5h34.1c1.4,0,2.5-1.1,2.5-2.5v-37.1c0-.7-.3-1.3-.7-1.8L120.2.8c-.5-.5-1.1-.7-1.8-.7H22.6c-1.4,0-2.5,1.1-2.5,2.5v33.1c0,1.4,1.1,2.5,2.5,2.5h65.4c0,.1,61,.2,61,.2,2.9,0,5.2,2.3,5.1,5.2h0Z"
-            fill="currentColor"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          />
-          <motion.path
-            d="M76,76.1c-.5.5-.8,1.1-.8,1.8v35.1c0,1.4,1.1,2.5,2.5,2.5h34.6c1.4,0,2.5-1.1,2.5-2.5V38.9c0-.2-.3-.4-.4-.2l-38.4,37.4h0Z"
-            fill="currentColor"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.25 }}
-          />
-          <motion.path
-            d="M39.6,112.9V38.9c0-.2-.3-.4-.5-.2L.8,76.1c-.5.5-.8,1.1-.8,1.8v35.1c0,1.4,1.1,2.5,2.5,2.5h34.6c1.4,0,2.5-1.1,2.5-2.5h0Z"
-            fill="currentColor"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          />
-        </motion.svg>
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-primary" />
+          
+          <svg viewBox="0 0 200 200" className="w-6 h-6 text-primary">
+            {LOGO_PATHS.map((d, i) => (
+              <motion.path
+                key={i}
+                d={d}
+                fill="currentColor"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 + i * 0.1 }}
+              />
+            ))}
+          </svg>
+        </motion.div>
 
         {/* Boot sequence lines */}
-        <div className="flex flex-col gap-2 min-w-[180px]">
+        <div className="flex flex-col gap-2.5 w-full">
           {bootLines.map((line, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: line.delay, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-center gap-2 text-[10px] font-mono"
-            >
+            <div key={i} className="flex items-center justify-between text-[10px] uppercase tracking-widest w-full">
+              <motion.span
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: line.delay, duration: 0.2 }}
+                className="text-muted-foreground"
+              >
+                {line.text}
+              </motion.span>
               <motion.span
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: line.delay + 0.4, duration: 0.2 }}
-                className="text-emerald-500 text-[8px]"
+                transition={{ delay: line.delay + 0.25, duration: 0.2 }}
+                className="text-primary font-bold"
               >
-                ✓
+                OK
               </motion.span>
-              <span className="text-white/20">{line.text}</span>
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* Progress bar */}
-        <div className="w-32 h-px bg-white/[0.06] rounded-full overflow-hidden">
+        <div className="w-full h-px bg-border mt-2 relative overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-primary/60 to-primary/20 rounded-full"
+            className="absolute top-0 left-0 h-full bg-primary"
             initial={{ width: "0%" }}
             animate={{ width: "100%" }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           />
+        </div>
+        
+        <div className="flex items-center justify-between w-full mt-[-16px]">
+          <span className="text-[9px] text-muted-foreground/40 uppercase tracking-[0.2em]">SYS.BOOT</span>
+          <div className="flex gap-1 items-center">
+            <motion.div 
+              animate={{ opacity: [1, 0.4, 1] }} 
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="w-1.5 h-1.5 bg-primary"
+            />
+            <span className="text-[9px] text-primary uppercase tracking-[0.2em]">LIVE</span>
+          </div>
         </div>
       </div>
     </div>
@@ -143,8 +160,8 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
     <HelmetProvider>
         <TooltipProvider delayDuration={0}>
+          <ThemeProvider defaultTheme="amber">
           <ErrorBoundary showDetails={import.meta.env.DEV}>
-            <Toaster />
             <Sonner position="top-center" />
 
             <BrowserRouter>
@@ -165,6 +182,7 @@ const App = () => (
             <Analytics />
             <SpeedInsights />
           </ErrorBoundary>
+          </ThemeProvider>
         </TooltipProvider>
     </HelmetProvider>
 );

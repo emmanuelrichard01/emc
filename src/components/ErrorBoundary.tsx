@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal, Copy, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface Props {
   children: ReactNode;
@@ -64,22 +63,19 @@ class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-black p-6 font-mono text-neutral-400 selection:bg-red-500/30">
-          <div className="max-w-2xl w-full border border-red-900/30 bg-red-950/5 rounded-xl p-8 shadow-2xl relative overflow-hidden">
-
-            {/* Decorative Noise/Scanline */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.02] mix-blend-overlay" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "256px 256px" }} />
+        <div className="min-h-screen flex items-center justify-center bg-background p-6 font-mono text-foreground selection:bg-destructive/30">
+          <div className="max-w-2xl w-full border border-destructive bg-card p-8 relative overflow-hidden rounded-none">
 
             {/* Header */}
             <div className="flex items-start gap-4 mb-8">
-              <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                <AlertTriangle className="w-8 h-8 text-red-500" />
+              <div className="p-3 border border-destructive bg-destructive/10">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-red-500 mb-1 tracking-tight">
-                  SYSTEM_CRITICAL_FAILURE
+                <h1 className="text-xl font-bold text-destructive mb-1 tracking-widest uppercase">
+                  SYS.CRITICAL_FAILURE
                 </h1>
-                <p className="text-sm text-red-400/60">
+                <p className="text-[11px] text-destructive/70 tracking-widest uppercase mt-2">
                   The application kernel encountered an unrecoverable error.
                 </p>
               </div>
@@ -90,18 +86,18 @@ class ErrorBoundary extends Component<Props, State> {
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={this.handleCopyError}
-                  className="p-1.5 rounded bg-red-900/50 hover:bg-red-900 text-red-200 transition-colors"
+                  className="p-1.5 border border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground transition-colors cursor-pointer"
                   title="Copy Stack Trace"
                 >
-                  {this.state.copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {this.state.copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               </div>
-              <pre className="bg-black/50 border border-red-900/30 rounded-lg p-4 text-[10px] md:text-xs overflow-x-auto custom-scrollbar">
-                <code className="text-red-300">
+              <pre className="bg-muted/30 border border-border p-4 text-[10px] md:text-xs overflow-x-auto">
+                <code className="text-destructive font-bold">
                   {this.state.error?.toString() || "Unknown Error"}
                 </code>
                 {this.props.showDetails && this.state.errorInfo && (
-                  <code className="text-red-400/50 block mt-2">
+                  <code className="text-muted-foreground block mt-4">
                     {this.state.errorInfo.componentStack}
                   </code>
                 )}
@@ -109,28 +105,27 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
                 onClick={this.handleRetry}
-                className="bg-red-600 hover:bg-red-700 text-white border-none font-mono"
+                className="flex items-center justify-center gap-2 px-6 py-3 border border-destructive bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors uppercase tracking-widest text-[11px] font-bold cursor-pointer"
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                REBOOT_SYSTEM
-              </Button>
-              <Button
+                <RefreshCw className="w-3.5 h-3.5" />
+                Reboot System
+              </button>
+              <button
                 onClick={this.handleGoHome}
-                variant="outline"
-                className="border-red-900/30 text-red-400 hover:bg-red-950/30 hover:text-red-300 font-mono"
+                className="flex items-center justify-center gap-2 px-6 py-3 border border-border bg-transparent text-muted-foreground hover:border-foreground hover:text-foreground transition-colors uppercase tracking-widest text-[11px] font-bold cursor-pointer"
               >
-                <Home className="w-4 h-4 mr-2" />
-                RETURN_HOME
-              </Button>
+                <Home className="w-3.5 h-3.5" />
+                Return Home
+              </button>
             </div>
 
             {/* Footer */}
-            <div className="mt-8 pt-4 border-t border-red-900/20 text-[10px] text-red-900/60 flex justify-between items-center">
-              <span>ERROR_CODE: 0xDEADBEEF</span>
-              <span className="flex items-center gap-1">
+            <div className="mt-8 pt-4 border-t border-border text-[9px] text-muted-foreground/60 flex justify-between items-center tracking-widest uppercase">
+              <span>ERR_CODE: 0xDEADBEEF</span>
+              <span className="flex items-center gap-2">
                 <Terminal className="w-3 h-3" /> sys_log_v2.0
               </span>
             </div>
