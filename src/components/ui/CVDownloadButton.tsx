@@ -29,45 +29,42 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
     setStatus('preparing');
     setProgress(0);
 
-    // Simulate preparation phase briefly
-    await new Promise(r => setTimeout(r, 400));
+    // Brief preparation state
+    await new Promise((r) => setTimeout(r, 150));
     setStatus('downloading');
 
     // Animate progress bar
     progressRef.current = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         if (prev >= 90) {
           if (progressRef.current) clearInterval(progressRef.current);
           return prev;
         }
-        return prev + Math.random() * 15;
+        return prev + Math.random() * 25;
       });
-    }, 100);
+    }, 50);
 
     try {
-      const response = await fetch('/Emmanuel_Moghalu_CV.pdf');
-      if (!response.ok) throw new Error('File not found');
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      // Complete progress
-      if (progressRef.current) clearInterval(progressRef.current);
-      setProgress(100);
-
+      // Direct static anchor download - lets the browser natively handle the file
       const a = document.createElement('a');
-      a.href = url;
+      a.href = '/Emmanuel_Moghalu_CV.pdf';
       a.download = FILE_NAME;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        if (document.body.contains(a)) document.body.removeChild(a);
+      }, 500);
 
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
+      if (progressRef.current) clearInterval(progressRef.current);
+      setProgress(100);
       setStatus('success');
+
       toast.success('CV downloaded successfully', {
         description: `${FILE_NAME} · ${FILE_SIZE}`,
-        icon: <FileText className="w-4 h-4 text-primary" />
+        icon: <FileText className="w-4 h-4 text-primary" />,
       });
 
       setTimeout(() => {
@@ -79,7 +76,7 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
       setStatus('idle');
       setProgress(0);
       toast.error('Download failed', {
-        description: 'Could not retrieve the file. Please try again.'
+        description: 'Could not retrieve the file. Please try again.',
       });
     }
   };
@@ -106,16 +103,17 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
           // Résumé
         </div>
         <button
+          type="button"
           onClick={handleDownload}
           disabled={status !== 'idle'}
           aria-label="Download Emmanuel Moghalu's CV as PDF"
           aria-describedby="cv-file-info"
-          className={`group relative flex items-center justify-between border border-border bg-card px-4 py-3 hover:border-primary transition-all disabled:opacity-70 disabled:cursor-not-allowed w-full overflow-hidden ${className}`}
+          className={`group relative flex items-center justify-between border border-border bg-card px-4 py-3 hover:border-primary transition-all disabled:opacity-70 disabled:cursor-not-allowed w-full overflow-hidden cursor-pointer ${className}`}
         >
           {/* Progress bar background */}
           {(status === 'downloading' || status === 'preparing') && (
             <motion.div
-              className="absolute inset-0 bg-primary/5"
+              className="absolute inset-0 bg-primary/10"
               initial={{ width: '0%' }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.1 }}
@@ -124,12 +122,22 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
 
           <div className="flex items-center gap-3 text-muted-foreground group-hover:text-foreground transition-colors relative z-10">
             <AnimatePresence mode="wait">
-              <motion.div key={status} initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
+              <motion.div
+                key={status}
+                initial={{ scale: 0, rotate: -90 }}
+                animate={{ scale: 1, rotate: 0 }}
+                exit={{ scale: 0, rotate: 90 }}
+                transition={{ duration: 0.2 }}
+              >
                 {statusIcon[status]}
               </motion.div>
             </AnimatePresence>
             <div className="flex flex-col items-start">
-              <span className={`text-[13px] uppercase tracking-wider font-mono ${status === 'downloading' || status === 'preparing' ? 'text-primary' : ''}`}>
+              <span
+                className={`text-[13px] uppercase tracking-wider font-mono ${
+                  status === 'downloading' || status === 'preparing' ? 'text-primary' : ''
+                }`}
+              >
                 {statusLabel[status]}
               </span>
               <span id="cv-file-info" className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">
@@ -152,10 +160,13 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
   /* ── Structural / Ghost Variant ── */
   return (
     <button
+      type="button"
       onClick={handleDownload}
       disabled={status !== 'idle'}
       aria-label="Download Emmanuel Moghalu's CV as PDF"
-      className={`${variant === 'structural' ? 'btn-structural' : 'btn-ghost-structural'} relative flex items-center justify-center gap-3 w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden ${className}`}
+      className={`${
+        variant === 'structural' ? 'btn-structural' : 'btn-ghost-structural'
+      } relative flex items-center justify-center gap-3 w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden cursor-pointer ${className}`}
     >
       {/* Progress bar background */}
       {(status === 'downloading' || status === 'preparing') && (

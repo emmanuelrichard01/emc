@@ -618,7 +618,7 @@ const StaggeredReveal = ({ text, className = "" }: { text: string; className?: s
 /* Hub nodes route data and spawn secondary relay signals.                    */
 /* -------------------------------------------------------------------------- */
 
-const GRID = 48; // Must match the original CSS grid spacing
+const GRID = 48; // Grid spacing in px
 
 const CircuitCanvas = React.memo(() => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -631,7 +631,7 @@ const CircuitCanvas = React.memo(() => {
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    // Use IntersectionObserver to pause rendering when off-screen
+    // Visibility observer to pause rendering off-screen
     let isVisible = true;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -646,13 +646,14 @@ const CircuitCanvas = React.memo(() => {
     let gridCols = 0;
     let gridRows = 0;
     let rafId = 0;
-    
+
     // --- Node Grid System ---
-    // Flat array to store node activation levels (0.0 to 1.0)
     let nodes = new Float32Array(0);
-    let hubs = new Set<number>();
-    
-    // --- Mouse Proximity ---
+    const hubs = new Set<number>();
+    // Pre-calculated 45-degree chamfer trace paths
+    let chamfers: Array<{ x1: number; y1: number; x2: number; y2: number; x3: number; y3: number }> = [];
+
+    // --- Mouse Proximity & Telemetry Probe ---
     let mouseX = -1000;
     let mouseY = -1000;
     let isTouch = false;
@@ -675,7 +676,150 @@ const CircuitCanvas = React.memo(() => {
     window.addEventListener('mouseleave', handleMouseLeave);
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
 
-    /* ── Sizing (ResizeObserver for precision) ── */
+    // --- Theme Color Sync ---
+    let primaryHSL = '38 92% 50%';
+    let fgHSL = '0 0% 93%';
+    const readTheme = () => {
+      const style = getComputedStyle(document.documentElement);
+      const p = style.getPropertyValue('--primary').trim();
+      const f = style.getPropertyValue('--foreground').trim();
+      if (p) primaryHSL = p;
+      if (f) fgHSL = f;
+    };
+    readTheme();
+
+    // --- Object Pools for Zero-GC RAF Loop ---
+
+    // 1. Shockwaves (Hub Ring Expansions)
+    interface Shockwave {
+      active: boolean;
+      x: number;
+      y: number;
+      radius: number;
+      maxRadius: number;
+      alpha: number;
+      speed: number;
+    }
+    const MAX_SHOCKWAVES = 16;
+    const shockwaves: Shockwave[] = Array.from({ length: MAX_SHOCKWAVES }, () => ({
+      active: false, x: 0, y: 0, radius: 0, maxRadius: 50, alpha: 0, speed: 0,
+    }));
+
+    const triggerShockwave = (x: number, y: number, maxR = 48, spd = 1.2) => {
+      const sw = shockwaves.find((s) => !s.active);
+      if (!sw) return;
+      sw.active = true;
+      sw.x = x;
+      sw.y = y;
+      sw.radius = 2;
+      sw.maxRadius = maxR;
+      sw.alpha = 0.8;
+      sw.speed = spd;
+    };
+
+    // 2. Micro Spark Particles
+    interface Spark {
+      active: boolean;
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      life: number;
+      maxLife: number;
+      size: number;
+    }
+    const MAX_SPARKS = 80;
+    const sparks: Spark[] = Array.from({ length: MAX_SPARKS }, () => ({
+      active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 30, size: 1,
+    }));
+
+    const emitSparks = (x: number, y: number, count = 2, pDir?: string) => {
+      for (let i = 0; i < count; i++) {
+        const s = sparks.find((sp) => !sp.active);
+        if (!s) break;
+        s.active = true;
+        s.x = x + (Math.random() - 0.5) * 4;
+        s.y = y + (Math.random() - 0.5) * 4;
+
+        let baseVx = (Math.random() - 0.5) * 0.8;
+        let baseVy = (Math.random() - 0.5) * 0.8;
+        if (pDir === 'right') baseVx -= 0.6;
+        else if (pDir === 'left') baseVx += 0.6;
+        else if (pDir === 'down') baseVy -= 0.6;
+        else if (pDir === 'up') baseVy += 0.6;
+
+        s.vx = baseVx;
+        s.vy = baseVy;
+        s.life = 0;
+        s.maxLife = 20 + Math.floor(Math.random() * 20);
+        s.size = 1 + Math.random() * 0.8;
+      }
+    };
+
+    // 3. Pulses / Data Stream Entities
+    type Dir = 'up' | 'down' | 'left' | 'right';
+    type PulseClass = 'stream' | 'telemetry' | 'relay';
+
+    interface Pulse {
+      active: boolean;
+      pClass: PulseClass;
+      x: number;
+      y: number;
+      dir: Dir;
+      speed: number;
+      trail: { x: number; y: number }[];
+      maxTrail: number;
+      accum: number;
+    }
+
+    const PULSE_POOL_SIZE = 36;
+    const pulses: Pulse[] = Array.from({ length: PULSE_POOL_SIZE }, () => ({
+      active: false, pClass: 'stream', x: 0, y: 0, dir: 'down', speed: 0, trail: [], maxTrail: 0, accum: 0,
+    }));
+
+    const TURN_CHANCE = 0.28;
+    const randFrom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const perpDirs = (d: Dir): Dir[] => (d === 'left' || d === 'right' ? ['up', 'down'] : ['left', 'right']);
+
+    const spawnPulse = (pClass: PulseClass, specificX?: number, specificY?: number, specificDir?: Dir) => {
+      const p = pulses.find((pl) => !pl.active);
+      if (!p) return;
+
+      p.active = true;
+      p.pClass = pClass;
+      p.trail = [];
+      p.accum = 0;
+
+      if (specificX !== undefined && specificY !== undefined && specificDir !== undefined) {
+        p.x = specificX;
+        p.y = specificY;
+        p.dir = specificDir;
+      } else {
+        const edge = Math.floor(Math.random() * 4);
+        const c = Math.floor(Math.random() * gridCols);
+        const r = Math.floor(Math.random() * gridRows);
+
+        switch (edge) {
+          case 0: p.x = c * GRID; p.y = 0; p.dir = 'down'; break;
+          case 1: p.x = (gridCols - 1) * GRID; p.y = r * GRID; p.dir = 'left'; break;
+          case 2: p.x = c * GRID; p.y = (gridRows - 1) * GRID; p.dir = 'up'; break;
+          case 3: p.x = 0; p.y = r * GRID; p.dir = 'right'; break;
+        }
+      }
+
+      if (pClass === 'stream') {
+        p.speed = 2.4 + Math.random() * 1.2;
+        p.maxTrail = 45 + Math.floor(Math.random() * 20);
+      } else if (pClass === 'telemetry') {
+        p.speed = 0.8 + Math.random() * 0.4;
+        p.maxTrail = 110 + Math.floor(Math.random() * 40);
+      } else if (pClass === 'relay') {
+        p.speed = 4.2 + Math.random() * 1.8;
+        p.maxTrail = 18 + Math.floor(Math.random() * 10);
+      }
+    };
+
+    // --- Sizing & Mesh Topology Setup ---
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.target === canvas.parentElement) {
@@ -686,213 +830,152 @@ const CircuitCanvas = React.memo(() => {
           canvas.width = w * dpr;
           canvas.height = h * dpr;
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          
+
           gridCols = Math.floor(w / GRID) + 2;
           gridRows = Math.floor(h / GRID) + 2;
-          
-          const newNodes = new Float32Array(gridCols * gridRows);
-          nodes = newNodes;
-          
-          // Re-pick hubs
+
+          nodes = new Float32Array(gridCols * gridRows);
+
+          // Select Strategic Hub Processing Nodes
           hubs.clear();
-          const hubCount = 6;
-          for(let i = 0; i < hubCount; i++) {
-             const col = Math.floor(Math.random() * (gridCols - 2)) + 1;
-             const row = Math.floor(Math.random() * (gridRows - 2)) + 1;
-             hubs.add(row * gridCols + col);
+          const hubCount = Math.max(6, Math.floor((gridCols * gridRows) / 45));
+          for (let i = 0; i < hubCount; i++) {
+            const col = Math.floor(Math.random() * (gridCols - 4)) + 2;
+            const row = Math.floor(Math.random() * (gridRows - 4)) + 2;
+            hubs.add(row * gridCols + col);
+          }
+
+          // Build PCB 45-degree chamfer traces
+          chamfers = [];
+          const chamferCount = Math.floor((gridCols * gridRows) / 35);
+          for (let i = 0; i < chamferCount; i++) {
+            const col = Math.floor(Math.random() * (gridCols - 3)) + 1;
+            const row = Math.floor(Math.random() * (gridRows - 3)) + 1;
+            const x = col * GRID;
+            const y = row * GRID;
+            const dir = Math.random() > 0.5 ? 1 : -1;
+            chamfers.push({
+              x1: x,
+              y1: y,
+              x2: x + 16 * dir,
+              y2: y + 16,
+              x3: x + 16 * dir + GRID / 2,
+              y3: y + 16,
+            });
           }
         }
       }
     });
-    
+
     if (canvas.parentElement) {
-       resizeObserver.observe(canvas.parentElement);
-    } else {
-       w = canvas.clientWidth;
-       h = canvas.clientHeight;
+      resizeObserver.observe(canvas.parentElement);
     }
 
+    // Initial Spawns
+    for (let i = 0; i < 10; i++) spawnPulse('stream');
+    for (let i = 0; i < 5; i++) spawnPulse('telemetry');
 
-    /* ── Theme color ── */
-    let primaryHSL = '';
-    let fgHSL = '';
-    const readTheme = () => {
-      const style = getComputedStyle(document.documentElement);
-      primaryHSL = style.getPropertyValue('--primary').trim();
-      fgHSL = style.getPropertyValue('--foreground').trim();
-    };
-    readTheme();
-
-    /* ── Pulse (particle) classes ── */
-    type Dir = 'up' | 'down' | 'left' | 'right';
-    type PulseClass = 'packet' | 'energy' | 'relay';
-
-    interface Pulse {
-      active: boolean;
-      pClass: PulseClass;
-      x: number;
-      y: number;
-      dir: Dir;
-      speed: number; // pixels per frame (at 60fps)
-      trail: { x: number; y: number }[];
-      maxTrail: number;
-      accum: number; // For sub-pixel movement
-    }
-
-    const PULSE_POOL_SIZE = 30; // Pre-allocate
-    const pulses: Pulse[] = Array.from({ length: PULSE_POOL_SIZE }, () => ({
-      active: false, pClass: 'packet', x: 0, y: 0, dir: 'down', speed: 0, trail: [], maxTrail: 0, accum: 0
-    }));
-
-    const TURN_CHANCE = 0.3;
-
-    const randFrom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-    const perpDirs = (d: Dir): Dir[] => d === 'left' || d === 'right' ? ['up', 'down'] : ['left', 'right'];
-
-    const spawnPulse = (pClass: PulseClass, specificX?: number, specificY?: number, specificDir?: Dir) => {
-      // Find inactive pulse
-      const p = pulses.find(p => !p.active);
-      if (!p) return;
-
-      p.active = true;
-      p.pClass = pClass;
-      p.trail = [];
-      p.accum = 0;
-
-      if (specificX !== undefined && specificY !== undefined && specificDir !== undefined) {
-         p.x = specificX;
-         p.y = specificY;
-         p.dir = specificDir;
-      } else {
-         // Pick random edge
-         const edge = Math.floor(Math.random() * 4);
-         const c = Math.floor(Math.random() * gridCols);
-         const r = Math.floor(Math.random() * gridRows);
-         
-         switch (edge) {
-           case 0: p.x = c * GRID; p.y = 0; p.dir = 'down'; break;
-           case 1: p.x = (gridCols - 1) * GRID; p.y = r * GRID; p.dir = 'left'; break;
-           case 2: p.x = c * GRID; p.y = (gridRows - 1) * GRID; p.dir = 'up'; break;
-           case 3: p.x = 0; p.y = r * GRID; p.dir = 'right'; break;
-         }
-      }
-
-      if (pClass === 'packet') {
-         p.speed = 2 + Math.random() * 1;
-         p.maxTrail = 40 + Math.random() * 20;
-      } else if (pClass === 'energy') {
-         p.speed = 0.5 + Math.random() * 0.5;
-         p.maxTrail = 120 + Math.random() * 60;
-      } else if (pClass === 'relay') {
-         p.speed = 4 + Math.random() * 2;
-         p.maxTrail = 15 + Math.random() * 10;
-      }
-    };
-    
-    // Initial spawns
-    for(let i=0; i<8; i++) spawnPulse('packet');
-    for(let i=0; i<4; i++) spawnPulse('energy');
-
+    // Update individual pulse
     const updatePulse = (p: Pulse, dtRatio: number) => {
       if (!p.active) return;
-      
+
       const frameSpeed = p.speed * dtRatio;
-      
       p.accum += frameSpeed;
-      // Move by whole pixels when accumulator >= 1
       const movePx = Math.floor(p.accum);
-      
+
       if (movePx > 0) {
         p.accum -= movePx;
-        
         p.trail.push({ x: p.x, y: p.y });
         if (p.trail.length > p.maxTrail) p.trail.shift();
-        
+
         const prevCol = Math.floor(p.x / GRID);
         const prevRow = Math.floor(p.y / GRID);
-        
+
         switch (p.dir) {
           case 'right': p.x += movePx; break;
           case 'left':  p.x -= movePx; break;
           case 'down':  p.y += movePx; break;
           case 'up':    p.y -= movePx; break;
         }
-        
+
         const currCol = Math.floor(p.x / GRID);
         const currRow = Math.floor(p.y / GRID);
-        
-        // Did we cross an intersection this step?
+
         let hitX = -1, hitY = -1;
-        if (p.dir === 'right' && currCol > prevCol) { hitX = currCol * GRID; hitY = Math.round(p.y/GRID)*GRID; }
-        else if (p.dir === 'left' && currCol < prevCol) { hitX = prevCol * GRID; hitY = Math.round(p.y/GRID)*GRID; }
-        else if (p.dir === 'down' && currRow > prevRow) { hitX = Math.round(p.x/GRID)*GRID; hitY = currRow * GRID; }
-        else if (p.dir === 'up' && currRow < prevRow) { hitX = Math.round(p.x/GRID)*GRID; hitY = prevRow * GRID; }
+        if (p.dir === 'right' && currCol > prevCol) { hitX = currCol * GRID; hitY = Math.round(p.y / GRID) * GRID; }
+        else if (p.dir === 'left' && currCol < prevCol) { hitX = prevCol * GRID; hitY = Math.round(p.y / GRID) * GRID; }
+        else if (p.dir === 'down' && currRow > prevRow) { hitX = Math.round(p.x / GRID) * GRID; hitY = currRow * GRID; }
+        else if (p.dir === 'up' && currRow < prevRow) { hitX = Math.round(p.x / GRID) * GRID; hitY = prevRow * GRID; }
 
         if (hitX !== -1 && hitY !== -1) {
-           p.x = hitX;
-           p.y = hitY;
-           
-           const col = Math.round(hitX / GRID);
-           const row = Math.round(hitY / GRID);
-           const nodeIdx = row * gridCols + col;
-           
-           // Activate node
-           if (nodeIdx >= 0 && nodeIdx < nodes.length) {
-              nodes[nodeIdx] = 1.0; 
-              
-              // Hub logic
-              if (hubs.has(nodeIdx) && p.pClass === 'packet') {
-                 const activeRelays = pulses.filter(pp => pp.active && pp.pClass === 'relay').length;
-                 if (activeRelays < 6) {
-                    const rDir = randFrom(perpDirs(p.dir));
-                    spawnPulse('relay', hitX, hitY, rDir);
-                 }
+          p.x = hitX;
+          p.y = hitY;
+
+          const col = Math.round(hitX / GRID);
+          const row = Math.round(hitY / GRID);
+          const nodeIdx = row * gridCols + col;
+
+          if (nodeIdx >= 0 && nodeIdx < nodes.length) {
+            nodes[nodeIdx] = 1.0;
+
+            // Emit subtle spark discharges along trace intersection
+            if (p.pClass === 'stream' && Math.random() < 0.6) {
+              emitSparks(hitX, hitY, 1, p.dir);
+            }
+
+            // Hub processing triggers shockwave + relay signal
+            if (hubs.has(nodeIdx) && p.pClass === 'stream') {
+              triggerShockwave(hitX, hitY, 52, 1.4);
+
+              const activeRelays = pulses.filter((pp) => pp.active && pp.pClass === 'relay').length;
+              if (activeRelays < 8) {
+                const rDir = randFrom(perpDirs(p.dir));
+                spawnPulse('relay', hitX, hitY, rDir);
               }
-           }
-           
-           if (Math.random() < TURN_CHANCE) {
-              p.dir = randFrom(perpDirs(p.dir));
-           }
+            }
+          }
+
+          if (Math.random() < TURN_CHANCE) {
+            p.dir = randFrom(perpDirs(p.dir));
+          }
         }
       }
 
-      // Respawn off-screen
+      // Respawn if off bounds
       const m = GRID * 2;
       const headOOB = p.x < -m || p.x > w + m || p.y < -m || p.y > h + m;
-      if (headOOB && p.trail.every(t => t.x < -m || t.x > w + m || t.y < -m || t.y > h + m)) {
+      if (headOOB && p.trail.every((t) => t.x < -m || t.x > w + m || t.y < -m || t.y > h + m)) {
         p.active = false;
-        if (p.pClass !== 'relay') {
-           spawnPulse(p.pClass);
-        }
+        if (p.pClass !== 'relay') spawnPulse(p.pClass);
       }
     };
 
-    /* ── Game Loop ── */
+    // Warm up animation state
+    for (let i = 0; i < 250; i++) pulses.forEach((p) => updatePulse(p, 1.0));
+
+    /* ── Render Loop ── */
     let lastTime = 0;
     let frameCount = 0;
-    
-    // Warm up
-    const dtRatio = 1.0;
-    for (let i = 0; i < 300; i++) pulses.forEach(p => updatePulse(p, dtRatio));
 
     const draw = (time: number) => {
       rafId = requestAnimationFrame(draw);
-      
+
       if (!isVisible) return;
-      
+
       if (lastTime === 0) lastTime = time;
       const dt = time - lastTime;
       lastTime = time;
-      const stepDt = Math.min(dt, 50);
-      const ratio = stepDt / (1000 / 60);
+      const ratio = Math.min(dt, 50) / (1000 / 60);
 
       ctx.clearRect(0, 0, w, h);
 
-      if (frameCount++ % 120 === 0) readTheme();
+      if (frameCount++ % 90 === 0) readTheme();
 
-      // --- Background Grid ---
+      // --- 1. Background Grid & Infrastructure Topology ---
       ctx.lineWidth = 1;
-      ctx.strokeStyle = `hsl(${fgHSL} / 0.05)`;
+
+      // Minor grid lines
+      ctx.strokeStyle = `hsl(${fgHSL} / 0.035)`;
       ctx.beginPath();
       for (let x = 0; x <= w; x += GRID) {
         ctx.moveTo(x, 0); ctx.lineTo(x, h);
@@ -902,61 +985,153 @@ const CircuitCanvas = React.memo(() => {
       }
       ctx.stroke();
 
-      // --- Nodes ---
+      // Major grid blocks (every 4x4 cells = 192px)
+      const MAJOR_GRID = GRID * 4;
+      ctx.strokeStyle = `hsl(${fgHSL} / 0.075)`;
+      ctx.beginPath();
+      for (let x = 0; x <= w; x += MAJOR_GRID) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, h);
+      }
+      for (let y = 0; y <= h; y += MAJOR_GRID) {
+        ctx.moveTo(0, y); ctx.lineTo(w, y);
+      }
+      ctx.stroke();
+
+      // Micro-Crosses (+) at Major Grid Intersections
+      ctx.strokeStyle = `hsl(${primaryHSL} / 0.25)`;
+      ctx.beginPath();
+      const crossSize = 3;
+      for (let x = 0; x <= w; x += MAJOR_GRID) {
+        for (let y = 0; y <= h; y += MAJOR_GRID) {
+          ctx.moveTo(x - crossSize, y); ctx.lineTo(x + crossSize, y);
+          ctx.moveTo(x, y - crossSize); ctx.lineTo(x, y + crossSize);
+        }
+      }
+      ctx.stroke();
+
+      // PCB Chamfer Traces
+      if (chamfers.length > 0) {
+        ctx.strokeStyle = `hsl(${fgHSL} / 0.045)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < chamfers.length; i++) {
+          const c = chamfers[i];
+          ctx.moveTo(c.x1, c.y1);
+          ctx.lineTo(c.x2, c.y2);
+          ctx.lineTo(c.x3, c.y3);
+        }
+        ctx.stroke();
+      }
+
+      // --- 2. Concentric Hub Shockwaves ---
+      for (const sw of shockwaves) {
+        if (!sw.active) continue;
+        sw.radius += sw.speed * ratio;
+        sw.alpha *= 0.95;
+
+        if (sw.radius >= sw.maxRadius || sw.alpha < 0.02) {
+          sw.active = false;
+          continue;
+        }
+
+        ctx.strokeStyle = `hsl(${primaryHSL} / ${sw.alpha * 0.4})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // --- 3. Grid Node Activation & Hub Halos ---
       const nodeDecay = 0.02 * ratio;
+      const breathingHalo = 6.5 + Math.sin(time * 0.003) * 1.8;
+
       ctx.fillStyle = `hsl(${primaryHSL})`;
-      
+
       for (let r = 0; r < gridRows; r++) {
-         for (let c = 0; c < gridCols; c++) {
-            const idx = r * gridCols + c;
-            const nx = c * GRID;
-            const ny = r * GRID;
-            
-            let proxVal = 0;
-            if (mouseX !== -1000) {
-               const dx = nx - mouseX;
-               const dy = ny - mouseY;
-               const dist = Math.sqrt(dx*dx + dy*dy);
-               if (dist < 120) {
-                  proxVal = 1.0 - (dist / 120);
-               }
+        for (let c = 0; c < gridCols; c++) {
+          const idx = r * gridCols + c;
+          const nx = c * GRID;
+          const ny = r * GRID;
+
+          let proxVal = 0;
+          if (mouseX !== -1000) {
+            const dx = nx - mouseX;
+            const dy = ny - mouseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 150) proxVal = 1.0 - dist / 150;
+          }
+
+          const activation = nodes[idx] || 0;
+          const isHub = hubs.has(idx);
+
+          if (activation > 0 || proxVal > 0 || isHub) {
+            const baseAlpha = isHub ? 0.2 : 0;
+            const finalAlpha = Math.max(baseAlpha, activation * 0.85, proxVal * 0.4);
+
+            if (finalAlpha > 0.01) {
+              ctx.globalAlpha = finalAlpha;
+
+              if (isHub) {
+                // Hub Core Dot
+                ctx.beginPath();
+                ctx.arc(nx, ny, 2.8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Hub Outer Breathing Aura
+                ctx.strokeStyle = `hsl(${primaryHSL} / ${finalAlpha * 0.5})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(nx, ny, breathingHalo, 0, Math.PI * 2);
+                ctx.stroke();
+              } else {
+                // Regular Node Dot
+                const radius = 1.2 + proxVal * 0.8;
+                ctx.beginPath();
+                ctx.arc(nx, ny, radius, 0, Math.PI * 2);
+                ctx.fill();
+              }
             }
 
-            let activation = nodes[idx] || 0;
-            
-            if (activation > 0 || proxVal > 0 || hubs.has(idx)) {
-               const baseAlpha = hubs.has(idx) ? 0.15 : 0;
-               const finalAlpha = Math.max(baseAlpha, activation * 0.8, proxVal * 0.3);
-               
-               if (finalAlpha > 0.01) {
-                  ctx.globalAlpha = finalAlpha;
-                  const radius = hubs.has(idx) ? 2.5 : 1.5;
-                  ctx.beginPath();
-                  ctx.arc(nx, ny, radius, 0, Math.PI * 2);
-                  ctx.fill();
-               }
-               
-               if (activation > 0) {
-                  nodes[idx] = Math.max(0, activation - nodeDecay);
-               }
+            if (activation > 0) {
+              nodes[idx] = Math.max(0, activation - nodeDecay);
             }
-         }
+          }
+        }
       }
       ctx.globalAlpha = 1.0;
 
-      // --- Pulses ---
+      // --- 4. Micro Spark Particles ---
+      for (const s of sparks) {
+        if (!s.active) continue;
+        s.x += s.vx * ratio;
+        s.y += s.vy * ratio;
+        s.life += ratio;
+
+        if (s.life >= s.maxLife) {
+          s.active = false;
+          continue;
+        }
+
+        const progress = s.life / s.maxLife;
+        const sparkAlpha = (1 - progress) * 0.6;
+        ctx.fillStyle = `hsl(${primaryHSL} / ${sparkAlpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size * (1 - progress * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // --- 5. Multi-Class Pulses ---
       for (const p of pulses) {
         if (!p.active) continue;
         updatePulse(p, ratio);
-        
+
         const { trail, pClass } = p;
         if (trail.length < 2) continue;
 
-        const bands = pClass === 'energy' ? 2 : 4;
+        const bands = pClass === 'telemetry' ? 2 : 4;
         const bandSize = Math.ceil(trail.length / bands);
-        
-        const maxAlpha = pClass === 'energy' ? 0.1 : (pClass === 'relay' ? 0.6 : 0.4);
-        const width = pClass === 'energy' ? 3 : 1.5;
+        const maxAlpha = pClass === 'telemetry' ? 0.12 : (pClass === 'relay' ? 0.7 : 0.45);
+        const width = pClass === 'telemetry' ? 3.5 : (pClass === 'relay' ? 1.5 : 1.8);
 
         for (let b = 0; b < bands; b++) {
           const s = b * bandSize;
@@ -974,22 +1149,89 @@ const CircuitCanvas = React.memo(() => {
           ctx.stroke();
         }
 
-        if (pClass !== 'energy') {
-           const head = trail[trail.length - 1];
-           ctx.save();
-           ctx.shadowColor = `hsl(${primaryHSL})`;
-           ctx.shadowBlur = pClass === 'packet' ? 8 : 4;
-           ctx.fillStyle = `hsl(${primaryHSL} / 0.9)`;
-           ctx.beginPath();
-           ctx.arc(head.x, head.y, pClass === 'packet' ? 2 : 1.5, 0, Math.PI * 2);
-           ctx.fill();
-           ctx.restore();
+        // Pulse Signal Head Spark
+        if (pClass !== 'telemetry') {
+          const head = trail[trail.length - 1];
+          ctx.save();
+          ctx.shadowColor = `hsl(${primaryHSL})`;
+          ctx.shadowBlur = pClass === 'stream' ? 10 : 5;
+          ctx.fillStyle = `hsl(${primaryHSL} / 0.95)`;
+          ctx.beginPath();
+          ctx.arc(head.x, head.y, pClass === 'stream' ? 2.2 : 1.6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
         }
       }
-      
-      // --- Edge Vignette ---
+
+      // --- 6. Interactive Telemetry Cursor Vector Probe ---
+      if (mouseX !== -1000 && mouseY !== -1000) {
+        // Collect nearest 3 nodes
+        let n1Dist = 9999, n2Dist = 9999, n3Dist = 9999;
+        let n1X = 0, n1Y = 0, n2X = 0, n2Y = 0, n3X = 0, n3Y = 0;
+
+        const searchR = 3;
+        const centerCol = Math.floor(mouseX / GRID);
+        const centerRow = Math.floor(mouseY / GRID);
+
+        for (let r = Math.max(0, centerRow - searchR); r <= Math.min(gridRows - 1, centerRow + searchR); r++) {
+          for (let c = Math.max(0, centerCol - searchR); c <= Math.min(gridCols - 1, centerCol + searchR); c++) {
+            const nx = c * GRID;
+            const ny = r * GRID;
+            const dx = nx - mouseX;
+            const dy = ny - mouseY;
+            const d = Math.sqrt(dx * dx + dy * dy);
+
+            if (d < n1Dist) {
+              n3Dist = n2Dist; n3X = n2X; n3Y = n2Y;
+              n2Dist = n1Dist; n2X = n1X; n2Y = n1Y;
+              n1Dist = d; n1X = nx; n1Y = ny;
+            } else if (d < n2Dist) {
+              n3Dist = n2Dist; n3X = n2X; n3Y = n2Y;
+              n2Dist = d; n2X = nx; n2Y = ny;
+            } else if (d < n3Dist) {
+              n3Dist = d; n3X = nx; n3Y = ny;
+            }
+          }
+        }
+
+        const maxProbeDist = 140;
+        const nearNodes = [
+          { x: n1X, y: n1Y, dist: n1Dist },
+          { x: n2X, y: n2Y, dist: n2Dist },
+          { x: n3X, y: n3Y, dist: n3Dist },
+        ];
+
+        for (const nn of nearNodes) {
+          if (nn.dist < maxProbeDist) {
+            const probeAlpha = (1 - nn.dist / maxProbeDist) * 0.35;
+            ctx.strokeStyle = `hsl(${primaryHSL} / ${probeAlpha})`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(mouseX, mouseY);
+            ctx.lineTo(nn.x, nn.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Endpoint Telemetry Dot
+            ctx.fillStyle = `hsl(${primaryHSL} / ${probeAlpha * 1.5})`;
+            ctx.beginPath();
+            ctx.arc(nn.x, nn.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Center Mouse Telemetry Reticle Halo
+        ctx.strokeStyle = `hsl(${primaryHSL} / 0.25)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // --- 7. Edge Vignette Layer ---
       ctx.globalCompositeOperation = 'destination-in';
-      const grad = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*0.2, w/2, h/2, Math.max(w,h)*0.6);
+      const grad = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.25, w / 2, h / 2, Math.max(w, h) * 0.65);
       grad.addColorStop(0, 'rgba(0,0,0,1)');
       grad.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = grad;
@@ -1010,13 +1252,17 @@ const CircuitCanvas = React.memo(() => {
   }, [prefersReduced]);
 
   if (prefersReduced) {
-     return (
-        <div className="absolute inset-0 z-0 pointer-events-none" style={{
-           backgroundImage: 'linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)',
-           backgroundSize: '48px 48px',
-           opacity: 0.05
-        }} />
-     );
+    return (
+      <div
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          opacity: 0.05,
+        }}
+      />
+    );
   }
 
   return (

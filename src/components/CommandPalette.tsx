@@ -56,7 +56,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
 
   const downloadCV = useCallback(() => {
     onClose();
-    // Small delay to let palette close, then trigger the download
+    // Small delay to let palette close, then trigger download
     setTimeout(() => {
       const a = document.createElement('a');
       a.href = '/Emmanuel_Moghalu_CV.pdf';
