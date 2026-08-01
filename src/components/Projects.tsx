@@ -84,19 +84,20 @@ const LinkButtons = ({ project }: { project: Project }) => (
 /*  CARDS (Structural / Ledger style)                                         */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-const FlagshipCard = ({ project, index }: { project: Project; index: number }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    whileInView={{ opacity: 1 }}
-    exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.2 } }}
-    viewport={{ once: true, amount: 0.1 }}
-    transition={{ duration: 0.5 }}
-    className="group relative w-full border border-border bg-card p-6 md:p-10 pb-9 hover:border-primary/40 hover:-translate-y-[2px] transition-all duration-300 overflow-hidden"
-    style={{ boxShadow: 'var(--shadow-sm)' }}
-    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md), var(--shadow-glow)'; }}
-    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'; }}
-  >
-    {/* Left accent edge — always visible for flagship distinction */}
+const FlagshipCard = ({ project, index }: { project: Project; index: number }) => {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="group relative w-full border border-border bg-card p-6 md:p-10 pb-9 hover:border-primary/40 transition-all duration-300 overflow-hidden"
+      style={{ boxShadow: 'var(--shadow-sm)' }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md), var(--shadow-glow)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'; }}
+    >
+      {/* Left accent edge — always visible for flagship distinction */}
     <div className="absolute top-0 left-0 w-[2px] h-full bg-primary/60 group-hover:bg-primary transition-colors" />
     <TerminalStatusStrip project={project} />
 
@@ -163,21 +164,23 @@ const FlagshipCard = ({ project, index }: { project: Project; index: number }) =
       ))}
     </div>
   </motion.div>
-);
+  );
+};
 
-const ProductionCard = ({ project, index }: { project: Project; index: number }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    whileInView={{ opacity: 1 }}
-    exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.2 } }}
-    viewport={{ once: true, amount: 0.1 }}
-    transition={{ duration: 0.5, delay: (index % 2) * 0.1 }}
-    className="group relative flex flex-col border border-border bg-card p-6 md:p-8 pb-9 hover:border-primary/30 hover:-translate-y-[1px] transition-all duration-300 overflow-hidden"
-    style={{ boxShadow: 'var(--shadow-sm)' }}
-    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)'; }}
-    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'; }}
-  >
-    <TerminalStatusStrip project={project} />
+const ProductionCard = ({ project, index }: { project: Project; index: number }) => {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="group relative flex flex-col h-full border border-border bg-card p-6 md:p-8 pb-9 hover:border-primary/30 transition-all duration-300 overflow-hidden"
+      style={{ boxShadow: 'var(--shadow-sm)' }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'; }}
+    >
+      <TerminalStatusStrip project={project} />
     {/* Header */}
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
       <div>
@@ -215,21 +218,23 @@ const ProductionCard = ({ project, index }: { project: Project; index: number })
       ))}
     </div>
   </motion.div>
-);
+  );
+};
 
-const SystemCard = ({ project, index }: { project: Project; index: number }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    whileInView={{ opacity: 1 }}
-    exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.2 } }}
-    viewport={{ once: true, amount: 0.1 }}
-    transition={{ duration: 0.5, delay: (index % 2) * 0.1 }}
-    className="group relative flex flex-col border border-border bg-card p-6 pb-9 hover:border-primary/30 transition-all duration-300 overflow-hidden"
-    style={{ boxShadow: 'var(--shadow-sm)' }}
-    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)'; }}
-    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'; }}
-  >
-    <TerminalStatusStrip project={project} />
+const SystemCard = ({ project, index }: { project: Project; index: number }) => {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="group relative flex flex-col h-full border border-border bg-card p-6 pb-9 hover:border-primary/30 transition-all duration-300 overflow-hidden"
+      style={{ boxShadow: 'var(--shadow-sm)' }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'; }}
+    >
+      <TerminalStatusStrip project={project} />
     <div className="mb-4">
       <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary mb-2">
         {project.category}
@@ -269,7 +274,8 @@ const SystemCard = ({ project, index }: { project: Project; index: number }) => 
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /*  TIER LABEL                                                                */
@@ -476,44 +482,44 @@ const Projects: React.FC = () => {
 
         {/* ── TIER 1: Flagship ── */}
         {visibleFlagships.length > 0 && (
-          <>
+          <motion.div layout>
             <TierLabel num="01" label="Flagship Architecture" />
             <div className="flex flex-col gap-8">
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {visibleFlagships.map((project, index) => (
                   <FlagshipCard key={project.id} project={project} index={index} />
                 ))}
               </AnimatePresence>
             </div>
-          </>
+          </motion.div>
         )}
 
         {/* ── TIER 2: Production ── */}
         {visibleProduction.length > 0 && (
-          <>
+          <motion.div layout>
             <TierLabel num="02" label="Production Applications" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {visibleProduction.map((project, index) => (
                   <ProductionCard key={project.id} project={project} index={index} />
                 ))}
               </AnimatePresence>
             </div>
-          </>
+          </motion.div>
         )}
 
         {/* ── TIER 3: Systems ── */}
         {visibleSystems.length > 0 && (
-          <>
+          <motion.div layout>
             <TierLabel num="03" label="System Prototypes" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {visibleSystems.map((project, index) => (
                   <SystemCard key={project.id} project={project} index={index} />
                 ))}
               </AnimatePresence>
             </div>
-          </>
+          </motion.div>
         )}
 
         {visibleCount === 0 && (
