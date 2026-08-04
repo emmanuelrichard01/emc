@@ -30,6 +30,7 @@ export const EXPERIENCE: ExperienceItem[] = [
       "Optimized SQL queries and backend processes to improve reporting performance and scalability",
     ],
     stack: ["Python", "SQL", "React", "Next.js", "PostgreSQL", "Data Analysis"],
+    note: "Completed alongside the final year of the B.Eng.",
   },
   {
     id: "freelance",
@@ -45,6 +46,7 @@ export const EXPERIENCE: ExperienceItem[] = [
       "Maintained continuous hands-on engineering work throughout a full-time B.Eng. program",
     ],
     stack: ["Python", "TypeScript", "React", "SQL", "Tailwind CSS"],
+    note: "Concurrent with the B.Eng. at Caritas University.",
   },
   {
     id: "tac-africa",
@@ -59,6 +61,7 @@ export const EXPERIENCE: ExperienceItem[] = [
       "Investigated and resolved production issues through log analysis and database query profiling",
     ],
     stack: ["Python", "JavaScript", "SQL", "REST APIs", "PostgreSQL"],
+    note: "Concurrent with the AfriHUB ICT role below.",
   },
   {
     id: "afrihub",
@@ -73,5 +76,6 @@ export const EXPERIENCE: ExperienceItem[] = [
       "Built secure database structures and backend business logic for client projects",
     ],
     stack: ["Python", "SQL", "JavaScript", "MySQL", "HTML/CSS"],
+    note: "Undertaken alongside the National Innovative Diploma programme.",
   },
 ];

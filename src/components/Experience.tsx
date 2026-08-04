@@ -33,10 +33,10 @@ const RoleRow = ({
       {/* Left: Metadata / Ledger info */}
       <div className="lg:col-span-4 flex flex-col gap-1.5">
         <div className="flex items-center gap-3 mb-2">
-          <span className="font-mono text-[10px] text-primary border border-primary/20 bg-primary/5 px-1.5 py-0.5">0{index + 1}</span>
-          <h3 className="text-xl font-bold text-foreground">
-            {role.company}
-          </h3>
+          <span className="font-mono text-[10px] text-primary border border-primary/20 bg-primary/5 px-1.5 py-0.5">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+          <h3 className="text-xl font-bold text-foreground">{role.company}</h3>
         </div>
 
         <div className="flex flex-col gap-1 lg:pl-5">
@@ -48,6 +48,13 @@ const RoleRow = ({
             <span className="text-primary/60">·</span>
             <span>{role.type}</span>
           </div>
+
+          {/* Overlapping dates read as an error until you say otherwise. */}
+          {role.note && (
+            <span className="text-[11px] text-muted-foreground/60 font-light leading-snug mt-1.5 max-w-[280px]">
+              {role.note}
+            </span>
+          )}
         </div>
       </div>
 

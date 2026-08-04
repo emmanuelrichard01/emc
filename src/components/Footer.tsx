@@ -2,18 +2,11 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence, useScroll, useSpring, useInView } from "framer-motion";
 import { ArrowUp, Terminal } from "lucide-react";
 import { scrollToSection } from "@/lib/scrollToSection";
+import { SECTIONS } from "@/data/sections";
 
 /* -------------------------------------------------------------------------- */
 /*  DATA                                                                       */
 /* -------------------------------------------------------------------------- */
-
-const SITEMAP = [
-  { id: "home", label: "Home" },
-  { id: "about", label: "About" },
-  { id: "projects", label: "Work" },
-  { id: "experience", label: "Experience" },
-  { id: "contact", label: "Contact" },
-];
 
 const CONNECT_LINKS = [
   { label: "GitHub", href: "https://github.com/emmanuelrichard01" },
@@ -111,17 +104,14 @@ const ScrollToTop = () => {
           style={{ boxShadow: 'var(--shadow-md)' }}
           aria-label="Scroll to top"
         >
-          {/* Progress ring */}
-          <svg className="absolute inset-0 w-full h-full p-1 -rotate-90" viewBox="0 0 44 44">
-            <rect
-              x="2"
-              y="2"
-              width="40"
-              height="40"
-              fill="none"
-              stroke="transparent"
-              strokeWidth="1.5"
-            />
+          {/* Progress ring.
+
+              `pathLength` is driven by framer, which manages strokeDasharray
+              and strokeDashoffset itself to express it. The previous version
+              also hardcoded strokeDasharray="160" and set strokeDashoffset
+              from progress.get() — a non-reactive read during render that
+              fought the same two attributes framer was already writing. */}
+          <svg className="absolute inset-0 w-full h-full p-1 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
             <motion.rect
               x="2"
               y="2"
@@ -131,11 +121,7 @@ const ScrollToTop = () => {
               stroke="currentColor"
               strokeWidth="1.5"
               className="text-primary"
-              strokeDasharray="160"
-              style={{
-                strokeDashoffset: progress.get() ? undefined : 160,
-                pathLength: progress,
-              }}
+              style={{ pathLength: progress }}
             />
           </svg>
           <ArrowUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors relative z-10" />
@@ -191,16 +177,23 @@ const Footer = () => {
           {/* Sitemap */}
           <div className="flex flex-col items-center sm:items-start">
             <FooterColumnLabel>Sitemap</FooterColumnLabel>
+            {/* Real anchors, sharing the nav's section list — the footer used
+                to keep its own copy, which is how "Work" and "Experience"
+                drift apart from the pill above. */}
             <nav className="flex flex-col items-center sm:items-start gap-2.5" aria-label="Footer section links">
-              {SITEMAP.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => scrollToSection(item.id)}
+              {SECTIONS.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    e.preventDefault();
+                    scrollToSection(section.id);
+                  }}
                   className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {item.label}
-                </button>
+                  {section.label}
+                </a>
               ))}
             </nav>
           </div>

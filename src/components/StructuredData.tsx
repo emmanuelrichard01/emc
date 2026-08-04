@@ -20,31 +20,45 @@ const StructuredData = () => {
     "givenName": "Emmanuel",
     "familyName": "Moghalu",
     "alternateName": "Emmanuel Richard Moghalu",
-    "jobTitle": "Lead Data Engineer & System Architect",
+    // "Lead" was not supported by any role on the CV; the title now matches
+    // the positioning used everywhere else on the site.
+    "jobTitle": "Data Engineer & Backend Systems Engineer",
     "url": origin,
     "image": `${origin}/profile.webp`,
-    "description": "Data Engineer & System Architect specializing in distributed data systems, cloud architecture (AWS, GCP, Azure), and high-performance software engineering. 4+ years building production infrastructure, ETL pipelines, and scalable backend systems.",
+    "description": "Data and backend engineer with 4+ years building production APIs, event-driven data pipelines, and analytics platforms — validated with automated test suites. Deep working knowledge of the Nigerian and broader African fintech ecosystem, including multi-PSP integration, CBN regulatory requirements, and NDPR compliance.",
     "knowsAbout": [
       "Data Engineering",
+      "Backend Engineering",
+      "Payment Reconciliation",
+      "Nigerian Fintech",
+      "Multi-PSP Integration",
+      "CBN Regulatory Compliance",
+      "NDPR Compliance",
+      "Event-Driven Architecture",
       "Distributed Systems",
-      "Cloud Architecture",
-      "ETL Pipeline Design",
-      "Apache Kafka",
-      "Apache Spark",
-      "Apache Airflow",
-      "React",
-      "TypeScript",
-      "Python",
-      "AWS Architecture",
-      "Docker",
-      "Kubernetes",
-      "Terraform",
-      "PostgreSQL",
-      "Redis",
-      "Snowflake",
-      "dbt",
       "Stream Processing",
-      "Data Warehousing"
+      "ETL Pipeline Design",
+      "Medallion Architecture",
+      "Data Warehousing",
+      "Apache Kafka",
+      "Redpanda",
+      "Apache Spark",
+      "Dagster",
+      "Prefect",
+      "dbt",
+      "DuckDB",
+      "PostgreSQL",
+      "pgvector",
+      "Redis",
+      "Python",
+      "TypeScript",
+      "FastAPI",
+      "Django",
+      "NestJS",
+      "React",
+      "Next.js",
+      "Docker",
+      "Terraform"
     ],
     "sameAs": [
       "https://github.com/emmanuelrichard01",
@@ -57,10 +71,47 @@ const StructuredData = () => {
       "addressCountry": "NG"
     },
     "email": "emma.moghalu@gmail.com",
-    "alumniOf": {
-      "@type": "EducationalOrganization",
-      "name": "Caritas University"
-    }
+    "alumniOf": [
+      {
+        "@type": "EducationalOrganization",
+        "name": "Caritas University",
+        "address": {
+          "@type": "PostalAddress",
+          "addressRegion": "Enugu State",
+          "addressCountry": "NG"
+        }
+      },
+      {
+        "@type": "EducationalOrganization",
+        "name": "AfriHUB ICT Solutions",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Abuja",
+          "addressCountry": "NG"
+        }
+      }
+    ],
+    "hasCredential": [
+      {
+        "@type": "EducationalOccupationalCredential",
+        "credentialCategory": "degree",
+        "name": "B.Eng. Computer Engineering",
+        "educationalLevel": "Bachelor's Degree",
+        "recognizedBy": { "@type": "EducationalOrganization", "name": "Caritas University" }
+      },
+      {
+        "@type": "EducationalOccupationalCredential",
+        "credentialCategory": "diploma",
+        "name": "National Innovative Diploma, Software Engineering",
+        "recognizedBy": { "@type": "EducationalOrganization", "name": "AfriHUB ICT Solutions" }
+      },
+      {
+        "@type": "EducationalOccupationalCredential",
+        "credentialCategory": "certification",
+        "name": "DataCamp Data Engineer Certification",
+        "recognizedBy": { "@type": "Organization", "name": "DataCamp" }
+      }
+    ]
   };
 
   // 2. ProfilePage Schema — correct type for a portfolio page
@@ -117,7 +168,7 @@ const StructuredData = () => {
         "name": "What does Emmanuel Moghalu specialize in?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Emmanuel Moghalu specializes in data engineering and system architecture. He builds resilient data pipelines, scalable cloud infrastructure on AWS/GCP/Azure, stream processing systems with Kafka, and production-grade backend APIs. His core stack includes Python, TypeScript, PostgreSQL, Docker, Terraform, and Apache Spark."
+          "text": "Emmanuel Moghalu specializes in data engineering and backend systems: event-driven data pipelines, payment reconciliation, stream processing, and analytics warehouses. He works extensively in the Nigerian and broader African fintech ecosystem, including multi-PSP integration (Paystack, Flutterwave, M-Pesa), CBN regulatory requirements, and NDPR compliance. His systems ship with automated test suites — a reconciliation engine with 160+ tests across 9 suites, and a distributed rate limiter verified by a concurrency test proving exactly 50 of 300 concurrent requests are admitted."
         }
       },
       {
@@ -125,7 +176,7 @@ const StructuredData = () => {
         "name": "What tech stack does Emmanuel Moghalu use?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Emmanuel's primary tech stack includes Python, TypeScript, React, PostgreSQL, AWS, Docker, Apache Kafka, Terraform, Redis, Snowflake, Apache Spark, Apache Airflow, dbt, and Kubernetes. He focuses on infrastructure-as-code, event-driven architectures, and data warehouse design."
+          "text": "Emmanuel's primary stack is Python and TypeScript across FastAPI, Django, Django Ninja, NestJS, React and Next.js. For data he uses dbt, Dagster, Prefect, DuckDB, PostgreSQL (including pgvector for semantic search) and Apache Spark; for streaming, Kafka and Redpanda with Celery and Redis. Infrastructure runs on Docker and Terraform, with Prometheus and Grafana for observability."
         }
       },
       {
@@ -133,7 +184,7 @@ const StructuredData = () => {
         "name": "How can I hire or contact Emmanuel Moghalu?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "You can reach Emmanuel Moghalu via email at emma.moghalu@gmail.com, through the contact form on his portfolio site, or via LinkedIn at linkedin.com/in/e-mc/. He is currently available for work and open to data engineering, cloud architecture, and full-stack development roles."
+          "text": "You can reach Emmanuel Moghalu by email at emma.moghalu@gmail.com, through the contact form on his portfolio, or via LinkedIn at linkedin.com/in/e-mc. He is open to discussing data engineering challenges, architectural scaling, and new opportunities, and works remote or hybrid from Abuja, Nigeria."
         }
       },
       {
@@ -141,7 +192,7 @@ const StructuredData = () => {
         "name": "What projects has Emmanuel Moghalu built?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Notable projects include: MMR Engine (cross-border mobile money reconciliation with a two-tier matching engine), Logistics Watchtower (real-time cold chain fleet monitoring with Redpanda and Quix Streams), Modern Data Warehouse (1.5M+ record analytics platform with Dagster, dbt, and DuckDB), MedVax Health (production telemedicine platform with NestJS), and ULTRA-NEWS V3 (news aggregation engine with Django and Next.js). All projects emphasize production-grade engineering, observability, and architectural decision-making."
+          "text": "Notable projects include: MMR Engine (cross-border mobile money reconciliation across Nigerian PSPs, using a two-tier exact-then-probabilistic matching engine over a Medallion pipeline, with 160+ tests); Global Rate Limiter (a distributed, cluster-safe token bucket using an atomic Redis Lua script, verified by 8 simulated nodes racing 300 concurrent requests and admitting exactly 50); Logistics Watchtower (real-time cold chain fleet monitoring on Redpanda and Quix Streams, sub-200ms end to end); Modern Data Warehouse (the complete 1.5M+ record Olist dataset through Dagster, dbt and DuckDB with 21 schema tests); ULTRA-NEWS V3 (story-centric news aggregation clustering 35+ sources with pgvector and local embeddings); and MedVax Health (production e-pharmacy and telemedicine platform). Separately, design-stage architecture work includes a CBN data residency migration reference architecture and a distributed smart meter telemetry blueprint — both clearly marked as not yet built."
         }
       },
       {

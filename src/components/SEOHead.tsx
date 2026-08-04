@@ -67,8 +67,8 @@ const SEOHead = ({ metadata }: SEOHeadProps) => {
 
       {/* 7. Twitter Card */}
       <meta name="twitter:card" content={twitter?.card || 'summary_large_image'} />
-      <meta name="twitter:site" content={twitter?.site || '@_mrebuka'} />
-      <meta name="twitter:creator" content={twitter?.creator || '@_mrebuka'} />
+      <meta name="twitter:site" content={twitter?.site || '@mrebr'} />
+      <meta name="twitter:creator" content={twitter?.creator || '@mrebr'} />
       <meta name="twitter:title" content={twitter?.title || title} />
       <meta name="twitter:description" content={twitter?.description || description} />
       <meta name="twitter:image" content={ogImageUrl} />

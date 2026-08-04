@@ -45,6 +45,10 @@ const ContactForm = () => {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const mountedAt = useRef<number | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     mountedAt.current = Date.now();
   }, []);
@@ -74,7 +78,15 @@ const ContactForm = () => {
     setErrors(fieldErrors);
     setTouched({ name: true, email: true, message: true });
 
-    if (Object.keys(fieldErrors).length > 0) return;
+    if (Object.keys(fieldErrors).length > 0) {
+      // Move focus to the first field that needs attention. Without this,
+      // submitting an invalid form leaves focus on the button and a screen
+      // reader user is told nothing about where the problem is.
+      if (fieldErrors.name) nameRef.current?.focus();
+      else if (fieldErrors.email) emailRef.current?.focus();
+      else if (fieldErrors.message) messageRef.current?.focus();
+      return;
+    }
 
     // Bot heuristics: a filled honeypot or an inhumanly fast submit both
     // silently "succeed" without ever hitting Formspree, so bots get no
@@ -143,15 +155,25 @@ const ContactForm = () => {
         <div>
           <label htmlFor="contact-name" className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2 flex items-center justify-between">
             <span>Name</span>
-            {showError("name") && <span className="text-destructive tracking-normal normal-case">{errors.name}</span>}
+            {/* The error carries an id so the input can point at it. It was
+                previously only visually adjacent, which tells a sighted user
+                everything and a screen reader user nothing. */}
+            {showError("name") && (
+              <span id="contact-name-error" className="text-destructive tracking-normal normal-case">
+                {errors.name}
+              </span>
+            )}
           </label>
           <input
+            ref={nameRef}
             id="contact-name"
             type="text"
             name="name"
             placeholder="John Doe"
             required
             autoComplete="name"
+            aria-invalid={showError("name") ? true : undefined}
+            aria-describedby={showError("name") ? "contact-name-error" : undefined}
             value={formData.name}
             onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
             onFocus={() => setFocused("name")}
@@ -162,15 +184,22 @@ const ContactForm = () => {
         <div>
           <label htmlFor="contact-email" className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2 flex items-center justify-between">
             <span>Email</span>
-            {showError("email") && <span className="text-destructive tracking-normal normal-case">{errors.email}</span>}
+            {showError("email") && (
+              <span id="contact-email-error" className="text-destructive tracking-normal normal-case">
+                {errors.email}
+              </span>
+            )}
           </label>
           <input
+            ref={emailRef}
             id="contact-email"
             type="email"
             name="email"
             placeholder="john@example.com"
             required
             autoComplete="email"
+            aria-invalid={showError("email") ? true : undefined}
+            aria-describedby={showError("email") ? "contact-email-error" : undefined}
             value={formData.email}
             onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
             onFocus={() => setFocused("email")}
@@ -184,19 +213,33 @@ const ContactForm = () => {
         <label htmlFor="contact-message" className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2 flex items-center justify-between">
           <span>Message</span>
           <span className="flex items-center gap-2">
-            {showError("message") && <span className="text-destructive tracking-normal normal-case">{errors.message}</span>}
-            <span className={`tracking-normal normal-case ${formData.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+            {showError("message") && (
+              <span id="contact-message-error" className="text-destructive tracking-normal normal-case">
+                {errors.message}
+              </span>
+            )}
+            <span
+              id="contact-message-count"
+              className={`tracking-normal normal-case ${formData.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-amber-400' : 'text-muted-foreground/40'}`}
+            >
               {formData.message.length}/{MAX_MESSAGE_LENGTH}
             </span>
           </span>
         </label>
         <textarea
+          ref={messageRef}
           id="contact-message"
           name="message"
           placeholder="Tell me about your project or opportunity..."
           rows={5}
           required
           maxLength={MAX_MESSAGE_LENGTH}
+          aria-invalid={showError("message") ? true : undefined}
+          // The character budget is described too, not just the error — it is
+          // information about the field that a sighted user gets for free.
+          aria-describedby={
+            showError("message") ? "contact-message-error contact-message-count" : "contact-message-count"
+          }
           value={formData.message}
           onChange={(e) => setFormData((p) => ({ ...p, message: e.target.value }))}
           onFocus={() => setFocused("message")}
@@ -285,6 +328,11 @@ const Contact: React.FC = () => {
             </h2>
             <p className="text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
               Open to discussing data engineering challenges, architectural scaling, or new opportunities.
+            </p>
+            {/* Timezone up front — the first practical question anyone
+                scheduling a call has, and it saves an email to ask it. */}
+            <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mt-4">
+              Abuja, Nigeria — UTC+1 · Remote &amp; hybrid
             </p>
           </div>
 

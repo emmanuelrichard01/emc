@@ -65,6 +65,21 @@
     --surface-elevated: 0 0% 6%;
   }
 
+  /* Hidden accent. Reachable only with clearance — via the Konami code, the
+     terminal's `konami` command, or window.__emc.unlock() from DevTools.
+     Deliberately absent from the visible theme toggle, so finding it is
+     worth something. */
+  .theme-phosphor {
+    --primary: 145 72% 50%; /* CRT phosphor green */
+    --primary-foreground: 0 0% 2%;
+    --primary-muted: 145 72% 50% / 0.1;
+    --primary-hover: 145 72% 58%;
+    --ring: 145 72% 50%;
+    --shadow-glow: 0 0 24px hsl(145 72% 50% / 0.14);
+    --gradient-primary: linear-gradient(135deg, hsl(145 72% 50%), hsl(145 72% 34%));
+    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(145 72% 50% / 0.05), transparent 60%);
+  }
+
   .theme-purple {
     /* Primary - Tech Purple System */
     --primary: 271 91% 65%; /* #a855f7 */
@@ -117,6 +132,25 @@
 
   .card-structural:hover {
     box-shadow: var(--shadow-md);
+  }
+
+  /* Card elevation.
+
+     This was previously done by mutating element.style.boxShadow inside
+     onMouseEnter / onMouseLeave handlers on every card — attaching two React
+     listeners per card to reproduce what :hover does natively, and forcing a
+     style write on the main thread each time the pointer crossed a card. */
+  .card-elevate {
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+
+  .card-elevate:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-elevate-glow:hover {
+    box-shadow: var(--shadow-md), var(--shadow-glow);
   }
 
   .btn-structural {

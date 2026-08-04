@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import { XLogo } from "@/components/ui/XLogo";
 import { useTheme } from "./ThemeProvider";
+import { useEasterEgg } from "./EasterEggProvider";
 import { scrollToSection as scrollToSectionBase } from "@/lib/scrollToSection";
 
 /* -------------------------------------------------------------------------- */
@@ -34,6 +35,7 @@ interface CommandPaletteProps {
 
 const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const { theme, setTheme } = useTheme();
+  const { unlock, unlocked } = useEasterEgg();
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -181,22 +183,38 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         category: "Preferences",
         keywords: ["theme", "color", "purple", "violet", "dark"],
       },
+      // The hidden accent only becomes a real palette entry once clearance is
+      // held — listing it while locked would give away that it exists.
+      ...(unlocked
+        ? [
+            {
+              id: "theme-phosphor",
+              title: "Phosphor Green",
+              subtitle: "Classified accent — Level Ω",
+              icon: Palette,
+              action: () => { setTheme("phosphor"); onClose(); },
+              category: "Preferences",
+              keywords: ["theme", "color", "phosphor", "green", "crt", "classified"],
+            } satisfies CommandItem,
+          ]
+        : []),
       // Hidden — only appears when searching for it
       {
         id: "easter-egg",
         title: "???",
-        subtitle: "Secret payload discovered. Enter KONAMI sequence.",
+        subtitle: unlocked
+          ? "Query layer already online. Run `schema` in the terminal."
+          : "Secret payload detected. Enter the KONAMI sequence.",
         icon: Sparkles,
         action: () => {
           onClose();
-          const keys = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
-          keys.forEach((k, i) => setTimeout(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: k })), i * 30));
+          unlock();
         },
         category: "Hidden",
         keywords: ["secret", "konami", "easter", "hidden", "cheat"],
       },
     ],
-    [scrollToSection, copyEmail, downloadCV, onClose, setTheme]
+    [scrollToSection, copyEmail, downloadCV, onClose, setTheme, unlock, unlocked]
   );
 
   // Filter — hidden items only appear when their keywords match

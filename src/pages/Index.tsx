@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+
+import { scrollToSection } from '../lib/scrollToSection';
 
 // Components
 import Hero from '../components/Hero';
@@ -6,22 +9,25 @@ import About from '../components/About';
 import Projects from '../components/Projects';
 import Experience from '../components/Experience';
 import Contact from '../components/Contact';
-import EasterEgg from '../components/EasterEgg';
 import SEOHead from '../components/SEOHead';
 import StructuredData from '../components/StructuredData';
-
-// Hooks
-import { useKonamiCode } from '../hooks/useKonamiCode';
 
 // Types
 import { SEOMetadata } from '../types';
 
 const Index = () => {
-  const [isEasterEggActive, setIsEasterEggActive] = useState(false);
+  const { hash } = useLocation();
 
-  useKonamiCode(() => {
-    setIsEasterEggActive(true);
-  });
+  /* Honour a hash target on arrival — e.g. the case-study breadcrumb linking
+     back to /#projects, or an external deep link. The sections mount with
+     this page, so the scroll is deferred by a frame to let layout settle
+     before the offset is measured. */
+  useEffect(() => {
+    if (!hash) return;
+    const id = hash.slice(1);
+    const frame = requestAnimationFrame(() => scrollToSection(id));
+    return () => cancelAnimationFrame(frame);
+  }, [hash]);
 
   // Console hint for developers who open DevTools
   useEffect(() => {
@@ -30,34 +36,43 @@ const Index = () => {
       "color: #8b5cf6; font-size: 14px; font-weight: bold;"
     );
     console.log(
-      "%cTry the Konami Code. You know the one.",
+      "%cThree ways in: the Konami code, `konami` in the terminal, or just run __emc.unlock() right here.",
       "color: #666; font-size: 11px;"
     );
+    console.log("%c__emc.status() // check your clearance", "color: #444; font-size: 11px;");
   }, []);
 
   const seoMetadata: SEOMetadata = {
-    title: "Emmanuel Moghalu | Data Engineer & System Architect",
-    description: "Engineering resilient data pipelines and scalable software systems. Focusing on architecture, tradeoffs, and operational excellence.",
+    title: "Emmanuel Moghalu | Data Engineer & Backend Systems",
+    description:
+      "Data and backend engineer building event-driven pipelines, payment reconciliation systems, and analytics platforms — shipped with the test suites that prove them. Nigerian fintech: multi-PSP integration, CBN and NDPR compliance.",
+    // Weighted toward the specific, searchable things this work actually
+    // involves. Generic cloud keywords ("Azure", "GCP") competed against
+    // millions of pages and described none of the projects on this site.
     keywords: [
-      "Data Engineer", "System Architect", "Software Engineer",
-      "Distributed Systems", "Pipeline Design", "React", "Next.js",
-      "TypeScript", "Python", "Kafka", "AWS", "Apache Spark",
-      "Docker", "Kubernetes", "Azure", "GCP", "Emmanuel Moghalu"
+      "Emmanuel Moghalu", "Data Engineer", "Backend Engineer", "Analytics Engineer",
+      "Payment Reconciliation", "Nigerian Fintech", "Multi-PSP Integration",
+      "CBN Compliance", "NDPR Compliance", "Paystack", "Flutterwave",
+      "Event-Driven Architecture", "Stream Processing", "Kafka", "Redpanda",
+      "dbt", "Dagster", "Prefect", "DuckDB", "PostgreSQL", "pgvector",
+      "Medallion Architecture", "Data Warehousing", "ETL Pipelines",
+      "Python", "TypeScript", "FastAPI", "Django", "NestJS", "React", "Next.js",
+      "Docker", "Distributed Systems", "Abuja", "Nigeria",
     ],
     canonical: typeof window !== 'undefined' ? window.location.href : undefined,
     openGraph: {
-      title: "Emmanuel Moghalu | Data Engineer & System Architect",
-      description: "Engineering resilient data pipelines, scalable cloud infrastructure, and production-grade software systems.",
+      title: "Emmanuel Moghalu | Data Engineer & Backend Systems",
+      description: "Event-driven pipelines, payment reconciliation, and analytics platforms — shipped with the test suites that prove them.",
       image: typeof window !== 'undefined' ? `${window.location.origin}/og-image.jpg` : 'https://www.builtbyem.dev/og-image.jpg',
       url: typeof window !== 'undefined' ? window.location.origin : 'https://www.builtbyem.dev',
       type: "website"
     },
     twitter: {
       card: "summary_large_image",
-      site: "@_mrebuka",
-      creator: "@_mrebuka",
-      title: "Emmanuel Moghalu - Engineering Logs",
-      description: "System designs, architectural decisions, and production-grade software."
+      site: "@mrebr",
+      creator: "@mrebr",
+      title: "Emmanuel Moghalu — Engineering Logs",
+      description: "Payment reconciliation, streaming telemetry, and analytics platforms — with the architectural decisions and trade-offs behind them."
     }
   };
 
@@ -77,11 +92,6 @@ const Index = () => {
         <Projects />
         <Experience />
         <Contact />
-
-        <EasterEgg
-          isActive={isEasterEggActive}
-          onComplete={() => setIsEasterEggActive(false)}
-        />
       </div>
     </div>
   );
