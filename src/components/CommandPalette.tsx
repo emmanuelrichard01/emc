@@ -9,6 +9,8 @@ import { XLogo } from "@/components/ui/XLogo";
 import { useTheme } from "./ThemeProvider";
 import { useEasterEgg } from "./EasterEggProvider";
 import { scrollToSection as scrollToSectionBase } from "@/lib/scrollToSection";
+import { SECTIONS } from "@/data/sections";
+import { CV_FILE_NAME, CV_FILE_SIZE, downloadCV } from "@/lib/cv";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES & DATA                                                               */
@@ -28,6 +30,25 @@ interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+/* Palette-only copy for the shared sections. Kept as a lookup rather than
+   pushed into SECTIONS itself, since the nav pill and footer have no use for
+   a subtitle and shouldn't carry the field. */
+const SECTION_SUBTITLES: Record<string, string> = {
+  home: "Back to top",
+  about: "Philosophy & stack",
+  projects: "Case studies & systems",
+  experience: "Career timeline",
+  contact: "Get in touch",
+};
+
+const SECTION_KEYWORDS: Record<string, string[]> = {
+  home: ["top", "start"],
+  about: ["bio", "stack", "tech"],
+  projects: ["work", "portfolio", "case"],
+  experience: ["jobs", "resume", "cv"],
+  contact: ["email", "hire", "reach"],
+};
 
 /* -------------------------------------------------------------------------- */
 /* COMPONENT                                                                  */
@@ -56,67 +77,28 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     onClose();
   }, [onClose]);
 
-  const downloadCV = useCallback(() => {
+  const triggerCVDownload = useCallback(() => {
     onClose();
     // Small delay to let palette close, then trigger download
-    setTimeout(() => {
-      const a = document.createElement('a');
-      a.href = '/Emmanuel_Moghalu_CV.pdf';
-      a.download = 'Emmanuel_Moghalu_CV.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }, 150);
+    setTimeout(downloadCV, 150);
   }, [onClose]);
 
   const commands: CommandItem[] = useMemo(
     () => [
-      // Navigation
-      {
-        id: "home",
-        title: "Home",
-        subtitle: "Back to top",
-        icon: Home,
-        action: () => scrollToSection("home"),
+      /* Navigation is generated from the shared SECTIONS list.
+         These were five hand-written entries, which is exactly the drift
+         sections.ts was created to prevent — it already claimed the palette
+         read from it while the palette kept its own copy, and the two had
+         already diverged ("Projects" here against "Work" in the nav). */
+      ...SECTIONS.map((section) => ({
+        id: `nav-${section.id}`,
+        title: section.label,
+        subtitle: SECTION_SUBTITLES[section.id] ?? `Go to ${section.label}`,
+        icon: section.icon,
+        action: () => scrollToSection(section.id),
         category: "Navigate",
-        keywords: ["home", "top", "start"],
-      },
-      {
-        id: "about",
-        title: "About",
-        subtitle: "Philosophy & stack",
-        icon: User,
-        action: () => scrollToSection("about"),
-        category: "Navigate",
-        keywords: ["about", "bio", "stack", "tech"],
-      },
-      {
-        id: "work",
-        title: "Projects",
-        subtitle: "Case studies & systems",
-        icon: Briefcase,
-        action: () => scrollToSection("projects"),
-        category: "Navigate",
-        keywords: ["work", "projects", "portfolio", "case"],
-      },
-      {
-        id: "experience",
-        title: "Experience",
-        subtitle: "Career timeline",
-        icon: FileText,
-        action: () => scrollToSection("experience"),
-        category: "Navigate",
-        keywords: ["experience", "jobs", "resume", "cv"],
-      },
-      {
-        id: "contact",
-        title: "Contact",
-        subtitle: "Get in touch",
-        icon: Mail,
-        action: () => scrollToSection("contact"),
-        category: "Navigate",
-        keywords: ["contact", "email", "hire", "reach"],
-      },
+        keywords: [section.id, section.label.toLowerCase(), ...(SECTION_KEYWORDS[section.id] ?? [])],
+      })),
       // Actions
       {
         id: "copy-email",
@@ -130,9 +112,9 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       {
         id: "download-cv",
         title: "Download CV",
-        subtitle: "Emmanuel_Moghalu_CV.pdf · 208 KB",
+        subtitle: `${CV_FILE_NAME} · ${CV_FILE_SIZE}`,
         icon: Download,
-        action: downloadCV,
+        action: triggerCVDownload,
         category: "Actions",
         keywords: ["download", "cv", "resume", "pdf", "curriculum"],
       },
@@ -214,7 +196,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         keywords: ["secret", "konami", "easter", "hidden", "cheat"],
       },
     ],
-    [scrollToSection, copyEmail, downloadCV, onClose, setTheme, unlock, unlocked]
+    [scrollToSection, copyEmail, triggerCVDownload, onClose, setTheme, unlock, unlocked]
   );
 
   // Filter — hidden items only appear when their keywords match
@@ -264,7 +246,29 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   }, [isOpen, filtered, selectedIndex, onClose]);
 
   useEffect(() => setSelectedIndex(0), [search]);
-  useEffect(() => { if (isOpen) { setSearch(""); setTimeout(() => inputRef.current?.focus(), 50); } }, [isOpen]);
+
+  /* Clamp when the result set shrinks for a reason other than typing —
+     unlocking adds an entry, relocking removes one. Resetting on `search`
+     alone left the cursor pointing past the end, so Enter silently did
+     nothing. */
+  useEffect(() => {
+    setSelectedIndex((i) => (i >= filtered.length ? Math.max(0, filtered.length - 1) : i));
+  }, [filtered.length]);
+
+  /* Restore focus to whatever opened the palette. Without this, closing it
+     drops focus to <body> and a keyboard user restarts their tab traversal
+     from the top of the document. */
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (isOpen) {
+      restoreFocusRef.current = document.activeElement as HTMLElement | null;
+      setSearch("");
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+    restoreFocusRef.current?.focus?.();
+    restoreFocusRef.current = null;
+  }, [isOpen]);
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "unset";
@@ -303,12 +307,15 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     return () => document.removeEventListener("keydown", handleTab);
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   let flatIndex = -1;
 
+  /* `isOpen` is gated inside AnimatePresence, not before it.
+     This was `if (!isOpen) return null` above the boundary, which unmounts
+     AnimatePresence itself at the same moment as its child — so it never
+     observed a child leaving and every exit={} prop below was inert. */
   return (
     <AnimatePresence>
+      {isOpen && (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -435,6 +442,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           </div>
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };

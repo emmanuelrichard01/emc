@@ -276,57 +276,71 @@ export const PROJECTS: Project[] = [
     liveUrl: "https://ultra-news.vercel.app/",
     image: "/images/ultra-news.png",
     metrics: [
-      { label: "Clustering", value: "pgvector" },
-      { label: "Ingestion", value: "35+ Feeds" },
-      { label: "Verification", value: "3-Tier" },
+      { label: "Corroboration", value: "Publishers" },
+      { label: "Ingestion", value: "41 Feeds" },
+      { label: "Tests", value: "123" },
     ],
     description:
-      "A story-centric news aggregation platform where multiple outlets covering the same event are semantically clustered into one 'Story' object. It features a three-tier verification lifecycle (Wire → Developing → Reporting) tracking how fast coverage accumulates, providing a consolidated intelligence feed without single-source bias.",
+      "A story-centric news platform built on one bet: stories, not articles, are the primary entity. Coverage of the same event is clustered semantically into a single Story carrying a count of the independent publishers behind it — resolved via the Public Suffix List, so a newsroom cannot corroborate itself. Three editions reorder the whole corpus rather than slicing it, so none can run dry. Runs at $0 with every feature intact.",
     decisions: [
       {
-        title: "Semantic Vectors over Exact Match",
+        title: "Corroboration Counted in Publishers",
         detail:
-          "Three outlets write three different headlines for the same event. We use cosine similarity (≥ 0.80) with local bge-small-en-v1.5 embeddings to cluster stories, avoiding permanent single-source silos while eliminating API costs.",
+          "The headline number is independent publishers, not articles. Two feeds from one newsroom resolve to one publisher via the Public Suffix List — a newsroom repeating itself is not corroboration, and counting it as such would invert the product's only claim.",
       },
       {
-        title: "Django Ninja + Next.js App Router",
+        title: "Momentum as a Materialised Column",
         detail:
-          "Django Ninja provides typed, fast, auto-documented APIs for the backend, while Next.js handles server-side data fetching and ISR for edge caching.",
+          "Momentum decays with the clock, not with writes: a story that drew ten outlets thirteen hours ago has zero now, and nothing touched its row to say so. A periodic sweep bulk-zeroes what aged out. Computing it per request cost 251ms; reading the column costs 7.6ms.",
       },
     ],
     stack: ["Python", "Django", "Next.js", "PostgreSQL", "pgvector", "Celery", "Redis"],
     caseStudy: {
       problem:
-        "News aggregators treat the article as the primary entity, so one event covered by Reuters, the BBC and the Guardian shows up as three items. The reader gets volume without consolidation, and a single outlet's framing becomes indistinguishable from corroborated reporting.",
+        "When something happens, fifty outlets publish about it. Every feed shows fifty headlines and leaves the reader to work out that they are one event — and, more importantly, whether anyone independently confirmed it or whether fifty outlets are all repeating a single unverified wire report. That second question is the one that matters, and no aggregator answers it.",
       approach:
-        "Rebuilt from a legacy Django monolith around a single architectural bet: stories, not articles, are primary. 35+ RSS feeds are parsed by a Celery worker, deep-fetched for full text with trafilatura, sanitised with nh3, then vectorised locally with fastembed and clustered in pgvector by cosine similarity. Articles covering the same event collapse into one Story carrying a source count, an independent-domain count, and a velocity score. Each story then moves through a three-tier verification lifecycle — Wire (single source), Developing (two independent sources), Reporting (three or more independent domains). That lifecycle is the product.",
+        "Rebuilt from a legacy Django monolith around one architectural bet: stories, not articles, are primary. 41 RSS feeds are polled on conditional GETs (ETag/304, so an unchanged feed costs a round trip with no body), deep-fetched with trafilatura, sanitised with nh3, embedded locally with bge-small-en-v1.5, and matched against recent stories through a pgvector HNSW shortlist. Articles above the threshold collapse into one Story, which then counts distinct publishers rather than articles. Three editions — The Wire (newest), Developing (outlets gained in the last 12h), The Record (weight of corroboration) — are orderings of the same corpus rather than separate collections, which is what stops two of the three sitting permanently near-empty.",
       outcome:
-        "35+ sources across 4 tiers and 6 regions, sorted into 9 topic categories. Shipped: a coverage velocity leaderboard, an interactive story timeline with time deltas and cumulative counts, side-by-side headline framing comparison, an SSE breaking-news ticker, related-story lookup over pgvector similarity, per-source health monitoring, and a RAG endpoint for semantic queries across the corpus.",
+        "123 tests passing, 41/41 feeds healthy, clean typecheck, zero lint errors. Semantic topic classification reaches 98% coverage, up from 53% under keyword rules. Shipped: a corroboration timeline plotting independent newsrooms over time and marking when a story crossed into confirmed, side-by-side framing comparison marking words unique to one outlet, conflicts-first machine-written briefs, per-edition outbound RSS, question answering with a semantic answer cache, tiered retention, and Prometheus metrics. The whole system also runs at $0 — batch work on GitHub Actions runners where the memory is, a 512MB API host, Neon and Vercel — with no feature dropped.",
       highlights: [
+        "The clustering threshold is 0.80 because it was measured, not chosen — a calibration command re-derives it against labelled pairs; an earlier 0.68 produced a 112-article blob of unrelated geopolitics",
+        "Larger embedding models scored worse separation on those same labelled pairs, so the 384d model is a benchmarked result rather than a cost compromise",
+        "Only the latest edition paginates: ranking scores are rewritten by clustering, and paginating a mutable key repeats and drops rows",
         "Article (display excerpt) is separated from RawDocument (internal full text powering embeddings), so aggregation never becomes republication",
-        "Counts independent domains rather than raw sources — three feeds from one publisher is still one source",
-        "nh3 (Rust) sanitisation closes the stored-XSS vector opened by dangerouslySetInnerHTML",
-        "GitHub OIDC JWT for ingest auth, so credentials rotate without redeployment",
-        "Django Ninja for typed, auto-documented APIs, with Next.js App Router handling server-side fetching and ISR caching",
+        "Tests cannot reach the network — an autouse fixture fails any test opening a non-local socket, added after mocked vendor SDKs silently stopped intercepting and the suite made live billed API calls",
+        "Alerting targets clustering backlog first: unclustered articles are invisible to readers, so the product goes stale while every request still returns 200",
+        "Refuses to start with DEBUG=0 and no SECRET_KEY rather than falling back to a key committed to the repo",
       ],
       tradeoffs: [
         {
+          decision: "Corroboration unit",
+          chose: "Distinct publishers via the Public Suffix List",
+          rejected: "Raw article or feed counts",
+          why: "One newsroom filing five updates is one source. Counting feeds would let a publisher corroborate itself, which makes the only number the product sells meaningless.",
+        },
+        {
+          decision: "Edition model",
+          chose: "Three orderings of the whole corpus",
+          rejected: "Three feeds split by a static source count",
+          why: "The split put roughly 95% of stories on one page and left the other two permanently near-empty. Ordering the same corpus means no edition can run dry, and corroboration becomes a signal on every card rather than a destination.",
+        },
+        {
           decision: "Clustering",
-          chose: "Semantic vectors, cosine ≥ 0.80",
+          chose: "Semantic vectors, cosine ≥ 0.80, calibrated",
           rejected: "Exact title matching",
-          why: "Three outlets write three headlines for one event. Exact matching creates permanent single-source silos — precisely the failure the product exists to fix.",
+          why: "Three outlets write three headlines for one event. Exact matching creates permanent single-source silos — precisely the failure the product exists to fix. The threshold sits above every different-event pair in the labelled set, preferring a missed merge to an invented one.",
         },
         {
-          decision: "Embedding model",
-          chose: "bge-small-en-v1.5, 384d, running locally",
-          rejected: "OpenAI embedding API",
-          why: "Zero API cost and runs inside Docker. Slightly lower quality, which the 72-hour clustering window absorbs.",
+          decision: "Pagination key",
+          chose: "Cursor on (first_seen_at, id)",
+          rejected: "Cursor on velocity or ranking score",
+          why: "Only immutable keys can paginate. Clustering rewrites ranking scores, so paging them repeats and drops rows; the ranked editions are capped snapshots instead.",
         },
         {
-          decision: "Pagination",
-          chose: "Cursor on (published_date, id)",
-          rejected: "Offset",
-          why: "Stable under a high insert rate. Offset pagination produces phantom and skipped rows whenever ingestion lands mid-scroll.",
+          decision: "Batch compute placement",
+          chose: "GitHub Actions runners",
+          rejected: "The web tier on a timer",
+          why: "Embedding wants a lot of RAM for a few minutes; serving wants a little all the time. The runner has 7GB free, the API host 512MB. Running batch work on the web tier inverts that and blocks request handling while it runs.",
         },
         {
           decision: "Display model",
@@ -334,13 +348,9 @@ export const PROJECTS: Project[] = [
           rejected: "Full article rendering",
           why: "This is an aggregator, not a publisher. The outbound link is the obligation that comes with the content.",
         },
-        {
-          decision: "Search",
-          chose: "PostgreSQL SearchVectorField with GIN",
-          rejected: "Elasticsearch",
-          why: "Postgres full-text is sufficient at this corpus size. A second datastore would be operational cost for no retrieval gain.",
-        },
       ],
+      notice:
+        "A high corroboration count is not a truth score, and the interface does not present it as one — ten outlets can repeat one mistaken report, which is exactly what a corroboration count looks like when it fails. A low count is not a red flag either: original investigative reporting starts at one outlet by definition. Known limits: publisher independence is inferred from domains, so outlets under common ownership count separately; vocabulary-divergent paraphrases (\"CBN holds rates\" vs \"Apex Bank keeps policy unchanged\") do not merge; and coverage skews toward English-language feeds.",
     },
   },
 

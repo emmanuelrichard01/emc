@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -17,7 +16,8 @@ import {
 
 import { PROJECTS } from "@/data/projects";
 import { STATUS_CLASS, STATUS_LABEL, projectStatus } from "@/lib/project";
-import type { Project } from "@/types";
+import SEOHead from "@/components/SEOHead";
+import type { Project, SEOMetadata } from "@/types";
 
 const SITE_URL = "https://www.builtbyem.dev";
 const getOrigin = () => (typeof window !== "undefined" ? window.location.origin : SITE_URL);
@@ -221,10 +221,13 @@ const ProjectDetail = () => {
   if (!project || !seo) {
     return (
       <div className="min-h-screen flex items-center justify-center flex-col gap-4 bg-background noise-overlay">
-        <Helmet>
-          <title>Project not found | Emmanuel Moghalu</title>
-          <meta name="robots" content="noindex, follow" />
-        </Helmet>
+        <SEOHead
+          metadata={{
+            title: "Project not found | Emmanuel Moghalu",
+            description: "This project does not exist. Browse the systems on the portfolio index instead.",
+            robots: "noindex, follow",
+          }}
+        />
         <h1 className="text-2xl text-foreground font-bold font-mono tracking-tighter">404 // NOT_FOUND</h1>
         <button
           type="button"
@@ -238,35 +241,39 @@ const ProjectDetail = () => {
   }
 
   const { caseStudy } = project;
-  const title = `${project.title} — ${project.subtitle} | Emmanuel Moghalu`;
+  const headline = `${project.title} — ${project.subtitle}`;
+
+  const metadata: SEOMetadata = {
+    title: `${headline} | Emmanuel Moghalu`,
+    description: seo.description,
+    canonical: seo.canonical,
+    openGraph: {
+      title: headline,
+      description: seo.description,
+      image: seo.image,
+      imageAlt: headline,
+      url: seo.canonical,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: "@mrebr",
+      creator: "@mrebr",
+      title: headline,
+      description: seo.description,
+      image: seo.image,
+    },
+  };
 
   return (
     <div className="pt-32 pb-24 min-h-screen bg-background relative selection:bg-primary/20 selection:text-primary">
-      <Helmet>
-        <title>{title}</title>
-        <meta name="description" content={seo.description} />
-        <link rel="canonical" href={seo.canonical} />
-        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-        <meta name="author" content="Emmanuel C. Moghalu" />
-
-        <meta property="og:type" content="article" />
-        <meta property="og:site_name" content="Emmanuel C. Moghalu — Engineering Logs" />
-        <meta property="og:title" content={`${project.title} — ${project.subtitle}`} />
-        <meta property="og:description" content={seo.description} />
-        <meta property="og:url" content={seo.canonical} />
-        <meta property="og:image" content={seo.image} />
-        <meta property="og:image:alt" content={`${project.title} — ${project.subtitle}`} />
-
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@mrebr" />
-        <meta name="twitter:creator" content="@mrebr" />
-        <meta name="twitter:title" content={`${project.title} — ${project.subtitle}`} />
-        <meta name="twitter:description" content={seo.description} />
-        <meta name="twitter:image" content={seo.image} />
-
+      {/* Routed through SEOHead rather than a bare Helmet so this page emits the
+          same complete tag set every other route does — which is what lets the
+          static tags in index.html be adopted instead of duplicated. */}
+      <SEOHead metadata={metadata}>
         <script type="application/ld+json">{JSON.stringify(seo.projectSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(seo.breadcrumbSchema)}</script>
-      </Helmet>
+      </SEOHead>
 
       {/* Background */}
       <div className="absolute inset-0 z-0 pointer-events-none noise-overlay" />

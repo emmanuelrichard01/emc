@@ -151,9 +151,29 @@ function locate(masked: string, pattern: string): Match | null {
 
 /* ── Value parsing ──────────────────────────────────────────────────────── */
 
+/**
+ * Thrown for input the engine can describe better than it can guess at.
+ *
+ * Returned as an error rather than silently producing 0 rows: a query that
+ * quietly matches nothing is indistinguishable from a query that correctly
+ * matched nothing, and the visitor has no way to tell which they got.
+ */
+class QueryInputError extends Error {}
+
 function parseScalar(raw: string): Cell {
   const value = raw.trim();
   if (value.length >= 2 && value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1);
+
+  /* Double quotes are identifiers in standard SQL, not strings — but nobody
+     typing into a terminal on a portfolio means that. Untreated, `tier =
+     "design"` compared against the literal characters `"design"`, matched
+     nothing, and reported a confident "0 rows". */
+  if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+    throw new QueryInputError(
+      `use single quotes for text: '${value.slice(1, -1)}' rather than ${value}`
+    );
+  }
+
   if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
   if (/^(true|false)$/i.test(value)) return value.toLowerCase() === 'true';
   return value;
@@ -226,6 +246,17 @@ const CONDITION =
 /* ── Query ──────────────────────────────────────────────────────────────── */
 
 export function runQuery(input: string): QueryResult | QueryError {
+  try {
+    return evaluate(input);
+  } catch (error) {
+    // Only the engine's own input errors are turned into messages; anything
+    // else is a genuine bug and should not be dressed up as user error.
+    if (error instanceof QueryInputError) return { error: error.message };
+    throw error;
+  }
+}
+
+function evaluate(input: string): QueryResult | QueryError {
   const sql = input.trim().replace(/;+$/, '').trim();
   if (!sql) return { error: 'empty query' };
 

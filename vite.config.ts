@@ -63,13 +63,47 @@ function sitemapPlugin(): Plugin {
   };
 }
 
+/**
+ * Recaptures project screenshots into the build output.
+ *
+ * Runs only when SCREENSHOT_API_KEY is present, which on Vercel it is — so
+ * every deploy ships current screenshots of the live sites, and a project
+ * whose UI has moved on stops being represented by a stale image.
+ *
+ * Writes into dist/ rather than public/. Vite copies public/ into dist/
+ * before writeBundle, so these land on top of the committed images without
+ * touching the working tree, and the repo keeps a known-good fallback.
+ *
+ * Deliberately cannot fail the build: a screenshot service having a bad
+ * afternoon must not block a deployment, so a failed capture logs and leaves
+ * the committed image in place.
+ */
+function screenshotPlugin(): Plugin {
+  return {
+    name: "capture-screenshots",
+    apply: "build",
+    async writeBundle(options) {
+      if (!process.env.SCREENSHOT_API_KEY) return;
+
+      const { captureAll } = await import("./scripts/screenshots.mjs");
+      const outDir = path.join(options.dir ?? path.resolve(__dirname, "dist"), "images");
+
+      console.log("\ncapturing project screenshots...");
+      const { ok, failed } = await captureAll(outDir, {
+        log: { info: console.log, warn: console.warn },
+      });
+      console.log(`screenshots: ${ok} captured, ${failed} kept from repo\n`);
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
   },
-  plugins: [react(), sitemapPlugin()],
+  plugins: [react(), sitemapPlugin(), screenshotPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

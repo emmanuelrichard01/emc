@@ -3,6 +3,8 @@ import { useLocation, Link } from "react-router-dom";
 import { ArrowLeft, Terminal, Activity } from "lucide-react";
 import { motion } from "framer-motion";
 
+import SEOHead from "@/components/SEOHead";
+
 const NotFound = () => {
   const location = useLocation();
   const [id] = useState(() => Math.random().toString(36).substring(2, 9));
@@ -16,6 +18,16 @@ const NotFound = () => {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center bg-background p-6 pt-20 font-mono selection:bg-red-500/20">
+      {/* This route previously rendered no head tags at all, so a 404 inherited
+          whatever the last page set — the homepage title, its canonical, its
+          social card — and invited crawlers to index it under that identity. */}
+      <SEOHead
+        metadata={{
+          title: "404 — Resource Not Found | Emmanuel Moghalu",
+          description: "This page does not exist. Return to the portfolio index.",
+          robots: "noindex, follow",
+        }}
+      />
       <div className="max-w-xl w-full border border-border bg-card p-8 relative overflow-hidden"
         style={{ boxShadow: 'var(--shadow-lg)' }}
       >

@@ -106,12 +106,15 @@ export interface SEOMetadata {
   description: string;
   keywords?: string[];
   canonical?: string;
+  /** Overrides the indexable default — e.g. "noindex, follow" for a 404. */
+  robots?: string;
   openGraph?: {
     title: string;
     description: string;
     image: string;
     url: string;
     type: string;
+    imageAlt?: string;
   };
   twitter?: {
     card: string;

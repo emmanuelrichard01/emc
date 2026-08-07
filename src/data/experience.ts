@@ -1,4 +1,8 @@
-import { ExperienceItem } from "@/types";
+// Type-only, matching projects.ts: a value import here is kept by any
+// consumer that strips types rather than bundling (Node's native TS support,
+// or vite.config.ts importing this the way it imports PROJECTS), and
+// src/types has no runtime exports to resolve.
+import type { ExperienceItem } from "@/types";
 
 export const EXPERIENCE: ExperienceItem[] = [
   {

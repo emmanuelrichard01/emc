@@ -5,6 +5,7 @@ import { STATUS_CLASS, STATUS_LABEL, projectStatus } from '@/lib/project';
 import { describeSchema, isQueryError, runQuery, type QueryResult } from '@/lib/portfolioQuery';
 import { CURATED_QUESTIONS } from '@/lib/portfolioQuestions';
 import type { ColorTheme } from '@/components/ThemeProvider';
+import { CV_FILE_NAME, downloadCV } from '@/lib/cv';
 import { scrollToSection } from '@/lib/scrollToSection';
 import { measureFps, readDomNodes, readHeapMB } from './useSystemTelemetry';
 
@@ -525,15 +526,8 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         summary: 'download the CV',
         usage: 'resume  (alias: cv)',
         run: () => ({
-          output: 'downloading Emmanuel_Moghalu_CV.pdf...',
-          sideEffect: () => {
-            const anchor = document.createElement('a');
-            anchor.href = '/Emmanuel_Moghalu_CV.pdf';
-            anchor.download = 'Emmanuel_Moghalu_CV.pdf';
-            document.body.appendChild(anchor);
-            anchor.click();
-            document.body.removeChild(anchor);
-          },
+          output: `downloading ${CV_FILE_NAME}...`,
+          sideEffect: downloadCV,
         }),
       },
       {

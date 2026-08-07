@@ -15,6 +15,9 @@ import StructuredData from '../components/StructuredData';
 // Types
 import { SEOMetadata } from '../types';
 
+const SITE_ORIGIN =
+  typeof window !== 'undefined' ? window.location.origin : 'https://www.builtbyem.dev';
+
 const Index = () => {
   const { hash } = useLocation();
 
@@ -59,12 +62,16 @@ const Index = () => {
       "Python", "TypeScript", "FastAPI", "Django", "NestJS", "React", "Next.js",
       "Docker", "Distributed Systems", "Abuja", "Nigeria",
     ],
-    canonical: typeof window !== 'undefined' ? window.location.href : undefined,
+    /* origin + pathname, deliberately not location.href.
+       href carries the query string, so an inbound ?utm_source=… link
+       self-canonicalised to the tagged URL instead of consolidating onto the
+       clean one — the exact duplicate-content split canonical exists to fix. */
+    canonical: `${SITE_ORIGIN}/`,
     openGraph: {
       title: "Emmanuel Moghalu | Data Engineer & Backend Systems",
       description: "Event-driven pipelines, payment reconciliation, and analytics platforms — shipped with the test suites that prove them.",
-      image: typeof window !== 'undefined' ? `${window.location.origin}/og-image.jpg` : 'https://www.builtbyem.dev/og-image.jpg',
-      url: typeof window !== 'undefined' ? window.location.origin : 'https://www.builtbyem.dev',
+      image: `${SITE_ORIGIN}/og-image.jpg`,
+      url: SITE_ORIGIN,
       type: "website"
     },
     twitter: {

@@ -27,7 +27,12 @@ export interface CuratedQuestion {
   answer: (count: number) => string;
 }
 
-const TOTAL = PROJECTS.length;
+/* Denominator counts built systems only.
+   PROJECTS.length includes the two design-stage studies, so "7 of 12 systems
+   run without containers" was counting blueprints that do not run at all.
+   The design tier exists precisely so the page can never imply a blueprint is
+   in production; the same rule has to apply to the numbers it quotes. */
+const TOTAL = PROJECTS.filter((p) => p.tier !== 'design').length;
 
 export const CURATED_QUESTIONS: CuratedQuestion[] = [
   {
@@ -46,9 +51,12 @@ export const CURATED_QUESTIONS: CuratedQuestion[] = [
     answer: (n) => `${n} of ${TOTAL} systems are built on Python.`,
   },
   {
+    // The tier filter is the point, not noise: a design study has an empty
+    // stack, so it satisfies NOT LIKE '%Docker%' vacuously and would be
+    // counted as a system "running without containers" while running nowhere.
     question: 'What ships without Docker?',
-    sql: "SELECT title, stack FROM projects WHERE stack NOT LIKE '%Docker%'",
-    answer: (n) => `${n} of ${TOTAL} systems run without containers.`,
+    sql: "SELECT title, stack FROM projects WHERE tier != 'design' AND stack NOT LIKE '%Docker%'",
+    answer: (n) => `${n} of ${TOTAL} built systems run without containers.`,
   },
   {
     question: 'Where does event streaming show up?',

@@ -1,47 +1,33 @@
-import fs from 'fs';
 import path from 'path';
 
-// Run with: node --env-file=.env scripts/fetch-screenshots.mjs
-const API_KEY = process.env.SCREENSHOT_API_KEY;
-if (!API_KEY) {
-  console.error('Missing SCREENSHOT_API_KEY env var. Set it in .env (see .env.example) and run with --env-file=.env.');
+import { captureAll, screenshotTargets } from './screenshots.mjs';
+
+/* Local refresh of the committed screenshots in public/images/.
+
+   Run with: npm run update-screenshots  (needs SCREENSHOT_API_KEY)
+             node --env-file=.env scripts/fetch-screenshots.mjs
+
+   The deployed site does not depend on this: vite.config.ts recaptures into
+   dist/ at build time when the key is present. This exists to refresh the
+   fallbacks that ship in the repo, which are what get served whenever the
+   screenshot service is unavailable at build time. */
+
+if (!process.env.SCREENSHOT_API_KEY) {
+  console.error(
+    'Missing SCREENSHOT_API_KEY. Set it in .env (see .env.example) and run with --env-file=.env.'
+  );
   process.exit(1);
 }
 
-const projects = [
-  { id: 'medvax', url: 'https://medvaxhealth.com' },
-  { id: 'ultra-news', url: 'https://ultra-news.vercel.app/' },
-  { id: 'caritas-scholar', url: 'https://caritas-ai-scholar.vercel.app/' },
-  { id: 'evanty', url: 'https://evanty.vercel.app/' }
-];
+const outDir = path.join(process.cwd(), 'public', 'images');
+const targets = screenshotTargets();
 
-async function fetchScreenshots() {
-  console.log('Starting screenshot downloads...');
-  for (const p of projects) {
-    const target = `https://screenshotapi.to/api/v1/screenshot?url=${encodeURIComponent(p.url)}&width=1280&height=720&type=png&colorScheme=light&devicePixelRatio=2`;
-    console.log(`Fetching ${p.id}...`);
-    try {
-      const res = await fetch(target, {
-        headers: { 'x-api-key': API_KEY }
-      });
-      if (!res.ok) {
-        console.error(`Failed to fetch ${p.id}: ${await res.text()}`);
-        continue;
-      }
-      const buffer = await res.arrayBuffer();
-      
-      const outDir = path.join(process.cwd(), 'public', 'images');
-      if (!fs.existsSync(outDir)) {
-          fs.mkdirSync(outDir, { recursive: true });
-      }
+console.log(`Capturing ${targets.length} project screenshots into public/images/...`);
+for (const target of targets) console.log(`  · ${target.id} → ${target.url}`);
 
-      fs.writeFileSync(path.join(outDir, `${p.id}.png`), Buffer.from(buffer));
-      console.log(`Saved public/images/${p.id}.png`);
-    } catch (e) {
-      console.error(`Error for ${p.id}:`, e);
-    }
-  }
-  console.log('Done!');
-}
+const { ok, failed } = await captureAll(outDir);
 
-fetchScreenshots();
+console.log(`\nDone — ${ok} captured, ${failed} failed.`);
+// Non-zero on failure so a scripted refresh does not report success having
+// silently kept every stale image.
+process.exit(failed > 0 ? 1 : 0);

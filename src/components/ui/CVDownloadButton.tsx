@@ -3,81 +3,126 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Loader2, CheckCircle2, FileText, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { CV_FILE_NAME, CV_FILE_SIZE, CV_PATH, downloadCV } from '@/lib/cv';
+
 interface Props {
   className?: string;
   variant?: 'structural' | 'ghost' | 'card';
 }
 
-const FILE_NAME = 'Emmanuel_Moghalu_CV.pdf';
-const FILE_SIZE = '208 KB';
+const FILE_NAME = CV_FILE_NAME;
+const FILE_SIZE = CV_FILE_SIZE;
+
+/** Hands a fetched blob to the browser under the CV's filename. */
+function saveBlob(blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = FILE_NAME;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  // Revoked on the next tick — releasing it synchronously can cancel the
+  // download in Safari before it has read the object URL.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export const CVDownloadButton = ({ className = '', variant = 'structural' }: Props) => {
   const [status, setStatus] = useState<'idle' | 'preparing' | 'downloading' | 'success'>('idle');
-  const [progress, setProgress] = useState(0);
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Bytes received / total, or null when the transfer reports no length. */
+  const [progress, setProgress] = useState<number | null>(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const resetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cleanup interval on unmount
   useEffect(() => {
     return () => {
-      if (progressRef.current) clearInterval(progressRef.current);
+      abortRef.current?.abort();
+      if (resetRef.current) clearTimeout(resetRef.current);
     };
   }, []);
 
+  /* The bar counts real bytes.
+
+     It used to be an interval adding `Math.random() * 25` to a number, next to
+     a static anchor click that emits no progress events at all — a percentage
+     nobody measured, which is precisely the fabrication this codebase removes
+     everywhere else. App.tsx says it outright about its own route loader: "a
+     dynamic import emits no progress events, so any percentage shown here
+     would be made up."
+
+     Fetching the file instead makes the number real. The response is streamed,
+     progress is received/total, and the blob is handed to the anchor once
+     complete. Where Content-Length is absent (a compressed transfer) progress
+     is null and the UI shows an indeterminate state rather than inventing one.
+     Any failure falls back to the plain anchor download, so the button still
+     works if fetch is blocked. */
   const handleDownload = async () => {
     if (status !== 'idle') return;
 
     setStatus('preparing');
     setProgress(0);
 
-    // Brief preparation state
-    await new Promise((r) => setTimeout(r, 150));
-    setStatus('downloading');
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    // Animate progress bar
-    progressRef.current = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 90) {
-          if (progressRef.current) clearInterval(progressRef.current);
-          return prev;
-        }
-        return prev + Math.random() * 25;
-      });
-    }, 50);
-
-    try {
-      // Direct static anchor download - lets the browser natively handle the file
-      const a = document.createElement('a');
-      a.href = '/Emmanuel_Moghalu_CV.pdf';
-      a.download = FILE_NAME;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      setTimeout(() => {
-        if (document.body.contains(a)) document.body.removeChild(a);
-      }, 500);
-
-      if (progressRef.current) clearInterval(progressRef.current);
-      setProgress(100);
+    const finish = () => {
       setStatus('success');
-
-      toast.success('CV downloaded successfully', {
+      toast.success('CV downloaded', {
         description: `${FILE_NAME} · ${FILE_SIZE}`,
         icon: <FileText className="w-4 h-4 text-primary" />,
       });
-
-      setTimeout(() => {
+      resetRef.current = setTimeout(() => {
         setStatus('idle');
         setProgress(0);
       }, 3000);
+    };
+
+    try {
+      const response = await fetch(CV_PATH, { signal: controller.signal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      setStatus('downloading');
+
+      const total = Number(response.headers.get('Content-Length')) || 0;
+      const reader = response.body?.getReader();
+
+      // No streaming reader available — take the blob whole and stay honest
+      // about not knowing the progress.
+      if (!reader) {
+        setProgress(null);
+        const blob = await response.blob();
+        saveBlob(blob);
+        finish();
+        return;
+      }
+
+      const chunks: Uint8Array[] = [];
+      let received = 0;
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          received += value.length;
+          setProgress(total > 0 ? Math.min(100, (received / total) * 100) : null);
+        }
+      }
+
+      saveBlob(new Blob(chunks as BlobPart[], { type: 'application/pdf' }));
+      setProgress(100);
+      finish();
     } catch (error) {
-      if (progressRef.current) clearInterval(progressRef.current);
-      setStatus('idle');
-      setProgress(0);
-      toast.error('Download failed', {
-        description: 'Could not retrieve the file. Please try again.',
-      });
+      if (controller.signal.aborted) return;
+
+      // Fetch can be unavailable or blocked; the plain anchor still works, so
+      // fall back rather than reporting a failure the user can do nothing with.
+      downloadCV();
+      setProgress(null);
+      finish();
+    } finally {
+      abortRef.current = null;
     }
   };
 
@@ -95,6 +140,27 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
     success: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
   };
 
+  const inFlight = status === 'downloading' || status === 'preparing';
+  /* Indeterminate when the transfer reports no length: the bar sweeps rather
+     than filling to a figure that was never measured. */
+  const indeterminate = progress === null;
+
+  const ProgressFill = () =>
+    indeterminate ? (
+      <motion.div
+        className="absolute inset-y-0 w-1/3 bg-primary/10"
+        animate={{ x: ['-120%', '320%'] }}
+        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+      />
+    ) : (
+      <motion.div
+        className="absolute inset-y-0 left-0 bg-primary/10"
+        initial={{ width: '0%' }}
+        animate={{ width: `${progress}%` }}
+        transition={{ duration: 0.1 }}
+      />
+    );
+
   /* ── Card Variant ── */
   if (variant === 'card') {
     return (
@@ -111,13 +177,10 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
           className={`group relative flex items-center justify-between border border-border bg-card px-4 py-3 hover:border-primary transition-all disabled:opacity-70 disabled:cursor-not-allowed w-full overflow-hidden cursor-pointer ${className}`}
         >
           {/* Progress bar background */}
-          {(status === 'downloading' || status === 'preparing') && (
-            <motion.div
-              className="absolute inset-0 bg-primary/10"
-              initial={{ width: '0%' }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.1 }}
-            />
+          {inFlight && (
+            <div className="absolute inset-0 overflow-hidden">
+              <ProgressFill />
+            </div>
           )}
 
           <div className="flex items-center gap-3 text-muted-foreground group-hover:text-foreground transition-colors relative z-10">
@@ -147,7 +210,7 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
           </div>
 
           <div className="flex items-center gap-2 relative z-10">
-            {status === 'downloading' && (
+            {status === 'downloading' && !indeterminate && (
               <span className="text-[9px] font-mono text-primary">{Math.round(progress)}%</span>
             )}
             <span className="text-[9px] font-mono text-muted-foreground">[PDF]</span>
@@ -169,14 +232,10 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
       } relative flex items-center justify-center gap-3 w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden cursor-pointer ${className}`}
     >
       {/* Progress bar background */}
-      {(status === 'downloading' || status === 'preparing') && (
-        <motion.div
-          className="absolute inset-0 bg-primary/10"
-          initial={{ width: '0%' }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.1 }}
-          style={{ zIndex: 0 }}
-        />
+      {inFlight && (
+        <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
+          <ProgressFill />
+        </div>
       )}
 
       <span className="min-w-[110px] text-center relative z-10">

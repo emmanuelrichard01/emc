@@ -4,50 +4,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5" />
+  <!-- data-rh="true" marks the baseline that non-JS scrapers see and that
+       react-helmet-async adopts (rather than duplicating) on first render.
+       Every route emits the full set via <SEOHead>; see that file. Tags that
+       must survive regardless — viewport, icons — are left unmarked. -->
   <title>Emmanuel Moghalu | Data Engineer &amp; Backend Systems</title>
-  <meta name="description"
+  <meta data-rh="true" name="description"
     content="Emmanuel Moghalu — data and backend engineer building event-driven pipelines, payment reconciliation systems, and analytics platforms, shipped with the test suites that prove them. Nigerian fintech: multi-PSP integration, CBN and NDPR compliance." />
-  <meta name="author" content="Emmanuel C. Moghalu" />
+  <meta data-rh="true" name="author" content="Emmanuel C. Moghalu" />
 
   <!-- Open Graph / Facebook / WhatsApp -->
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://www.builtbyem.dev/" />
-  <meta property="og:site_name" content="Emmanuel Moghalu Portfolio" />
-  <meta property="og:title" content="Emmanuel Moghalu | Data Engineer &amp; Backend Systems" />
-  <meta property="og:description" content="Event-driven pipelines, payment reconciliation, and analytics platforms — shipped with the test suites that prove them." />
-  <meta property="og:image" content="https://www.builtbyem.dev/og-image.jpg" />
-  <meta property="og:image:secure_url" content="https://www.builtbyem.dev/og-image.jpg" />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Emmanuel Moghalu — Data Engineer & System Architect" />
-  <meta property="og:locale" content="en_US" />
+  <meta data-rh="true" property="og:type" content="website" />
+  <meta data-rh="true" property="og:url" content="https://www.builtbyem.dev/" />
+  <meta data-rh="true" property="og:site_name" content="Emmanuel Moghalu Portfolio" />
+  <meta data-rh="true" property="og:title" content="Emmanuel Moghalu | Data Engineer &amp; Backend Systems" />
+  <meta data-rh="true" property="og:description" content="Event-driven pipelines, payment reconciliation, and analytics platforms — shipped with the test suites that prove them." />
+  <meta data-rh="true" property="og:image" content="https://www.builtbyem.dev/og-image.jpg" />
+  <meta data-rh="true" property="og:image:secure_url" content="https://www.builtbyem.dev/og-image.jpg" />
+  <meta data-rh="true" property="og:image:type" content="image/jpeg" />
+  <meta data-rh="true" property="og:image:width" content="1200" />
+  <meta data-rh="true" property="og:image:height" content="630" />
+  <meta data-rh="true" property="og:image:alt" content="Emmanuel Moghalu — Data Engineer & System Architect" />
+  <meta data-rh="true" property="og:locale" content="en_US" />
 
   <!-- Twitter / X -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:url" content="https://www.builtbyem.dev/" />
-  <meta name="twitter:title" content="Emmanuel Moghalu | Data Engineer &amp; Backend Systems" />
-  <meta name="twitter:description" content="Event-driven pipelines, payment reconciliation, and analytics platforms — shipped with the test suites that prove them." />
-  <meta name="twitter:image" content="https://www.builtbyem.dev/og-image.jpg" />
-  <meta name="twitter:site" content="@mrebr" />
-  <meta name="twitter:creator" content="@mrebr" />
+  <meta data-rh="true" name="twitter:card" content="summary_large_image" />
+  <meta data-rh="true" name="twitter:url" content="https://www.builtbyem.dev/" />
+  <meta data-rh="true" name="twitter:title" content="Emmanuel Moghalu | Data Engineer &amp; Backend Systems" />
+  <meta data-rh="true" name="twitter:description" content="Event-driven pipelines, payment reconciliation, and analytics platforms — shipped with the test suites that prove them." />
+  <meta data-rh="true" name="twitter:image" content="https://www.builtbyem.dev/og-image.jpg" />
+  <meta data-rh="true" name="twitter:site" content="@mrebr" />
+  <meta data-rh="true" name="twitter:creator" content="@mrebr" />
 
   <!-- Canonical URL -->
-  <link rel="canonical" href="https://www.builtbyem.dev/" />
+  <link data-rh="true" rel="canonical" href="https://www.builtbyem.dev/" />
 
-  <!-- Fonts — async load for performance -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
-    as="style" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript>
-    <link rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
-  </noscript>
+  <!-- Fonts are self-hosted and imported by src/index.css. See
+       scripts/fetch-fonts.mjs for why they are vendored rather than linked. -->
+
+  <!-- Icons and manifest — static so they resolve before the bundle runs. -->
+  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
 
   <!-- Theme Color -->
-  <meta name="theme-color" content="#050505" />
-  <meta name="color-scheme" content="dark" />
+  <meta data-rh="true" name="theme-color" content="#050505" />
+  <meta data-rh="true" name="color-scheme" content="dark" />
 
 </head>
 

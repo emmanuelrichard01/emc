@@ -128,8 +128,10 @@ Case studies carry an optional `problem` / `approach` / `outcome` narrative with
 ## Security
 
 - **Strict CSP + security headers** (`vercel.json`) applied to every response: `Content-Security-Policy`, `X-Frame-Options: DENY`, `Strict-Transport-Security` (HSTS, preload), `Referrer-Policy`, `Permissions-Policy`, `X-Content-Type-Options: nosniff`.
-- **No secrets in the client bundle.** `api/screenshot.ts` and `scripts/fetch-screenshots.mjs` read `SCREENSHOT_API_KEY` from `process.env` — never hardcoded, never shipped to the browser.
-- **`api/screenshot.ts` is allowlisted.** It's a Vercel Edge Function that proxies screenshot requests; its target-URL parameter is restricted to an `ALLOWED_HOSTS` list of known project domains, so it can't be used as an open proxy against arbitrary URLs.
+- **No inline script, anywhere.** `script-src 'self'` with no `'unsafe-inline'` and no nonce. Fonts are self-hosted specifically so nothing needs an inline `onload` to apply them — the previous font loader used exactly that and was silently blocked in production, leaving every page rendering in system fallbacks.
+- **No third-party origins in the CSP.** `style-src` and `font-src` are `'self'` only; the site loads no external stylesheet, font or script.
+- **No secrets in the client bundle.** `SCREENSHOT_API_KEY` is read from `process.env` at *build* time by `vite.config.ts` and by `scripts/fetch-screenshots.mjs` — never hardcoded, never shipped to the browser, and no longer exposed by any runtime endpoint.
+- **No public API surface.** The site is fully static. A `api/screenshot.ts` Edge Function previously proxied screenshot requests behind a host allowlist; it was removed because nothing called it, so it was an unauthenticated endpoint spending a metered quota for a feature already served by static assets.
 - **Spam-guarded contact form** — honeypot field + timing check in `Contact.tsx`, no third-party CAPTCHA required.
 
 ## Performance & Accessibility
@@ -140,6 +142,7 @@ Case studies carry an optional `problem` / `approach` / `outcome` narrative with
 - **`prefers-reduced-motion`** respected throughout — CSS animations inherit a global media-query rule automatically; the Hero canvas and terminal typing loop check it explicitly and fall back to static equivalents.
 - **Safe areas** — respects `env(safe-area-inset-*)` for notched devices.
 - **Semantic HTML** — `<section>`, `<nav>`, `<main>` landmarks with ARIA labels throughout.
+- **Self-hosted fonts** — Inter and JetBrains Mono are vendored into `src/assets/fonts/` by `scripts/fetch-fonts.mjs`, so there is no cross-origin round trip before first paint and no external origin in the CSP. Each `@font-face` keeps its `unicode-range`, so a browser downloads only the subsets it renders (~80 KB for Latin text), and the files land in `/assets/` where they inherit the immutable cache header.
 - **Manual chunk splitting** (`vite.config.ts`) — `vendor-react`, `vendor-motion`, `vendor-icons` isolated for better long-term caching.
 - **Route-level code splitting** — pages are lazy-loaded behind a fallback that is itself **held back 250ms**, so a warm-cache navigation never flashes a loading screen it can't finish animating.
 - **Generated sitemap** — `vite.config.ts` emits `sitemap.xml` at build time from the same `PROJECTS` array the site renders, so it cannot drift from what actually exists.
@@ -171,7 +174,7 @@ Copy `.env.example` to `.env` and fill in your own value — never commit the re
 
 | Variable | Purpose |
 |----------|---------|
-| `SCREENSHOT_API_KEY` | Used by `scripts/fetch-screenshots.mjs` (local preview refresh) and `api/screenshot.ts` (Edge Function). For production, set this in the Vercel project's Environment Variables dashboard, not just locally. |
+| `SCREENSHOT_API_KEY` | Read at **build** time. `vite.config.ts` recaptures every live project screenshot into `dist/images/`, so each deploy ships current previews; `scripts/fetch-screenshots.mjs` refreshes the committed fallbacks in `public/images/`. **Set this in the Vercel project's Environment Variables dashboard** — without it the build skips capture and serves the committed images instead, which degrades to slightly stale previews but never fails the build. |
 | `VITE_FORMSPREE_ENDPOINT` *(optional)* | Overrides the contact form's submission target. Falls back to a hardcoded Formspree endpoint in `Contact.tsx` if unset. |
 
 One other value is hardcoded intentionally rather than env-configured, since it changes rarely and benefits from being visible in source review:
@@ -188,8 +191,10 @@ One other value is hardcoded intentionally rather than env-configured, since it 
 | `npm run build` | Production build to `dist/` |
 | `npm run build:dev` | Development-mode build (unminified, for debugging build output) |
 | `npm run lint` | ESLint across the repo |
+| `npm run test` | Vitest suite (watch mode: `npm run test:watch`) |
 | `npm run preview` | Serve the production build locally |
-| `npm run update-screenshots` | Refresh `public/images/*.png` project previews via the screenshot API |
+| `npm run update-screenshots` | Refresh the committed `public/images/*.png` fallbacks via the screenshot API |
+| `npm run update-fonts` | Re-vendor Inter + JetBrains Mono into `src/assets/fonts/` and regenerate `src/fonts.css` |
 
 ## Deployment
 

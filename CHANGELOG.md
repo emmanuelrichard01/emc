@@ -5,6 +5,96 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — Correctness pass: fonts, head tags, and the first tests
+
+A follow-up pass driven by an end-to-end review. Two production bugs, both
+silent: the fonts were never applying, and every route was emitting duplicate
+head tags. Plus the first test suite, which this repo had gone without while
+the site's own copy sold "shipped with the test suites that prove them".
+
+### Added
+- **Vitest, and 70 tests.** `portfolioQuery` (the parser — literal masking,
+  operator complements, ordering, error paths), the ten prepared `ask`
+  questions and the documented `sql` examples (both are hand-written strings
+  executed against live data, so a data edit can break them with nothing
+  failing at compile time), `projectStatus` derivation, and data integrity
+  over `PROJECTS` / `EXPERIENCE`.
+  Verified by mutation: making `ORDER BY` sort in place, and masking literals
+  with whitespace, each fail the suite.
+- **Self-hosted fonts.** `scripts/fetch-fonts.mjs` vendors Inter and
+  JetBrains Mono into `src/assets/fonts/` and generates `src/fonts.css`.
+  Deduplicated by source URL — Inter is a variable font, so Google returns
+  one file per subset for all four weights, and naming per weight had written
+  1.1 MB where 305 KB was needed.
+- **Build-time screenshot capture.** `vite.config.ts` recaptures every live
+  project into `dist/images/` when `SCREENSHOT_API_KEY` is set, with targets
+  derived from `PROJECTS` rather than a second hardcoded list. Cannot fail a
+  deploy: a failed capture keeps the committed image and logs it.
+- `lib/cv.ts` — the CV's path, filename and size in one place, shared by the
+  download button, the command palette and the terminal's `resume`.
+
+### Fixed
+- **Fonts never applied in production.** `index.html` loaded them via a
+  `preload` swapped to a stylesheet by an inline `onload=""` handler. That
+  handler is script, so `script-src 'self'` blocked it outright: the CSS was
+  fetched and never applied, and every page silently rendered in `system-ui`
+  / Consolas. Nothing surfaced it — a blocked inline handler is a console
+  warning, not an error — on a site whose entire identity is typographic.
+  Self-hosting removes the failure mode rather than working around it, and
+  drops `fonts.googleapis.com` / `fonts.gstatic.com` from the CSP.
+- **Duplicate and conflicting head tags on every route.** The static tags in
+  `index.html` and Helmet's runtime tags both rendered, so a project page
+  served two canonicals — one pointing at `/`, one at `/projects/x` — which
+  search engines resolve by ignoring both. The static tags now carry
+  `data-rh="true"` so Helmet adopts rather than duplicates them, and every
+  route emits the complete set through `SEOHead` (adoption is only safe if it
+  is total: Helmet clears what it owns before writing).
+- **The 404 page emitted no head tags at all**, inheriting the previous
+  page's title and canonical and inviting indexing under that identity. Now
+  `noindex, follow` with its own title.
+- **Canonical carried the query string** (`window.location.href`), so an
+  inbound `?utm_source=…` link self-canonicalised to the tagged URL instead
+  of consolidating — the exact split canonical exists to prevent.
+- **A fabricated progress bar on the CV download.** An interval added
+  `Math.random() * 25` next to a static anchor click that emits no progress
+  events — the same invention this project removed everywhere else, and which
+  `App.tsx` argues against in its own route loader. Now a real streamed
+  `fetch` counting bytes, indeterminate when the response reports no length,
+  falling back to the plain anchor if fetch is unavailable.
+- **The command palette kept its own copy of the section list**, which is
+  precisely the drift `data/sections.ts` was created to prevent — and the two
+  had already diverged ("Projects" against the nav's "Work"). It reads from
+  `SECTIONS` now.
+- **The palette's exit animations were unreachable.** `if (!isOpen) return
+  null` sat *above* `AnimatePresence`, unmounting the boundary and its child
+  together, so every `exit` prop was inert. Also added focus restoration on
+  close and index clamping when the result set shrinks.
+- **Query denominators counted unbuilt work.** "7 of 12 systems run without
+  containers" included two design studies with empty stacks, which satisfy
+  `NOT LIKE '%Docker%'` vacuously while running nowhere. Now "5 of 10 built
+  systems", with the design tier excluded from stack questions.
+- **Double-quoted string literals returned a confident `0 rows`.** Standard
+  SQL reads them as identifiers, but nobody typing into this terminal means
+  that; it now explains the problem instead of silently matching nothing.
+- `data/experience.ts` used a value import for a type, unlike `projects.ts`
+  which documents why it must be `import type`.
+
+### Removed
+- **`api/screenshot.ts`.** An unauthenticated public Edge Function spending a
+  metered third-party quota — with nothing in the app calling it, the feature
+  having already moved to static assets. The key it held now does more, more
+  safely, at build time.
+
+### Changed
+- **Ultra News rewritten for V3**: 41 feeds, 123 tests, corroboration counted
+  in independent publishers via the Public Suffix List, the three-editions
+  model (and why the earlier static-count split left two of three near-empty),
+  momentum as a materialised column (251 ms → 7.6 ms), the measured 0.80
+  clustering threshold, and the $0 deployment topology. Known limits stated in
+  a `notice`, including that a corroboration count is not a truth score.
+
+---
+
 ## [Unreleased] — Hero rebuild, query layer, and an honesty pass over every number
 
 A long pass across the whole site. The through-line: **every figure on the
