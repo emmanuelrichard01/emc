@@ -354,6 +354,67 @@ export const PROJECTS: Project[] = [
     },
   },
 
+  {
+    id: "caritas-scholar",
+    tier: "production",
+    title: "CARITAS AI Scholar",
+    subtitle: "Intelligent Academic Platform",
+    category: "AI / RAG",
+    timeline: "2025",
+    github: "https://github.com/emmanuelrichard01/caritas-ai-scholar",
+    liveUrl: "https://caritas-ai-scholar.vercel.app/",
+    image: "/images/caritas-scholar.png",
+    metrics: [
+      { label: "Workflows", value: "7" },
+      { label: "Edge Functions", value: "6" },
+      { label: "Access", value: "Row-level" },
+    ],
+    description:
+      "React/Supabase study platform unifying seven student workflows — AI tutoring, course-material analysis (PDF→notes/quiz/flashcards), study planning, research, GPA, and a searchable interaction history — with all model calls isolated in Deno edge functions.",
+    decisions: [],
+    stack: ["TypeScript", "React", "Vite", "Supabase", "Deno", "PostgreSQL", "Gemini", "Tailwind"],
+    caseStudy: {
+      problem:
+        "Students juggle a scattering of single-purpose tools — one for notes, another for flashcards, a calculator for GPA, a separate search for papers — and none of them share context. Ask a question on Monday and there is no record of it on Friday. For a cohort of roughly three thousand students at Caritas University, the friction was never any individual tool; it was that none of them knew about each other.",
+      approach:
+        "A single-page React application over Supabase, with seven workflows sharing one identity, one history and one design system: an AI tutor, a dashboard, a GPA calculator, a study planner, a course assistant, a research assistant, and a searchable archive of every interaction. All model calls run inside Deno edge functions rather than the browser, so no provider key is ever shipped to a visitor. Uploaded course material moves through a defined pipeline — storage, then parsing and segmentation, then generated notes, quizzes and flashcards — with each stage persisted so the expensive step is never repeated.",
+      outcome:
+        "Six edge functions carry the backend: a general AI router across Google Gemini, OpenRouter and OpenAI, a document parser, a study-aid generator, an upload handler, an academic search wrapping Serper, and a health endpoint. Row-level security is enabled on every user-scoped table with policies enforcing auth.uid() = user_id, uploads live in a private bucket reachable only through signed URLs, and a database trigger creates the profile row on signup so the application layer never has to.",
+      highlights: [
+        "Model output is repaired rather than trusted — jsonrepair recovers structured quiz data from malformed model JSON instead of failing the request",
+        "The health endpoint probes all three AI providers in parallel with 5-second timeouts, caches for 30 seconds, and rate-limits to 60 requests per hour per IP",
+        "The service role key never leaves the edge runtime; the browser only ever holds the anon key",
+        "Parsed material persists as segments, summaries, quizzes and flashcards, so regenerating one study aid never re-parses the document",
+        "Auth gating renders a modal over a blurred preview rather than a hard redirect, so the value of a page is visible before sign-up is demanded",
+      ],
+      tradeoffs: [
+        {
+          decision: "Where model calls run",
+          chose: "Deno edge functions",
+          rejected: "Direct calls from the browser",
+          why: "A browser-side call means shipping a provider key to every visitor. The edge function keeps the key server-side and gives one place to enforce auth and route by category.",
+        },
+        {
+          decision: "AI provider",
+          chose: "Multi-provider router — Gemini, OpenRouter, OpenAI",
+          rejected: "A single hardcoded provider",
+          why: "Providers rate-limit, deprecate models and go down. Routing behind one edge function makes the provider a configuration detail rather than a rewrite.",
+        },
+        {
+          decision: "Role storage",
+          chose: "A dedicated user_roles table with a SECURITY DEFINER has_role() function",
+          rejected: "A role column on the profiles table",
+          why: "Users can write their own profile row. A role stored there is a privilege escalation waiting to be found.",
+        },
+        {
+          decision: "Malformed model output",
+          chose: "Repair with jsonrepair",
+          rejected: "Reject and retry",
+          why: "Models emit almost-valid JSON often enough that a retry is slower and more expensive than a repair. Retry stays as the fallback for when repair fails.",
+        },
+      ],
+    },
+  },
   /* ── TIER 3: SYSTEMS ──────────────────────────────────────────────────── */
   {
     id: "global-rate-limiter",
@@ -529,67 +590,6 @@ export const PROJECTS: Project[] = [
           chose: "Hourly batch",
           rejected: "Real-time streaming",
           why: "The questions being asked are trend-shaped, not tick-shaped. Hourly stays well inside free-tier API limits and removes an entire class of streaming infrastructure that would earn nothing here.",
-        },
-      ],
-    },
-  },
-  {
-    id: "caritas-scholar",
-    tier: "system",
-    title: "CARITAS AI Scholar",
-    subtitle: "Intelligent Academic Platform",
-    category: "AI / RAG",
-    timeline: "2025",
-    github: "https://github.com/emmanuelrichard01/caritas-ai-scholar",
-    liveUrl: "https://caritas-ai-scholar.vercel.app/",
-    image: "/images/caritas-scholar.png",
-    metrics: [
-      { label: "Workflows", value: "7" },
-      { label: "Edge Functions", value: "6" },
-      { label: "Access", value: "Row-level" },
-    ],
-    description:
-      "React/Supabase study platform unifying seven student workflows — AI tutoring, course-material analysis (PDF→notes/quiz/flashcards), study planning, research, GPA, and a searchable interaction history — with all model calls isolated in Deno edge functions.",
-    decisions: [],
-    stack: ["TypeScript", "React", "Vite", "Supabase", "Deno", "PostgreSQL", "Gemini", "Tailwind"],
-    caseStudy: {
-      problem:
-        "Students juggle a scattering of single-purpose tools — one for notes, another for flashcards, a calculator for GPA, a separate search for papers — and none of them share context. Ask a question on Monday and there is no record of it on Friday. For a cohort of roughly three thousand students at Caritas University, the friction was never any individual tool; it was that none of them knew about each other.",
-      approach:
-        "A single-page React application over Supabase, with seven workflows sharing one identity, one history and one design system: an AI tutor, a dashboard, a GPA calculator, a study planner, a course assistant, a research assistant, and a searchable archive of every interaction. All model calls run inside Deno edge functions rather than the browser, so no provider key is ever shipped to a visitor. Uploaded course material moves through a defined pipeline — storage, then parsing and segmentation, then generated notes, quizzes and flashcards — with each stage persisted so the expensive step is never repeated.",
-      outcome:
-        "Six edge functions carry the backend: a general AI router across Google Gemini, OpenRouter and OpenAI, a document parser, a study-aid generator, an upload handler, an academic search wrapping Serper, and a health endpoint. Row-level security is enabled on every user-scoped table with policies enforcing auth.uid() = user_id, uploads live in a private bucket reachable only through signed URLs, and a database trigger creates the profile row on signup so the application layer never has to.",
-      highlights: [
-        "Model output is repaired rather than trusted — jsonrepair recovers structured quiz data from malformed model JSON instead of failing the request",
-        "The health endpoint probes all three AI providers in parallel with 5-second timeouts, caches for 30 seconds, and rate-limits to 60 requests per hour per IP",
-        "The service role key never leaves the edge runtime; the browser only ever holds the anon key",
-        "Parsed material persists as segments, summaries, quizzes and flashcards, so regenerating one study aid never re-parses the document",
-        "Auth gating renders a modal over a blurred preview rather than a hard redirect, so the value of a page is visible before sign-up is demanded",
-      ],
-      tradeoffs: [
-        {
-          decision: "Where model calls run",
-          chose: "Deno edge functions",
-          rejected: "Direct calls from the browser",
-          why: "A browser-side call means shipping a provider key to every visitor. The edge function keeps the key server-side and gives one place to enforce auth and route by category.",
-        },
-        {
-          decision: "AI provider",
-          chose: "Multi-provider router — Gemini, OpenRouter, OpenAI",
-          rejected: "A single hardcoded provider",
-          why: "Providers rate-limit, deprecate models and go down. Routing behind one edge function makes the provider a configuration detail rather than a rewrite.",
-        },
-        {
-          decision: "Role storage",
-          chose: "A dedicated user_roles table with a SECURITY DEFINER has_role() function",
-          rejected: "A role column on the profiles table",
-          why: "Users can write their own profile row. A role stored there is a privilege escalation waiting to be found.",
-        },
-        {
-          decision: "Malformed model output",
-          chose: "Repair with jsonrepair",
-          rejected: "Reject and retry",
-          why: "Models emit almost-valid JSON often enough that a retry is slower and more expensive than a repair. Retry stays as the fallback for when repair fails.",
         },
       ],
     },

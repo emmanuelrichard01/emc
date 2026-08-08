@@ -5,6 +5,7 @@ import { ArrowRight, ExternalLink, Github } from 'lucide-react';
 
 import type { Project } from '@/types';
 import { STATUS_CLASS, STATUS_LABEL, projectStatus } from '@/lib/project';
+import { TierRule, groupByTier } from '@/components/projects/tiers';
 
 /* ==========================================================================
    PROJECT INDEX
@@ -22,11 +23,8 @@ import { STATUS_CLASS, STATUS_LABEL, projectStatus } from '@/lib/project';
    speak a different visual language from the terminal above it was what made
    the page read as two sites stitched together.
 
-   THE TIER LADDER
-   Tier is carried by a group rule with a rank glyph rather than by four
-   full-width banners. `▍▍▍` down to `▍` reads as depth at a glance, the rule
-   costs one line instead of a heading block, and grouping survives — which
-   the flat filtered list had quietly thrown away.
+   Tier is carried by the shared group rule in ./tiers — the same one the
+   card grid uses, so the two views cannot show the hierarchy differently.
 
    CONTRAST
    Every piece of text here is at full token opacity. Dimming
@@ -47,24 +45,9 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 const COLUMNS =
   'grid grid-cols-[1fr_auto] md:grid-cols-[minmax(0,1.7fr)_7rem_minmax(0,1fr)_4rem_1rem] gap-x-5 items-baseline';
 
-/** Rank glyph — depth of the tier, readable without the label. */
-const TIER_RANK: Record<string, string> = {
-  flagship: '▍▍▍',
-  production: '▍▍',
-  system: '▍',
-  design: '┆',
-};
-
-const TIER_LABEL: Record<string, string> = {
-  flagship: 'flagship',
-  production: 'production',
-  system: 'prototype',
-  design: 'design study',
-};
-
 const IndexHeader = () => (
   <div
-    className={`${COLUMNS} px-4 pb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground`}
+    className={`${COLUMNS} px-4 pt-4 pb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground`}
     aria-hidden="true"
   >
     <span>system</span>
@@ -73,19 +56,6 @@ const IndexHeader = () => (
     <span className="hidden md:block text-right">year</span>
     <span className="hidden md:block" />
   </div>
-);
-
-const TierRule = ({ tier, count }: { tier: string; count: number }) => (
-  <li className="flex items-center gap-3 px-4 pt-5 pb-2" aria-hidden="true">
-    <span className="font-mono text-[11px] text-primary tracking-[0.15em] leading-none">
-      {TIER_RANK[tier] ?? '▍'}
-    </span>
-    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-      {TIER_LABEL[tier] ?? tier}
-    </span>
-    <span className="font-mono text-[10px] text-muted-foreground tabular-nums">{count}</span>
-    <span className="flex-1 h-px bg-border" />
-  </li>
 );
 
 const IndexRow = ({ project, index }: { project: Project; index: number }) => {
@@ -151,14 +121,7 @@ interface ProjectIndexProps {
 export default function ProjectIndex({ projects, grouped = true }: ProjectIndexProps) {
   if (!projects.length) return null;
 
-  // Consecutive runs, since PROJECTS is already authored in tier order.
-  const groups: { tier: string; items: Project[] }[] = [];
-  for (const project of projects) {
-    const last = groups[groups.length - 1];
-    if (last && last.tier === project.tier) last.items.push(project);
-    else groups.push({ tier: project.tier, items: [project] });
-  }
-
+  const groups = groupByTier(projects);
   let row = 0;
 
   return (
@@ -167,7 +130,11 @@ export default function ProjectIndex({ projects, grouped = true }: ProjectIndexP
       <ul className="border-t border-border">
         {groups.map((group) => (
           <React.Fragment key={group.tier}>
-            {grouped && <TierRule tier={group.tier} count={group.items.length} />}
+            {grouped && (
+              <li>
+                <TierRule tier={group.tier} count={group.items.length} className="px-4 pt-5 pb-2.5" />
+              </li>
+            )}
             {group.items.map((project) => (
               <IndexRow key={project.id} project={project} index={row++} />
             ))}

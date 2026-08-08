@@ -8,6 +8,7 @@ import { PROJECTS } from "@/data/projects";
 import { STATUS_CLASS, STATUS_LABEL, projectStatus } from "@/lib/project";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import ProjectIndex from "@/components/projects/ProjectIndex";
+import { TierRule, groupByTier } from "@/components/projects/tiers";
 
 /* ==========================================================================
    PROJECTS
@@ -107,6 +108,7 @@ const ExternalLinks = ({ project }: { project: Project }) => (
 const ProjectCard = ({ project, index }: { project: Project; index: number }) => {
   const status = projectStatus(project);
   const isDesign = project.tier === "design";
+  const hasImage = Boolean(project.image);
 
   return (
     <motion.article
@@ -116,17 +118,69 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
       viewport={{ once: true, amount: 0.2 }}
       exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
       transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.2), ease: EASE }}
-      className={`group relative flex flex-col p-5 bg-card/25 hover:border-primary/40 transition-colors ${
+      /* Only the projects you can actually go and click carry a screenshot,
+         so the image alone is the signal that one is real and running — no
+         extra width needed. An earlier pass gave these cards two columns and
+         it read as jarring: the grid lurched every few rows and the
+         screenshots dominated a section whose job is scanning. Same
+         footprint, slimmer band, distinct by content. */
+      className={`group relative flex flex-col bg-card/25 hover:border-primary/40 transition-colors ${
         isDesign ? "border border-dashed border-border" : "border border-border/70"
       }`}
     >
+      {hasImage && (
+        <div className="relative w-full aspect-[16/6] overflow-hidden bg-muted border-b border-border/70">
+          <img
+            src={project.image}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover object-top grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-image-reveal"
+          />
+
+          {/* Scanline wash, so a screenshot reads as something on a screen
+              rather than as stock imagery dropped into the layout. */}
+          <span
+            className="absolute inset-0 pointer-events-none opacity-40"
+            aria-hidden="true"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(to bottom, hsl(0 0% 0% / 0.28) 0px, hsl(0 0% 0% / 0.28) 1px, transparent 1px, transparent 3px)",
+            }}
+          />
+          <span
+            className="absolute inset-0 pointer-events-none bg-gradient-to-t from-card via-card/25 to-transparent"
+            aria-hidden="true"
+          />
+
+          {/* Registration marks, the same detail the case-study hero uses. */}
+          {(["top-2 left-2 border-t border-l", "top-2 right-2 border-t border-r", "bottom-2 left-2 border-b border-l", "bottom-2 right-2 border-b border-r"] as const).map(
+            (pos) => (
+              <span
+                key={pos}
+                aria-hidden="true"
+                className={`absolute w-2 h-2 border-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${pos}`}
+              />
+            )
+          )}
+
+          <span className="absolute bottom-2 left-3 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 bg-emerald-500 status-live" aria-hidden="true" />
+            <span className={STATUS_CLASS[status]}>{STATUS_LABEL[status]}</span>
+          </span>
+        </div>
+      )}
+
+      <div className="flex flex-col flex-1 p-5">
       <div className="flex items-center justify-between gap-3 mb-3">
         <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-primary truncate">
           {project.category}
         </span>
-        <span className={`font-mono text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
-          {STATUS_LABEL[status]}
-        </span>
+        {!hasImage && (
+          <span className={`font-mono text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
+            {STATUS_LABEL[status]}
+          </span>
+        )}
       </div>
 
       {/* Stretched link, rather than wrapping the card in one.
@@ -169,6 +223,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
         <span className="relative z-10">
           <ExternalLinks project={project} />
         </span>
+      </div>
       </div>
     </motion.article>
   );
@@ -316,6 +371,7 @@ const Projects: React.FC = () => {
   const hiddenCount = TECH_RANKED.length - shownTech.length;
 
   const showsDesign = visible.some((p) => p.tier === "design");
+  const cardGroups = React.useMemo(() => groupByTier(visible), [visible]);
 
   return (
     <section id="projects" data-section="projects" className="py-24 relative" aria-label="Projects and case studies">
@@ -326,14 +382,20 @@ const Projects: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5, ease: EASE }}
-          className="mb-10"
+          className="mb-12"
         >
-          <span className="flex items-center gap-3 font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
-            <Terminal className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+          {/* Matched to Experience and Contact exactly — same eyebrow size,
+              same heading scale. This section had drifted a step smaller,
+              which read as a subsection rather than a peer. */}
+          <span className="flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
+            <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
             Module 02 // Engineering
           </span>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-            Systems <span className="text-muted-foreground font-mono font-normal">/ {PROJECTS.length}</span>
+          {/* "Systems / 12" put a raw count where a name belongs, and the
+              count is already stated precisely below the filters. "Index" is
+              also what the default view now actually is. */}
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            Systems <span className="text-muted-foreground font-mono font-normal">Index</span>
           </h2>
         </motion.div>
 
@@ -464,12 +526,26 @@ const Projects: React.FC = () => {
         ) : view === "index" ? (
           <ProjectIndex projects={visible} grouped={tier === null} />
         ) : (
-          <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <AnimatePresence mode="popLayout">
-              {visible.map((project, index) => (
-                <ProjectCard key={project.id} project={project} index={index} />
-              ))}
-            </AnimatePresence>
+          /* Grouped by tier here too, using the same rule the index draws.
+             The card grid had lost the hierarchy entirely when the four
+             banners came out — a flat wall of eleven boxes where a flagship
+             and a design study looked like peers. The rule spans the grid,
+             costs one line, and keeps both views telling the same story. */
+          <motion.div layout className="flex flex-col gap-6">
+            {(cardGroups.length ? cardGroups : [{ tier: "", items: visible }]).map((group) => (
+              <div key={group.tier || "all"} className="flex flex-col gap-3">
+                {tier === null && group.tier && (
+                  <TierRule tier={group.tier} count={group.items.length} />
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <AnimatePresence mode="popLayout">
+                    {group.items.map((project, index) => (
+                      <ProjectCard key={project.id} project={project} index={index} />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </div>
+            ))}
           </motion.div>
         )}
       </div>
