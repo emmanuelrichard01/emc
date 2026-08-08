@@ -38,6 +38,19 @@ import AiTranscript, { AI_SUGGESTIONS } from './AiTranscript';
 
 const PROMPT = 'em@builtbyem:~/$';
 
+/* One token for every element on the prompt line.
+
+   The prompt, the off-screen ruler, the input, the ghost completion and the
+   cancel row all have to render at the same size or the measured cell width
+   stops matching the text it positions the block caret over. They were five
+   separate `text-[14px]` literals, which is a drift waiting to happen — and
+   it mattered the moment mobile needed a different size.
+
+   16px below `md` is not a style choice: iOS Safari zooms the page whenever a
+   focused input is under 16px, so tapping the prompt — the hero's whole
+   invitation — shoved the layout sideways on first touch. */
+const TERMINAL_TEXT = 'text-base md:text-[14px]';
+
 const MOTD_TONE_CLASS: Record<MotdTone, string> = {
   identity: 'text-foreground/90',
   meta: 'text-muted-foreground',
@@ -510,7 +523,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   e.stopPropagation();
                   cancelRunning();
                 }}
-                className="flex items-center gap-2 min-w-0 text-left group font-mono text-[14px] w-full"
+                className={`flex items-center gap-2 min-w-0 text-left group font-mono ${TERMINAL_TEXT} w-full`}
                 aria-label={`Cancel ${running.name}`}
               >
                 <span className="w-1.5 h-1.5 bg-primary status-live shrink-0" aria-hidden="true" />
@@ -522,7 +535,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             ) : (
               <>
                 <span
-                  className="font-mono text-[14px] text-primary shrink-0 select-none flex items-center gap-1.5"
+                  className={`font-mono ${TERMINAL_TEXT} text-primary shrink-0 select-none flex items-center gap-1.5`}
                   aria-hidden="true"
                 >
                   {aiMode ? (
@@ -541,7 +554,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   <span
                     ref={rulerRef}
                     aria-hidden="true"
-                    className="pointer-events-none absolute -left-[9999px] top-0 font-mono text-[14px] whitespace-pre"
+                    className={`pointer-events-none absolute -left-[9999px] top-0 font-mono ${TERMINAL_TEXT} whitespace-pre`}
                   >
                     0000000000
                   </span>
@@ -577,7 +590,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                        block below stands in for it. The global focus-visible
                        ring is suppressed too: on a bare inline input it draws
                        a heavy box, and here the lit border is the indicator. */
-                    className="relative z-10 w-full bg-transparent border-none outline-none focus:outline-none focus-visible:outline-none text-foreground font-mono text-[14px] p-0 caret-transparent"
+                    className={`relative z-10 w-full bg-transparent border-none outline-none focus:outline-none focus-visible:outline-none text-foreground font-mono ${TERMINAL_TEXT} p-0 caret-transparent`}
                   />
 
                   {/* The block. Solid and blinking while focused; hollow and
@@ -586,19 +599,22 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   {charWidth > 0 && !running && (
                     <span
                       aria-hidden="true"
-                      className={`pointer-events-none absolute top-1/2 -translate-y-1/2 z-20 w-[8px] h-[17px] ${
+                      className={`pointer-events-none absolute top-1/2 -translate-y-1/2 z-20 h-[1.2em] ${
                         inputFocused
                           ? `bg-primary ${autoTyping ? '' : 'terminal-caret'}`
                           : 'border border-primary/50'
                       }`}
-                      style={{ left: `${caret * charWidth}px` }}
+                      /* One cell wide, measured rather than assumed. The
+                         hardcoded 8px matched 14px text only, so it no longer
+                         covered a character once mobile rendered at 16px. */
+                      style={{ left: `${caret * charWidth}px`, width: `${charWidth}px` }}
                     />
                   )}
 
                   {ghost && !autoTyping && (
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 font-mono text-[14px] whitespace-pre text-muted-foreground/25 flex items-center"
+                      className={`pointer-events-none absolute inset-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-foreground/25 flex items-center`}
                     >
                       <span className="invisible">{inputValue}</span>
                       {ghost}
@@ -631,7 +647,15 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             </>
           ) : (
             <>
-              type <span className="text-primary/70">'help'</span> for more information
+              {/* "type 'help'" asks for a keyboard, which on a phone costs
+                  about 40% of the viewport before anything is shown. The
+                  chips below do the same job with one tap, so mobile is
+                  pointed at those and the typed form is kept for devices
+                  that already have somewhere to type. */}
+              <span className="md:hidden">tap a command below</span>
+              <span className="hidden md:inline">
+                type <span className="text-primary/70">'help'</span> for more information
+              </span>
             </>
           )}
         </motion.p>
@@ -639,7 +663,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         {/* ── Chips ──
             In AI mode these become starter questions instead of commands, so
             the empty prompt is never a blank stare. */}
-        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center gap-x-1 gap-y-2 shrink-0 ${compact ? 'mt-4' : 'mt-8'}`}>
+        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center gap-x-2 md:gap-x-1 gap-y-2 shrink-0 ${compact ? 'mt-4' : 'mt-8'}`}>
           {aiMode
             ? AI_SUGGESTIONS.map((suggestion) => (
                 <button
@@ -659,7 +683,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                 <React.Fragment key={chip}>
                   {i > 0 && (
                     <span
-                      className="text-muted-foreground/20 font-mono text-[11px] px-1.5"
+                      className="hidden md:inline text-muted-foreground/20 font-mono text-[11px] px-1.5"
                       aria-hidden="true"
                     >
                       ·
@@ -675,7 +699,13 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                        to hit with a thumb. The negative margin cancels the
                        padding in the flex line, so the row's height and the
                        spacing between chips are unchanged. */
-                    className={`font-mono text-[11px] md:text-[12px] py-2 -my-2 px-1 -mx-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed underline-offset-4 hover:underline decoration-primary/40 ${
+                    /* Boxed below `md`, inline above it. As bare text among
+                       "·" separators these read as prose on a phone, which is
+                       the one place they are the primary way in — the border
+                       matches the AI starter questions directly below and
+                       makes the affordance obvious. The desktop treatment is
+                       untouched. */
+                    className={`font-mono text-[11px] md:text-[12px] border border-border md:border-0 px-2.5 md:px-1 md:-mx-1 py-1.5 md:py-2 md:-my-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed md:underline-offset-4 md:hover:underline decoration-primary/40 ${
                       chip === 'ai'
                         ? 'text-primary/80 hover:text-primary'
                         : 'text-muted-foreground/60 hover:text-primary'

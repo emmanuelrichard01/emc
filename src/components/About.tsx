@@ -260,7 +260,7 @@ const DeliverablesModule = () => {
             className="flex items-start gap-3 group"
           >
             <ArrowRight className="w-4 h-4 text-primary shrink-0 mt-0.5 group-hover:translate-x-1 transition-transform" />
-            <span className="text-[13px] text-foreground/80 leading-snug">{item}</span>
+            <span className="text-[15px] md:text-[13px] text-foreground/80 leading-snug">{item}</span>
           </motion.div>
         ))}
       </div>

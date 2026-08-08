@@ -124,8 +124,12 @@ const ContactForm = () => {
     }
   };
 
+  /* 16px below `md`, not a whim: iOS Safari zooms the page whenever a focused
+     input renders under 16px, and it does not zoom back out. At 13px every
+     field in this form triggered it, so filling the form meant three
+     unrequested zooms and a manual pinch to recover. Desktop keeps 13px. */
   const fieldClass = (name: string) =>
-    `w-full bg-card text-foreground text-[13px] placeholder:text-muted-foreground/50 outline-none transition-all border ${
+    `w-full bg-card text-foreground text-base md:text-[13px] placeholder:text-muted-foreground/50 outline-none transition-all border ${
       touched[name] && errors[name as keyof FieldErrors]
         ? "border-destructive focus:border-destructive"
         : focused === name
@@ -326,7 +330,7 @@ const Contact: React.FC = () => {
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">
               Let's <span className="text-muted-foreground font-mono font-normal">Talk</span>
             </h2>
-            <p className="text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
+            <p className="text-[15px] md:text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
               Open to discussing data engineering challenges, architectural scaling, or new opportunities.
             </p>
             {/* Timezone up front — the first practical question anyone

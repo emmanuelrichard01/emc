@@ -190,7 +190,7 @@ const Footer = () => {
             cannot, and the place to state the site's own claim about itself. */}
         <div className="mt-10 pt-8 border-t border-border">
           <FooterColumnLabel>// Colophon</FooterColumnLabel>
-          <p className="text-[13px] text-muted-foreground font-light leading-relaxed max-w-xl">
+          <p className="text-[15px] md:text-[13px] text-muted-foreground font-light leading-relaxed max-w-xl">
             React, TypeScript and Tailwind, deployed on Vercel. The figures on this page
             are not written by hand — they are queried from the same dataset the terminal
             reads, so{" "}

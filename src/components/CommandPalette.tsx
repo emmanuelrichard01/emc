@@ -350,7 +350,9 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
               ref={inputRef}
               type="text"
               placeholder="Search commands..."
-              className="flex-1 bg-transparent border-none outline-none text-[13px] font-mono text-foreground placeholder:text-muted-foreground"
+              // 16px below `md` so focusing it does not make iOS Safari zoom
+              // the page out from under a search that is already open.
+              className="flex-1 bg-transparent border-none outline-none text-base md:text-[13px] font-mono text-foreground placeholder:text-muted-foreground"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

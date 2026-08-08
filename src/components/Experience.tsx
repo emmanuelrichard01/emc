@@ -1,6 +1,6 @@
-import React, { useMemo, useRef } from "react";
+import React, { useId, useMemo, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
-import { Terminal } from "lucide-react";
+import { ChevronDown, Terminal } from "lucide-react";
 
 import { EXPERIENCE } from "@/data/experience";
 import { careerWindow, formatDuration, parsePeriod, spanBar, yearTicks } from "@/lib/tenure";
@@ -41,6 +41,20 @@ const RoleRow = ({
   const inView = useInView(ref, { once: true, amount: 0.2 });
 
   const ticks = useMemo(() => (axis ? yearTicks(axis) : []), [axis]);
+
+  /* Collapsed below `lg`, and only there.
+
+     Stacked on a phone this section ran 3,818px — 4.7 screens, 37% of the
+     whole page — because the two columns that sit side by side on a desktop
+     fall on top of each other, and every one of five roles pays full price
+     for a summary, three highlights and up to seven stack chips. The two most
+     recent stay open; the rest keep their heading, dates and span bar, which
+     is enough to read the shape of the career, and open on demand.
+
+     The desktop layout is untouched: the detail block carries `lg:block`, so
+     above the breakpoint this state cannot hide anything. */
+  const [open, setOpen] = useState(index < 2);
+  const detailId = useId();
 
   return (
     <motion.div
@@ -162,12 +176,29 @@ const RoleRow = ({
               {role.note}
             </span>
           )}
+
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls={detailId}
+            className="lg:hidden mt-4 -ml-1 self-start flex items-center gap-1.5 px-1 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-primary"
+          >
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+            {open ? "Hide detail" : "What I did"}
+          </button>
         </div>
       </div>
 
       {/* Right: Content */}
-      <div className="lg:col-span-8 space-y-4 pt-1">
-        <p className="text-[13px] text-foreground/80 leading-relaxed font-light">
+      <div
+        id={detailId}
+        className={`lg:col-span-8 space-y-4 pt-1 lg:block ${open ? "" : "hidden"}`}
+      >
+        <p className="text-[15px] md:text-[13px] text-foreground/80 leading-relaxed font-light">
           {role.summary}
         </p>
 
@@ -179,7 +210,7 @@ const RoleRow = ({
                 initial={{ opacity: 0, x: -6 }}
                 animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
                 transition={{ duration: 0.4, delay: index * 0.08 + (i + 1) * 0.08 }}
-                className="flex items-start gap-3 text-[13px] text-muted-foreground font-light leading-relaxed"
+                className="flex items-start gap-3 text-[15px] md:text-[13px] text-muted-foreground font-light leading-relaxed"
               >
                 <span className="mt-1.5 w-1 h-1 bg-primary shrink-0" />
                 {h}
@@ -244,7 +275,7 @@ const Experience: React.FC = () => {
               could have sat under anyone's experience section. This says what
               is specific to these five: they overlap, and none of them started
               from an empty repository. */}
-          <p className="text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
+          <p className="text-[15px] md:text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
             {EXPERIENCE.length} roles since {startYear}, most run alongside a degree or another
             contract. The work was largely inherited — systems already in production, already
             depended on, and usually manual or slow.
