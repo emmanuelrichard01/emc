@@ -292,7 +292,11 @@ export default function StatusRail({ active }: { active: boolean }) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`${social.label} (opens in a new tab)`}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
+              /* The label is hidden below `sm`, which left a bare 14px icon
+                 as the whole tap target on exactly the devices least able to
+                 hit it. Padding plus a cancelling negative margin brings the
+                 hit area to 30px without changing the rail's layout. */
+              className="flex items-center gap-1.5 p-2 -m-2 text-muted-foreground hover:text-primary transition-colors"
             >
               <social.icon className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="font-mono text-[9px] uppercase tracking-widest hidden sm:inline">

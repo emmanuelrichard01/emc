@@ -308,7 +308,18 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
         aria-hidden={concealed || undefined}
         inert={concealed}
       >
-        <div className="pointer-events-auto flex items-stretch gap-0.5 p-1.5 bg-card/95 backdrop-blur-xl border border-border shadow-2xl">
+        {/* Fluid, not fixed.
+
+            Five 52px tabs plus two 40px controls and their gaps came to about
+            377px of rigid width, which fits a 390px phone and nothing
+            narrower — on a 320px screen the island ran ~34px past the edge,
+            clipping the command-palette button entirely. It is `fixed`, so it
+            never widened the document and no overflow check caught it.
+
+            The tabs now share the available width instead of claiming a fixed
+            slice of it, and the island is capped so it does not stretch into
+            a full-width bar on a large phone. */}
+        <div className="pointer-events-auto w-full max-w-[380px] flex items-stretch gap-0.5 p-1.5 bg-card/95 backdrop-blur-xl border border-border shadow-2xl">
           {SECTIONS.map((section) => {
             const isActive = activeSection === section.id;
             return (
@@ -321,7 +332,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                   e.preventDefault();
                   scrollToSection(section.id);
                 }}
-                className={`relative flex flex-col items-center justify-center gap-0.5 w-[52px] min-h-[48px] px-1 py-1.5 transition-colors active:scale-95 ${
+                className={`relative flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 min-h-[48px] px-0.5 py-1.5 transition-colors active:scale-95 ${
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
@@ -335,20 +346,20 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                 <section.icon className="h-[17px] w-[17px] relative z-10" aria-hidden="true" />
                 {/* Icon-only navigation asks every visitor to decode a
                     pictogram. The label costs 9px and removes the guess. */}
-                <span className="relative z-10 font-mono text-[8px] uppercase tracking-wider leading-none">
+                <span className="relative z-10 max-w-full truncate font-mono text-[8px] uppercase tracking-wider leading-none">
                   {section.short}
                 </span>
               </a>
             );
           })}
 
-          <div className="w-[1px] self-stretch bg-border mx-1" aria-hidden="true" />
+          <div className="w-px shrink-0 self-stretch bg-border mx-0.5" aria-hidden="true" />
 
           <button
             type="button"
             onClick={cycleTheme}
             aria-label={`Accent colour: ${theme}. Switch to next.`}
-            className="min-w-[40px] flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
+            className="shrink-0 w-9 flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
           >
             <Palette className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -357,7 +368,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
             type="button"
             onClick={onOpenCommandPalette}
             aria-label="Open command palette"
-            className="min-w-[40px] flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
+            className="shrink-0 w-9 flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
           >
             <Command className="h-4 w-4" aria-hidden="true" />
           </button>

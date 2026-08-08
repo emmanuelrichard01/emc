@@ -669,7 +669,13 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                     type="button"
                     onClick={() => (chip === 'ai' ? enterAi() : runChip(chip))}
                     disabled={autoTyping || running !== null}
-                    className={`font-mono text-[11px] md:text-[12px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed underline-offset-4 hover:underline decoration-primary/40 ${
+                    /* py-2 -my-2 grows the hit area without moving anything.
+                       These chips are the hero's calls to action and stood
+                       17px tall — under the 24px minimum and genuinely hard
+                       to hit with a thumb. The negative margin cancels the
+                       padding in the flex line, so the row's height and the
+                       spacing between chips are unchanged. */
+                    className={`font-mono text-[11px] md:text-[12px] py-2 -my-2 px-1 -mx-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed underline-offset-4 hover:underline decoration-primary/40 ${
                       chip === 'ai'
                         ? 'text-primary/80 hover:text-primary'
                         : 'text-muted-foreground/60 hover:text-primary'
