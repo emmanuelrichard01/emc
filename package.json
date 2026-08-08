@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "preview": "vite preview",
     "update-screenshots": "node scripts/fetch-screenshots.mjs",
-    "update-fonts": "node scripts/fetch-fonts.mjs"
+    "update-fonts": "node scripts/fetch-fonts.mjs",
+    "prebuild": "node scripts/build-ai-context.mjs",
+    "build:context": "node scripts/build-ai-context.mjs"
   },
   "dependencies": {
     "@radix-ui/react-tooltip": "^1.2.8",

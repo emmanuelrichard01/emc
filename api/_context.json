@@ -1,0 +1,442 @@
+{
+  "generatedAt": "2026-08-08T06:05:35.435Z",
+  "person": {
+    "name": "Emmanuel Moghalu",
+    "role": "Data & Backend Engineer",
+    "location": "Abuja, Nigeria",
+    "timezone": "UTC+1",
+    "availability": "open to opportunities, remote or hybrid",
+    "email": "emma.moghalu@gmail.com",
+    "links": {
+      "github": "https://github.com/emmanuelrichard01",
+      "linkedin": "https://www.linkedin.com/in/e-mc/",
+      "x": "https://x.com/mrebr",
+      "site": "https://www.builtbyem.dev"
+    },
+    "focus": [
+      "event-driven data pipelines",
+      "payment reconciliation and multi-PSP integration",
+      "stream processing",
+      "analytics warehouses",
+      "Nigerian fintech (CBN, NDPR compliance)"
+    ]
+  },
+  "counts": {
+    "builtSystems": 10,
+    "designStudies": 2,
+    "caseStudies": 9,
+    "roles": 5
+  },
+  "projects": [
+    {
+      "id": "mmr-engine",
+      "title": "MMR Engine",
+      "subtitle": "Cross-Border Mobile Money Reconciliation",
+      "tier": "flagship",
+      "category": "Fintech Core System",
+      "timeline": "2026",
+      "status": "source available",
+      "stack": [
+        "Python",
+        "FastAPI",
+        "Next.js",
+        "PostgreSQL",
+        "Redpanda",
+        "Prefect",
+        "dbt",
+        "MinIO"
+      ],
+      "metrics": [
+        "Auto-Match Target: 99.5%",
+        "End-to-End Latency: <10s",
+        "Pipeline: Medallion"
+      ],
+      "summary": "Every Nigerian business taking payments across multiple PSPs — Paystack, Flutterwave, M-Pesa — carries a reconciliation gap. Settlement is asynchronous, reference IDs are not shared between providers, FX rates move between initiation and settlement, and webhooks arrive out of order, duplicated, or not at all. Finance teams spend 30–40% of their time reconciling by hand, against industry error rates of 3–8% of transaction volume.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 3,
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/mmr-engine"
+      }
+    },
+    {
+      "id": "logistics-watchtower",
+      "title": "Logistics Watchtower",
+      "subtitle": "Real-Time Cold Chain Fleet Monitoring",
+      "tier": "flagship",
+      "category": "Real-Time Systems",
+      "timeline": "2026",
+      "status": "source available",
+      "stack": [
+        "Python",
+        "FastAPI",
+        "Redpanda",
+        "Quix Streams",
+        "Docker",
+        "Prometheus"
+      ],
+      "metrics": [
+        "Latency: <200ms",
+        "Sensors: 15+/truck",
+        "Alert Rules: 8"
+      ],
+      "summary": "Cold chain logistics fail when cargo leaves its safe temperature window. Conventional monitoring relies on post-trip data dumps, so a temperature breach surfaces only after delivery — by which point the cargo is already lost. The information arrives accurate and useless.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 4,
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/logistics-watchtower"
+      }
+    },
+    {
+      "id": "modern-warehouse",
+      "title": "Modern Data Warehouse",
+      "subtitle": "1.5M+ Record Analytics Platform",
+      "tier": "flagship",
+      "category": "Analytics Engineering",
+      "timeline": "2025",
+      "status": "source available",
+      "stack": [
+        "Python",
+        "Dagster",
+        "dbt",
+        "DuckDB",
+        "Docker",
+        "Plotly"
+      ],
+      "metrics": [
+        "Records: 1.5M+",
+        "dbt Tests: 21",
+        "Coverage: 80%+"
+      ],
+      "summary": "The Olist Brazilian e-commerce dataset arrives as nine separate files — orders, payments, reviews, sellers, geolocation and more — with no shared model between them. Most treatments load a convenient subset and stop there. Any question that crosses those files needs an actual warehouse behind it.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 1,
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/modern-warehouse"
+      }
+    },
+    {
+      "id": "medvax",
+      "title": "MedVax",
+      "subtitle": "Health-Tech Telemedicine & E-Commerce",
+      "tier": "production",
+      "category": "Health-Tech Platform",
+      "timeline": "Jan — Feb 2026",
+      "status": "live",
+      "stack": [
+        "NestJS",
+        "Next.js",
+        "PostgreSQL",
+        "Redis",
+        "BullMQ",
+        "Paystack",
+        "WhatsApp API"
+      ],
+      "metrics": [
+        "Stack: NestJS + Next.js",
+        "Auth: JWT + RBAC",
+        "Status: Production"
+      ],
+      "summary": "Access to sexual and maternal reproductive health products in West Africa runs into two barriers at once: discretion and distribution. People who need contraceptives, prescription medication, or a frank consultation often will not walk into a pharmacy and ask for it — and the pharmacies that do stock what they need are fragmented across independent operators with no shared inventory or fulfilment layer.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 3,
+      "links": {
+        "live": "https://medvaxhealth.com"
+      }
+    },
+    {
+      "id": "ultra-news",
+      "title": "ULTRA-NEWS V3",
+      "subtitle": "The Wire Room",
+      "tier": "production",
+      "category": "News Intelligence",
+      "timeline": "2025 — Present",
+      "status": "live",
+      "stack": [
+        "Python",
+        "Django",
+        "Next.js",
+        "PostgreSQL",
+        "pgvector",
+        "Celery",
+        "Redis"
+      ],
+      "metrics": [
+        "Corroboration: Publishers",
+        "Ingestion: 41 Feeds",
+        "Tests: 123"
+      ],
+      "summary": "When something happens, fifty outlets publish about it. Every feed shows fifty headlines and leaves the reader to work out that they are one event — and, more importantly, whether anyone independently confirmed it or whether fifty outlets are all repeating a single unverified wire report. That second question is the one that matters, and no aggregator answers it.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 6,
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/ULTRA-NEWS",
+        "live": "https://ultra-news.vercel.app/"
+      }
+    },
+    {
+      "id": "global-rate-limiter",
+      "title": "Global Rate Limiter as a Service",
+      "subtitle": "High-availability API quota management",
+      "tier": "system",
+      "category": "API Infrastructure",
+      "timeline": "2026",
+      "status": "private build",
+      "stack": [
+        "TypeScript",
+        "Node.js",
+        "Express",
+        "Redis",
+        "Lua",
+        "PostgreSQL",
+        "nginx",
+        "Docker"
+      ],
+      "metrics": [
+        "Admission: Exactly 50/300",
+        "Check Latency: p99 <15ms",
+        "Tests: 36 / 7 suites"
+      ],
+      "summary": "Outbound calls to quota-constrained third-party APIs — banking, logistics, AI providers — are metered by the provider, not by you, and exceeding the quota costs real money. The hard part is that the limit has to hold across a fleet of stateless instances: if each enforces its own local count, the cluster collectively overshoots. This is the inverse of the usual problem. Kong and Envoy protect your API from inbound callers; here the job is coordinating your own outbound calls against somebody else's budget, and a limiter that fails closed would take the whole fleet down with it.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 5,
+      "links": {}
+    },
+    {
+      "id": "cloud-bill-hunter",
+      "title": "Cloud Bill Hunter",
+      "subtitle": "FinOps Intelligence Platform",
+      "tier": "system",
+      "category": "FinOps",
+      "timeline": "2025",
+      "status": "source available",
+      "stack": [
+        "Python",
+        "FastAPI",
+        "React",
+        "Airflow",
+        "DuckDB",
+        "Terraform",
+        "Pandera",
+        "Docker"
+      ],
+      "metrics": [
+        "Detection: Z-score",
+        "Contracts: Pandera",
+        "Storage: DuckDB"
+      ],
+      "summary": "Cloud waste hides in plain sight: provisioned resources nobody uses, billing every hour. Static cost reports show the total but not which line items are zombies — and the naive detection heuristic, usage equals zero, misses everything that is merely near-idle or newly spiking.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 3,
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/cloud-bill-hunter"
+      }
+    },
+    {
+      "id": "crypto-pipeline",
+      "title": "Crypto Data Pipeline",
+      "subtitle": "Market Analytics Engine",
+      "tier": "system",
+      "category": "Data Pipeline",
+      "timeline": "2025",
+      "status": "source available",
+      "stack": [
+        "Python",
+        "dbt",
+        "PostgreSQL",
+        "Redis",
+        "Docker",
+        "Streamlit",
+        "Grafana"
+      ],
+      "metrics": [
+        "Cadence: Hourly",
+        "Freshness SLA: 2h alert",
+        "Coverage: 80%+"
+      ],
+      "summary": "Market data is easy to fetch and hard to trust. A public API will happily return a price; it will not tell you that the last three hours are missing, that a value moved 40% because of a bad tick rather than the market, or that the dashboard is quietly rendering yesterday's numbers. A chart built straight onto an API call inherits every one of those failures silently.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 3,
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/crypto-data-pipeline"
+      }
+    },
+    {
+      "id": "caritas-scholar",
+      "title": "CARITAS AI Scholar",
+      "subtitle": "Intelligent Academic Platform",
+      "tier": "system",
+      "category": "AI / RAG",
+      "timeline": "2025",
+      "status": "live",
+      "stack": [
+        "TypeScript",
+        "React",
+        "Vite",
+        "Supabase",
+        "Deno",
+        "PostgreSQL",
+        "Gemini",
+        "Tailwind"
+      ],
+      "metrics": [
+        "Workflows: 7",
+        "Edge Functions: 6",
+        "Access: Row-level"
+      ],
+      "summary": "Students juggle a scattering of single-purpose tools — one for notes, another for flashcards, a calculator for GPA, a separate search for papers — and none of them share context. Ask a question on Monday and there is no record of it on Friday. For a cohort of roughly three thousand students at Caritas University, the friction was never any individual tool; it was that none of them knew about each other.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 4,
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/caritas-ai-scholar",
+        "live": "https://caritas-ai-scholar.vercel.app/"
+      }
+    },
+    {
+      "id": "evanty",
+      "title": "Evanty",
+      "subtitle": "Event Management Platform",
+      "tier": "system",
+      "category": "Full-Stack",
+      "timeline": "2025",
+      "status": "live",
+      "stack": [
+        "Next.js",
+        "TypeScript",
+        "MongoDB",
+        "Stripe",
+        "Clerk"
+      ],
+      "metrics": [
+        "Payments: Stripe",
+        "Auth: Clerk"
+      ],
+      "summary": "Next.js 14 event platform with Server Actions, Stripe checkout, Clerk auth, MongoDB, and Zod-validated forms. Webhook-synced user and payment state.",
+      "hasCaseStudy": false,
+      "tradeoffCount": 0,
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/Evanty",
+        "live": "https://evanty.vercel.app/"
+      }
+    },
+    {
+      "id": "cbn-data-residency",
+      "title": "CBN Data Residency Migration",
+      "subtitle": "Reference Architecture for Local Payment Data Storage",
+      "tier": "design",
+      "category": "Regulatory Architecture",
+      "timeline": "2026",
+      "status": "design-stage, not built",
+      "stack": [],
+      "metrics": [
+        "Compliance Deadline: Jan 2027"
+      ],
+      "summary": "A reference architecture for migrating Nigerian payment transaction data into local storage ahead of the Central Bank of Nigeria's January 2027 compliance deadline, set out in Circular PSS/DIR/PUB/CIR/001/004. Scopes the migration path, residency boundary, and the data classes the circular actually covers.",
+      "hasCaseStudy": false,
+      "tradeoffCount": 0,
+      "links": {}
+    },
+    {
+      "id": "smart-meter-telemetry",
+      "title": "Smart Meter & Inverter Telemetry",
+      "subtitle": "Distributed IoT Telemetry Platform",
+      "tier": "design",
+      "category": "Streaming Architecture",
+      "timeline": "2026",
+      "status": "design-stage, not built",
+      "stack": [
+        "Apache Flink",
+        "Apache Iceberg",
+        "TimescaleDB"
+      ],
+      "metrics": [],
+      "summary": "Blueprint-stage architecture for a real-time telemetry platform over distributed smart meters and inverters — Flink for stream processing, Iceberg as the table format, and TimescaleDB for time-series serving.",
+      "hasCaseStudy": false,
+      "tradeoffCount": 0,
+      "links": {}
+    }
+  ],
+  "experience": [
+    {
+      "id": "medvax",
+      "company": "MedVax Health",
+      "role": "Software & Data Engineer",
+      "type": "Contract",
+      "period": "Jan — Feb 2026",
+      "summary": "Architected a secure e-prescription portal supporting prescription management, authentication, and payment processing workflows for doctors and patients on a production health platform.",
+      "stack": [
+        "Python",
+        "FastAPI",
+        "NestJS",
+        "Prisma",
+        "TypeScript",
+        "PostgreSQL",
+        "Docker"
+      ]
+    },
+    {
+      "id": "setraco",
+      "company": "SETRACO Nigeria",
+      "role": "Data Operations & Systems Engineer",
+      "type": "Full-time",
+      "period": "Mar — Oct 2024",
+      "summary": "Designed centralized reporting solutions that replaced manual Excel workflows for a construction firm — reducing reporting effort by ~40% while maintaining 99.9% data accuracy across production systems.",
+      "stack": [
+        "Python",
+        "SQL",
+        "React",
+        "Next.js",
+        "PostgreSQL",
+        "Data Analysis"
+      ],
+      "note": "Completed alongside the final year of the B.Eng."
+    },
+    {
+      "id": "freelance",
+      "company": "Independent Consultant",
+      "role": "Freelance Software & Data Engineer",
+      "type": "Freelance",
+      "period": "Oct 2020 — Mar 2024",
+      "summary": "Delivered web development and data solutions for independent and small-business clients, managing full project lifecycles from proposal through delivery — sustained throughout a full-time engineering degree.",
+      "stack": [
+        "Python",
+        "TypeScript",
+        "React",
+        "SQL",
+        "Tailwind CSS"
+      ],
+      "note": "Concurrent with the B.Eng. at Caritas University."
+    },
+    {
+      "id": "tac-africa",
+      "company": "TAC AFRICA",
+      "role": "Full-Stack Software Engineer",
+      "type": "Part-time",
+      "period": "Aug 2019 — Aug 2020",
+      "summary": "Developed and maintained web applications serving 50,000+ users. Optimized backend APIs and SQL queries, reducing response latency by ~45% through structured debugging, log analysis, and database optimization.",
+      "stack": [
+        "Python",
+        "JavaScript",
+        "SQL",
+        "REST APIs",
+        "PostgreSQL"
+      ],
+      "note": "Concurrent with the AfriHUB ICT role below."
+    },
+    {
+      "id": "afrihub",
+      "company": "AfriHUB ICT",
+      "role": "Software Engineer",
+      "type": "Part-time",
+      "period": "Oct 2018 — Oct 2020",
+      "summary": "Designed and implemented software solutions for academic and business clients using modern web technologies. Supported deployment, system integration, and maintenance of enterprise applications.",
+      "stack": [
+        "Python",
+        "SQL",
+        "JavaScript",
+        "MySQL",
+        "HTML/CSS"
+      ],
+      "note": "Undertaken alongside the National Innovative Diploma programme."
+    }
+  ]
+}

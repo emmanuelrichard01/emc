@@ -2,87 +2,76 @@ import React, { useEffect, useRef } from 'react';
 import { useReducedMotion } from 'framer-motion';
 
 import { onCircuitSignal } from '@/lib/circuitBus';
+import { cumulativeLengths, edgePoints } from '@/lib/circuitGeometry';
 
 /* ==========================================================================
-   CIRCUIT CANVAS — a data path, not a particle field.
+   CIRCUIT CANVAS — packets on a routed board.
 
-   The board depicts a pipeline. Nodes carry roles: ingest sources on the
-   left, routing hubs through the middle, sinks on the right. Streams are
-   emitted by sources, Manhattan-routed toward a sink, flare when they cross
-   a hub, and are absorbed on arrival. Motion is therefore *directional and
-   purposeful* — left to right, ingest to storage — rather than the random
-   edge-to-edge drift it replaced, which was pleasant but depicted nothing.
+   The board is a graph, and everything you see moving travels along it.
 
-   Structured as two layers with very different costs:
+   That is the whole change from the previous version, and it is the reason
+   this reads as a circuit rather than as decoration. Before, the substrate
+   drew traces between nodes while the pulses moved along arbitrary grid
+   lines: motion and wiring were two unrelated systems drawn on top of each
+   other, so nothing ever appeared to travel *through* anything. Now a single
+   edge list is built once and used twice — rasterised as the etched trace,
+   and walked as the path a packet follows. A packet cannot leave the wire,
+   because the wire is its coordinate space.
 
-     · The substrate (grid, routed traces, pads) never changes between
-       resizes, so it is rasterised once into an offscreen canvas and blitted
-       as a single drawImage each frame.
-     · The signal layer (pulses, activations, sparks, shockwaves) is the only
-       thing actually redrawn per frame.
+   Packets route source → hub → … → sink over real graph paths, decelerate
+   into a node, flash it, and accelerate out. They travel in small bursts,
+   the way a message is actually transmitted, rather than as an even drizzle.
 
-   Everything in the hot loop reads and writes pre-allocated typed arrays.
-   There are no object literals, no closures and no array methods inside
-   draw() — a 60fps loop that allocates is a 60fps loop that stutters every
-   few seconds when the collector runs.
+   The hot loop still allocates nothing: geometry is precomputed into flat
+   Float32Arrays at build time, packet state lives in typed arrays, and the
+   substrate is a single drawImage.
    ========================================================================== */
 
 const GRID = 48;
 const MAJOR = GRID * 4;
 
-/* Ring-buffer capacity per pulse. Trails are a fixed window of points rather
-   than a growing array, so a long-lived pulse costs exactly as much memory
-   as a new one. */
-const TRAIL_CAP = 128;
-const POOL = 40;
-const MAX_SPARKS = 64;
-const MAX_SHOCKWAVES = 16;
+const MAX_PACKETS = 48;
+const MAX_FLASHES = 32;
 
-/* Direction is an index, not a string — it indexes straight into these
-   lookup tables, which removes a per-step string comparison for every pulse
-   on every frame. */
-const DX = [0, 1, 0, -1] as const;
-const DY = [-1, 0, 1, 0] as const;
-const opposite = (dir: number) => (dir + 2) % 4;
+/** Points sampled behind the head to draw the trail. */
+const TAIL_SAMPLES = 12;
 
-const CLASS_STREAM = 0;
-const CLASS_TELEMETRY = 1;
-const CLASS_RELAY = 2;
+/* Two speeds, deliberately far apart.
 
-const ROLE_PLAIN = 0;
+   Almost everything drifts: slow enough that you register it as steady
+   rather than as animation, which is what keeps a background from competing
+   with the text on top of it. Then, rarely, one packet runs — a streak with
+   a long tail that crosses and is gone. The contrast is the whole effect;
+   a field where everything moves at one speed reads as a screensaver no
+   matter how slow you make it. */
+const DRIFT_SPEED = 0.42;
+const STREAK_SPEED = 4.6;
+/** Share of spawns that streak. */
+const STREAK_CHANCE = 0.13;
+
 const ROLE_HUB = 1;
 const ROLE_SOURCE = 2;
 const ROLE_SINK = 3;
 
-/** Chance a routed stream re-evaluates its heading at an intersection. */
-const ROUTE_CHANCE = 0.55;
-/** Chance an unrouted (ambient) pulse turns at an intersection. */
-const DRIFT_TURN_CHANCE = 0.25;
-
 interface Tier {
-  streams: number;
-  telemetry: number;
-  maxRelays: number;
-  sparks: boolean;
+  packets: number;
+  burst: number;
+  stars: number;
   dprCap: number;
+  glow: boolean;
 }
 
-/* Three quality budgets. The renderer starts at whichever the device
-   advertises and can drop down at runtime, but never climbs — an upgrade
-   path invites oscillation on a device sitting right at the boundary. */
-/* Stream counts are deliberately lower than the old free-drifting design
-   needed. Routed streams all converge on a handful of sinks in one quarter
-   of the board, so the same count that read as ambient when spread edge-to-
-   edge reads as a pile-up once it has a destination. */
+/* Three quality budgets. The renderer starts wherever the device advertises
+   and can drop, never climb — an upgrade path invites oscillation on a
+   device sitting exactly at the boundary. */
 const TIERS: Tier[] = [
-  { streams: 2, telemetry: 2, maxRelays: 1, sparks: false, dprCap: 1.5 },
-  { streams: 4, telemetry: 3, maxRelays: 2, sparks: true, dprCap: 2 },
-  { streams: 6, telemetry: 4, maxRelays: 2, sparks: true, dprCap: 2 },
+  { packets: 2, burst: 1, stars: 70, dprCap: 1.5, glow: false },
+  { packets: 3, burst: 1, stars: 150, dprCap: 2, glow: true },
+  { packets: 4, burst: 2, stars: 230, dprCap: 2, glow: true },
 ];
 
 function detectTier(): number {
   if (typeof window === 'undefined') return 1;
-
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   if (coarse && window.innerWidth < 768) return 0;
 
@@ -95,9 +84,8 @@ function detectTier(): number {
   return 2;
 }
 
-/* Pre-rendered glow sprite. Setting ctx.shadowBlur per pulse head per frame
-   forces a full offscreen blur pass on every fill, and was comfortably the
-   most expensive call in the loop. A radial-gradient sprite blitted with
+/* Pre-rendered glow. Setting shadowBlur per packet per frame forces a full
+   offscreen blur pass on every fill; a radial-gradient sprite blitted with
    drawImage is visually equivalent and effectively free. */
 function makeGlowSprite(hsl: string, radius: number): HTMLCanvasElement {
   const size = Math.ceil(radius * 2);
@@ -109,14 +97,30 @@ function makeGlowSprite(hsl: string, radius: number): HTMLCanvasElement {
   if (!ctx) return canvas;
 
   const gradient = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
-  gradient.addColorStop(0, `hsl(${hsl} / 1)`);
-  gradient.addColorStop(0.2, `hsl(${hsl} / 0.6)`);
-  gradient.addColorStop(0.5, `hsl(${hsl} / 0.18)`);
+  gradient.addColorStop(0, `hsl(${hsl} / 0.95)`);
+  gradient.addColorStop(0.25, `hsl(${hsl} / 0.5)`);
+  gradient.addColorStop(0.6, `hsl(${hsl} / 0.14)`);
   gradient.addColorStop(1, `hsl(${hsl} / 0)`);
 
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
   return canvas;
+}
+
+interface Edge {
+  a: number;
+  b: number;
+  pts: Float32Array;
+  /** Cumulative distance at each point; last entry is the total length. */
+  cum: Float32Array;
+  len: number;
+}
+
+interface Route {
+  /** Edge index per leg, with the direction it is traversed. */
+  edges: Int32Array;
+  forward: Uint8Array;
+  legs: number;
 }
 
 const CircuitCanvas = React.memo(() => {
@@ -131,87 +135,66 @@ const CircuitCanvas = React.memo(() => {
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    /* ── Quality ────────────────────────────────────────────────────────── */
     let tierIndex = detectTier();
     let tier = TIERS[tierIndex];
 
-    /* ── Surface ────────────────────────────────────────────────────────── */
     let w = 0;
     let h = 0;
-    let cols = 0;
-    let rows = 0;
-    let nodeCount = 0;
     let rafId = 0;
     let running = true;
 
     const substrate = document.createElement('canvas');
     const subCtx = substrate.getContext('2d');
 
-    /* ── Node grid ──────────────────────────────────────────────────────── */
-    let nodeAct = new Float32Array(0);
+    /* ── Graph ──────────────────────────────────────────────────────────── */
+    let nodeX = new Float32Array(0);
+    let nodeY = new Float32Array(0);
     let nodeRole = new Uint8Array(0);
-    let drawnStamp = new Uint32Array(0);
+    /** Activation level per node, decayed each frame. */
+    let nodeAct = new Float32Array(0);
+    let nodeCount = 0;
 
-    let hubList = new Int32Array(0);
-    let hubCount = 0;
-    let sourceList = new Int32Array(0);
-    let sourceCount = 0;
-    let sinkList = new Int32Array(0);
-    let sinkCount = 0;
+    let edges: Edge[] = [];
+    let routes: Route[] = [];
 
-    /* Only lit nodes are visited each frame, rather than sweeping every cell
-       with a sqrt per cell. */
-    let activeList = new Int32Array(0);
-    let activeFlag = new Uint8Array(0);
-    let activeCount = 0;
+    /* ── Star field ──────────────────────────────────────────────────────
+       The board is mostly stillness. Hundreds of tiny lights sit on grid
+       intersections and breathe on their own slow cycles, and the routed
+       traffic moves through them — so the eye reads a quiet field with
+       something occasionally crossing it, rather than a machine demanding
+       attention behind body copy. */
+    let starX = new Float32Array(0);
+    let starY = new Float32Array(0);
+    let starPhase = new Float32Array(0);
+    let starRate = new Float32Array(0);
+    let starBase = new Float32Array(0);
+    let starCount = 0;
 
-    /* ── Pulses ─────────────────────────────────────────────────────────── */
-    const pActive = new Uint8Array(POOL);
-    const pClass = new Uint8Array(POOL);
-    const pX = new Float32Array(POOL);
-    const pY = new Float32Array(POOL);
-    const pDir = new Uint8Array(POOL);
-    const pSpeed = new Float32Array(POOL);
-    const pAccum = new Float32Array(POOL);
-    const pMaxTrail = new Uint16Array(POOL);
-    const pTrailLen = new Uint16Array(POOL);
-    const pTrailHead = new Uint16Array(POOL);
-    /** Destination node index, or -1 for ambient drifters. */
-    const pTarget = new Int32Array(POOL);
-    const trailXY = new Float32Array(POOL * TRAIL_CAP * 2);
+    /* ── Packets ────────────────────────────────────────────────────────── */
+    const pkActive = new Uint8Array(MAX_PACKETS);
+    const pkRoute = new Int32Array(MAX_PACKETS);
+    const pkLeg = new Int32Array(MAX_PACKETS);
+    const pkDist = new Float32Array(MAX_PACKETS);
+    const pkSpeed = new Float32Array(MAX_PACKETS);
+    const pkBase = new Float32Array(MAX_PACKETS);
+    /** Frames left dwelling at a node before moving on. */
+    const pkDwell = new Float32Array(MAX_PACKETS);
+    const pkSize = new Float32Array(MAX_PACKETS);
+    /** Trail length in px — long on a streak, short on a drifter. */
+    const pkTail = new Float32Array(MAX_PACKETS);
 
-    /* ── Sparks ─────────────────────────────────────────────────────────── */
-    const sActive = new Uint8Array(MAX_SPARKS);
-    const sX = new Float32Array(MAX_SPARKS);
-    const sY = new Float32Array(MAX_SPARKS);
-    const sVX = new Float32Array(MAX_SPARKS);
-    const sVY = new Float32Array(MAX_SPARKS);
-    const sLife = new Float32Array(MAX_SPARKS);
-    const sMaxLife = new Float32Array(MAX_SPARKS);
-    const sSize = new Float32Array(MAX_SPARKS);
+    /* ── Node flashes ───────────────────────────────────────────────────── */
+    const flNode = new Int32Array(MAX_FLASHES);
+    const flLife = new Float32Array(MAX_FLASHES);
+    const flMax = new Float32Array(MAX_FLASHES);
+    const flActive = new Uint8Array(MAX_FLASHES);
 
-    /* ── Shockwaves ─────────────────────────────────────────────────────── */
-    const wActive = new Uint8Array(MAX_SHOCKWAVES);
-    const wX = new Float32Array(MAX_SHOCKWAVES);
-    const wY = new Float32Array(MAX_SHOCKWAVES);
-    const wR = new Float32Array(MAX_SHOCKWAVES);
-    const wMaxR = new Float32Array(MAX_SHOCKWAVES);
-    const wAlpha = new Float32Array(MAX_SHOCKWAVES);
-    const wSpeed = new Float32Array(MAX_SHOCKWAVES);
-    const wInward = new Uint8Array(MAX_SHOCKWAVES);
-
-    /* ── Activity ───────────────────────────────────────────────────────────
-       The board idles quietly and ramps under activity — pointer movement,
-       or explicit signals from the page. `activity` decays on its own;
-       `externalLoad` is held until the page clears it. */
+    /* ── Activity ───────────────────────────────────────────────────────── */
     let activity = 0;
     let externalLoad = 0;
-
-    /* Streams are replaced on a stagger rather than the instant one is
-       absorbed. Respawning inline made arrivals and departures lock-step, so
-       the board pulsed in unison instead of carrying continuous traffic. */
-    let pendingStreams = 0;
     let spawnCooldown = 0;
+    let burstQueue = 0;
+    let burstRoute = -1;
 
     /* ── Pointer ────────────────────────────────────────────────────────── */
     let pointerX = -9999;
@@ -226,8 +209,7 @@ const CircuitCanvas = React.memo(() => {
     /* ── Theme ──────────────────────────────────────────────────────────── */
     let primaryHSL = '38 92% 50%';
     let foregroundHSL = '0 0% 93%';
-    let glowStream = makeGlowSprite(primaryHSL, 7);
-    let glowRelay = makeGlowSprite(primaryHSL, 5);
+    let glowSprite = makeGlowSprite(primaryHSL, 9);
 
     const readTheme = () => {
       const style = getComputedStyle(document.documentElement);
@@ -239,277 +221,49 @@ const CircuitCanvas = React.memo(() => {
       return changed;
     };
 
-    const rebuildSprites = () => {
-      glowStream = makeGlowSprite(primaryHSL, 7);
-      glowRelay = makeGlowSprite(primaryHSL, 5);
-    };
-
     readTheme();
-    rebuildSprites();
 
-    /* ── Helpers ────────────────────────────────────────────────────────── */
+    /* ── Path sampling ──────────────────────────────────────────────────── */
 
-    const colOf = (idx: number) => idx % cols;
-    const rowOf = (idx: number) => (idx / cols) | 0;
+    const out = new Float32Array(2);
 
-    const activateNode = (idx: number) => {
-      if (idx < 0 || idx >= nodeCount) return;
-      nodeAct[idx] = 1;
-      if (!activeFlag[idx]) {
-        activeFlag[idx] = 1;
-        activeList[activeCount++] = idx;
-      }
+    /** Writes the point `dist` along an edge into `out`. */
+    const pointOnEdge = (edge: Edge, dist: number, forward: boolean) => {
+      const target = forward ? dist : edge.len - dist;
+      const { pts, cum } = edge;
+
+      // Few points per edge (2 or 4), so a linear scan beats a binary search.
+      let i = 1;
+      while (i < cum.length - 1 && cum[i] < target) i++;
+
+      const segStart = cum[i - 1];
+      const segLen = cum[i] - segStart;
+      const t = segLen > 0 ? (target - segStart) / segLen : 0;
+
+      out[0] = pts[(i - 1) * 2] + (pts[i * 2] - pts[(i - 1) * 2]) * t;
+      out[1] = pts[(i - 1) * 2 + 1] + (pts[i * 2 + 1] - pts[(i - 1) * 2 + 1]) * t;
     };
 
-    const perpDir = (dir: number) => {
-      const vertical = dir === 0 || dir === 2;
-      const pick = Math.random() < 0.5 ? 0 : 1;
-      return vertical ? (pick === 0 ? 1 : 3) : pick === 0 ? 0 : 2;
-    };
+    /**
+     * Writes the point `back` units behind a packet's head, walking into
+     * earlier legs when the trail crosses a corner.
+     *
+     * Walking rather than clamping is what lets a trail bend around a corner
+     * instead of bunching up at it — the detail that makes a packet look like
+     * it is following the wire rather than sliding over it.
+     */
+    const pointBehind = (packet: number, back: number) => {
+      const route = routes[pkRoute[packet]];
+      let leg = pkLeg[packet];
+      let dist = pkDist[packet] - back;
 
-    const countClass = (cls: number) => {
-      let n = 0;
-      for (let i = 0; i < POOL; i++) if (pActive[i] && pClass[i] === cls) n++;
-      return n;
-    };
-
-    const triggerShockwave = (x: number, y: number, maxR: number, inward: boolean) => {
-      for (let i = 0; i < MAX_SHOCKWAVES; i++) {
-        if (wActive[i]) continue;
-        wActive[i] = 1;
-        wX[i] = x;
-        wY[i] = y;
-        wR[i] = inward ? maxR : 2;
-        wMaxR[i] = maxR;
-        wAlpha[i] = 0.8;
-        wSpeed[i] = 1.4;
-        wInward[i] = inward ? 1 : 0;
-        return;
+      while (dist < 0 && leg > 0) {
+        leg -= 1;
+        dist += edges[route.edges[leg]].len;
       }
-    };
+      if (dist < 0) dist = 0;
 
-    const emitSpark = (x: number, y: number, dir: number) => {
-      if (!tier.sparks) return;
-      for (let i = 0; i < MAX_SPARKS; i++) {
-        if (sActive[i]) continue;
-        sActive[i] = 1;
-        sX[i] = x + (Math.random() - 0.5) * 4;
-        sY[i] = y + (Math.random() - 0.5) * 4;
-        // Spray opposite the direction of travel, like a contact spark.
-        sVX[i] = (Math.random() - 0.5) * 0.8 - DX[dir] * 0.6;
-        sVY[i] = (Math.random() - 0.5) * 0.8 - DY[dir] * 0.6;
-        sLife[i] = 0;
-        sMaxLife[i] = 20 + Math.random() * 20;
-        sSize[i] = 1 + Math.random() * 0.8;
-        return;
-      }
-    };
-
-    const freeSlot = () => {
-      for (let i = 0; i < POOL; i++) if (!pActive[i]) return i;
-      return -1;
-    };
-
-    const initTrail = (slot: number) => {
-      pAccum[slot] = 0;
-      pTrailLen[slot] = 0;
-      pTrailHead[slot] = 0;
-    };
-
-    /** Emits a routed stream from a source toward a sink. */
-    const spawnStream = () => {
-      if (!sourceCount || !sinkCount) return;
-      const slot = freeSlot();
-      if (slot === -1) return;
-
-      const source = sourceList[(Math.random() * sourceCount) | 0];
-      const sink = sinkList[(Math.random() * sinkCount) | 0];
-
-      pActive[slot] = 1;
-      pClass[slot] = CLASS_STREAM;
-      pX[slot] = colOf(source) * GRID;
-      pY[slot] = rowOf(source) * GRID;
-      pDir[slot] = 1; // sources sit on the left, so flow begins rightward
-      pTarget[slot] = sink;
-      pSpeed[slot] = 2.4 + Math.random() * 1.2;
-      pMaxTrail[slot] = 44 + ((Math.random() * 20) | 0);
-      initTrail(slot);
-      // No ring on emit. Ringing on both departure and arrival meant every
-      // completed stream produced two, which is what turned the sink zone
-      // into a constant strobe.
-    };
-
-    /** Ambient wide drifter with no destination — background traffic. */
-    const spawnTelemetry = () => {
-      if (cols === 0 || rows === 0) return;
-      const slot = freeSlot();
-      if (slot === -1) return;
-
-      const edge = (Math.random() * 4) | 0;
-      const c = (Math.random() * cols) | 0;
-      const r = (Math.random() * rows) | 0;
-
-      pActive[slot] = 1;
-      pClass[slot] = CLASS_TELEMETRY;
-      pTarget[slot] = -1;
-
-      if (edge === 0) {
-        pX[slot] = c * GRID;
-        pY[slot] = 0;
-        pDir[slot] = 2;
-      } else if (edge === 1) {
-        pX[slot] = (cols - 1) * GRID;
-        pY[slot] = r * GRID;
-        pDir[slot] = 3;
-      } else if (edge === 2) {
-        pX[slot] = c * GRID;
-        pY[slot] = (rows - 1) * GRID;
-        pDir[slot] = 0;
-      } else {
-        pX[slot] = 0;
-        pY[slot] = r * GRID;
-        pDir[slot] = 1;
-      }
-
-      pSpeed[slot] = 0.8 + Math.random() * 0.4;
-      pMaxTrail[slot] = 100 + ((Math.random() * 28) | 0);
-      initTrail(slot);
-    };
-
-    /** Short fast fork thrown off a hub as it routes. */
-    const spawnRelay = (x: number, y: number, dir: number) => {
-      const slot = freeSlot();
-      if (slot === -1) return;
-
-      pActive[slot] = 1;
-      pClass[slot] = CLASS_RELAY;
-      pTarget[slot] = -1;
-      pX[slot] = x;
-      pY[slot] = y;
-      pDir[slot] = dir;
-      pSpeed[slot] = 4.2 + Math.random() * 1.8;
-      pMaxTrail[slot] = 18 + ((Math.random() * 10) | 0);
-      initTrail(slot);
-    };
-
-    /* ── Substrate ──────────────────────────────────────────────────────── */
-
-    /** Orthogonal run with a 45-degree corner — how a board actually routes. */
-    const traceTo = (c: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) => {
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      c.moveTo(x1, y1);
-
-      if (dx === 0 || dy === 0) {
-        c.lineTo(x2, y2);
-        return;
-      }
-
-      const sx = Math.sign(dx);
-      const sy = Math.sign(dy);
-      const chamfer = Math.min(GRID * 0.6, Math.abs(dx), Math.abs(dy));
-
-      c.lineTo(x2 - sx * chamfer, y1);
-      c.lineTo(x2, y1 + sy * chamfer);
-      c.lineTo(x2, y2);
-    };
-
-    const drawSubstrate = () => {
-      if (!subCtx || w === 0 || h === 0) return;
-
-      subCtx.setTransform(1, 0, 0, 1, 0, 0);
-      subCtx.clearRect(0, 0, substrate.width, substrate.height);
-      const dpr = Math.min(window.devicePixelRatio || 1, tier.dprCap);
-      subCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      subCtx.lineWidth = 1;
-
-      // Minor grid.
-      subCtx.strokeStyle = `hsl(${foregroundHSL} / 0.035)`;
-      subCtx.beginPath();
-      for (let x = 0; x <= w; x += GRID) {
-        subCtx.moveTo(x, 0);
-        subCtx.lineTo(x, h);
-      }
-      for (let y = 0; y <= h; y += GRID) {
-        subCtx.moveTo(0, y);
-        subCtx.lineTo(w, y);
-      }
-      subCtx.stroke();
-
-      // Major grid.
-      subCtx.strokeStyle = `hsl(${foregroundHSL} / 0.07)`;
-      subCtx.beginPath();
-      for (let x = 0; x <= w; x += MAJOR) {
-        subCtx.moveTo(x, 0);
-        subCtx.lineTo(x, h);
-      }
-      for (let y = 0; y <= h; y += MAJOR) {
-        subCtx.moveTo(0, y);
-        subCtx.lineTo(w, y);
-      }
-      subCtx.stroke();
-
-      // Registration crosses.
-      subCtx.strokeStyle = `hsl(${primaryHSL} / 0.22)`;
-      subCtx.beginPath();
-      for (let x = 0; x <= w; x += MAJOR) {
-        for (let y = 0; y <= h; y += MAJOR) {
-          subCtx.moveTo(x - 3, y);
-          subCtx.lineTo(x + 3, y);
-          subCtx.moveTo(x, y - 3);
-          subCtx.lineTo(x, y + 3);
-        }
-      }
-      subCtx.stroke();
-
-      /* Routed traces. Every source and sink is wired to its nearest hub, and
-         each hub to its nearest neighbouring hub, so the etched board shows
-         the same ingest → route → sink topology the signals follow. */
-      subCtx.strokeStyle = `hsl(${foregroundHSL} / 0.055)`;
-      subCtx.beginPath();
-
-      const wireToNearestHub = (list: Int32Array, count: number) => {
-        for (let i = 0; i < count; i++) {
-          const from = list[i];
-          const ax = colOf(from) * GRID;
-          const ay = rowOf(from) * GRID;
-
-          let bestDistSq = Infinity;
-          let bx = 0;
-          let by = 0;
-
-          for (let j = 0; j < hubCount; j++) {
-            const hub = hubList[j];
-            if (hub === from) continue;
-            const cx = colOf(hub) * GRID;
-            const cy = rowOf(hub) * GRID;
-            const distSq = (cx - ax) * (cx - ax) + (cy - ay) * (cy - ay);
-            if (distSq < bestDistSq) {
-              bestDistSq = distSq;
-              bx = cx;
-              by = cy;
-            }
-          }
-
-          if (bestDistSq !== Infinity) traceTo(subCtx, ax, ay, bx, by);
-        }
-      };
-
-      wireToNearestHub(hubList, hubCount);
-      wireToNearestHub(sourceList, sourceCount);
-      wireToNearestHub(sinkList, sinkCount);
-      subCtx.stroke();
-
-      // Solder pads around every functional node.
-      subCtx.strokeStyle = `hsl(${primaryHSL} / 0.16)`;
-      subCtx.beginPath();
-      for (let i = 0; i < hubCount; i++) {
-        const x = colOf(hubList[i]) * GRID;
-        const y = rowOf(hubList[i]) * GRID;
-        subCtx.moveTo(x + 5.5, y);
-        subCtx.arc(x, y, 5.5, 0, Math.PI * 2);
-      }
-      subCtx.stroke();
+      pointOnEdge(edges[route.edges[leg]], dist, route.forward[leg] === 1);
     };
 
     /* ── Topology ───────────────────────────────────────────────────────── */
@@ -522,142 +276,286 @@ const CircuitCanvas = React.memo(() => {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
       substrate.width = canvas.width;
       substrate.height = canvas.height;
 
-      cols = Math.floor(w / GRID) + 2;
-      rows = Math.floor(h / GRID) + 2;
-      nodeCount = cols * rows;
+      const cols = Math.max(6, Math.floor(w / GRID));
+      const rows = Math.max(5, Math.floor(h / GRID));
 
-      nodeAct = new Float32Array(nodeCount);
-      nodeRole = new Uint8Array(nodeCount);
-      drawnStamp = new Uint32Array(nodeCount);
-      activeList = new Int32Array(nodeCount);
-      activeFlag = new Uint8Array(nodeCount);
-      activeCount = 0;
+      /* Roles by zone so the board reads left to right: ingest on the left,
+         routing across the middle, sinks on the right. Nothing sits on the
+         outer ring, where a pad would be clipped by the canvas edge. */
+      const xs: number[] = [];
+      const ys: number[] = [];
+      const roles: number[] = [];
 
-      /* Roles are placed by zone so the board reads left-to-right: ingest on
-         the left quarter, routing across the middle, sinks on the right
-         quarter. Nothing is placed on the outer ring, where a pad or trace
-         would be clipped by the canvas edge. */
-      const interiorRows = Math.max(1, rows - 4);
-      const pick = (minCol: number, maxCol: number) => {
-        const span = Math.max(1, maxCol - minCol);
-        const col = minCol + ((Math.random() * span) | 0);
-        const row = 2 + ((Math.random() * interiorRows) | 0);
-        return row * cols + col;
+      /* Placement is zoned left-to-right but scattered within each zone.
+
+         Nodes on exact shared columns and evenly divided rows produced a
+         lattice — every trace the same length, every corner in line with the
+         next, which reads as wallpaper. Jittering the column and row (still
+         snapped to the grid, so nothing leaves the ruling) gives runs of
+         different lengths and corners at different depths: the board looks
+         laid out rather than generated, without adding any noise. */
+      /* Layer, not column, is what the wiring walks. With the jitter above no
+         two nodes share an exact x any more, so bucketing by coordinate would
+         put every node in a column of its own and the graph would come out
+         empty. The layer is assigned here, where the intent is known. */
+      const layers: number[] = [];
+
+      const place = (col: number, row: number, role: number, layer: number) => {
+        const c = Math.max(1, Math.min(cols - 1, Math.round(col)));
+        const r = Math.max(1, Math.min(rows - 1, Math.round(row)));
+        xs.push(c * GRID);
+        ys.push(r * GRID);
+        roles.push(role);
+        layers.push(layer);
       };
 
-      const leftEdge = Math.max(2, Math.floor(cols * 0.08));
-      const leftLimit = Math.max(leftEdge + 1, Math.floor(cols * 0.22));
-      const rightEdge = Math.min(cols - 3, Math.floor(cols * 0.78));
-      const rightLimit = Math.min(cols - 2, Math.floor(cols * 0.92));
+      /** Even spread across the usable rows, nudged by up to a cell. */
+      const scatterRow = (i: number, total: number) =>
+        1 + ((rows - 2) * (i + 0.5)) / total + (Math.random() - 0.5) * 1.6;
 
-      const targetHubs = Math.max(5, Math.floor(nodeCount / 55));
-      /* More ports than before. Three sinks meant every stream on the board
-         terminated at one of three points, concentrating all arrivals into a
-         small area; spreading them down the full height keeps the traffic
-         legible as flow rather than as a queue. */
-      const targetPorts = Math.max(4, Math.floor(rows / 3));
+      const ports = Math.max(2, Math.min(5, Math.floor(rows / 3)));
 
-      hubList = new Int32Array(targetHubs);
-      sourceList = new Int32Array(targetPorts);
-      sinkList = new Int32Array(targetPorts);
-      hubCount = 0;
-      sourceCount = 0;
-      sinkCount = 0;
-
-      const claim = (idx: number, role: number, list: Int32Array, count: number) => {
-        if (idx < 0 || idx >= nodeCount || nodeRole[idx] !== ROLE_PLAIN) return count;
-        nodeRole[idx] = role;
-        list[count] = idx;
-        return count + 1;
-      };
-
-      for (let i = 0; i < targetPorts; i++) {
-        sourceCount = claim(pick(leftEdge, leftLimit), ROLE_SOURCE, sourceList, sourceCount);
+      for (let i = 0; i < ports; i++) {
+        place(cols * 0.07 + Math.random() * cols * 0.06, scatterRow(i, ports), ROLE_SOURCE, 0);
       }
-      for (let i = 0; i < targetPorts; i++) {
-        sinkCount = claim(pick(rightEdge, rightLimit), ROLE_SINK, sinkList, sinkCount);
-      }
-      for (let i = 0; i < targetHubs; i++) {
-        hubCount = claim(pick(leftLimit + 1, rightEdge - 1), ROLE_HUB, hubList, hubCount);
+      for (let i = 0; i < ports; i++) {
+        place(cols * 0.87 + Math.random() * cols * 0.07, scatterRow(i, ports), ROLE_SINK, 5);
       }
 
-      /* Random placement can collide on a narrow board and leave a zone
-         empty. Streams are emitted from a source toward a sink, so zero of
-         either means zero streams — a silently near-dead animation rather
-         than a visibly broken one. Deterministic sweep as a floor. */
-      const ensurePort = (minCol: number, maxCol: number, role: number, list: Int32Array, count: number) => {
-        if (count > 0) return count;
-        for (let row = 2; row < rows - 2; row++) {
-          for (let col = minCol; col <= maxCol && col < cols; col++) {
-            const idx = row * cols + col;
-            if (idx >= 0 && idx < nodeCount && nodeRole[idx] === ROLE_PLAIN) {
-              nodeRole[idx] = role;
-              list[0] = idx;
-              return 1;
-            }
-          }
+      // Three routing bands, each jittered so the columns do not line up.
+      const hubRows = Math.max(2, Math.min(5, Math.floor(rows / 3)));
+      [0.26, 0.42, 0.58, 0.74].forEach((band, bandIndex) => {
+        for (let i = 0; i < hubRows; i++) {
+          place(
+            cols * band + (Math.random() - 0.5) * cols * 0.07,
+            scatterRow(i, hubRows),
+            ROLE_HUB,
+            bandIndex + 1
+          );
         }
-        return count;
+      });
+
+      nodeCount = xs.length;
+      nodeX = Float32Array.from(xs);
+      nodeY = Float32Array.from(ys);
+      nodeRole = Uint8Array.from(roles);
+      nodeAct = new Float32Array(nodeCount);
+
+      /* Wire the graph in columns: every node connects rightward to the two
+         nearest nodes in the next column. That produces a board that always
+         has a path from any source to some sink, which the previous
+         nearest-hub wiring did not guarantee — and a source with no route is
+         a source that silently emits nothing. */
+      const byLayer = new Map<number, number[]>();
+      layers.forEach((layer, i) => {
+        const bucket = byLayer.get(layer);
+        if (bucket) bucket.push(i);
+        else byLayer.set(layer, [i]);
+      });
+
+      const layerKeys = [...byLayer.keys()].sort((a, b) => a - b);
+      edges = [];
+      const adjacency: number[][] = Array.from({ length: nodeCount }, () => []);
+
+      const addEdge = (a: number, b: number) => {
+        // Deterministic per pair, so the board is stable across redraws while
+        // still mixing which axis leads.
+        const hFirst = (a + b) % 2 === 0;
+        const pts = Float32Array.from(edgePoints(nodeX[a], nodeY[a], nodeX[b], nodeY[b], hFirst));
+        const cum = cumulativeLengths(pts);
+        const index = edges.length;
+        edges.push({ a, b, pts, cum, len: cum[cum.length - 1] });
+        adjacency[a].push(index);
+        return index;
       };
 
-      sourceCount = ensurePort(leftEdge, leftLimit, ROLE_SOURCE, sourceList, sourceCount);
-      sinkCount = ensurePort(rightEdge, rightLimit, ROLE_SINK, sinkList, sinkCount);
-      hubCount = ensurePort(leftLimit + 1, Math.max(leftLimit + 1, rightEdge - 1), ROLE_HUB, hubList, hubCount);
+      for (let c = 0; c < layerKeys.length - 1; c++) {
+        const from = byLayer.get(layerKeys[c])!;
+        const to = byLayer.get(layerKeys[c + 1])!;
+
+        for (const a of from) {
+          // Nearest two in the next layer by vertical distance: enough for a
+          // node to have a choice of onward path, few enough that the board
+          // stays legible rather than becoming a mesh.
+          const ranked = [...to].sort(
+            (p, q) => Math.abs(nodeY[p] - nodeY[a]) - Math.abs(nodeY[q] - nodeY[a])
+          );
+          for (const b of ranked.slice(0, 2)) addEdge(a, b);
+        }
+      }
+
+      /* Precompute routes source → sink. Depth-first over the forward-only
+         adjacency, which cannot cycle because every edge advances a column. */
+      routes = [];
+      const walk = (node: number, path: number[]) => {
+        if (nodeRole[node] === ROLE_SINK) {
+          routes.push({
+            edges: Int32Array.from(path),
+            forward: Uint8Array.from(path.map(() => 1)),
+            legs: path.length,
+          });
+          return;
+        }
+        if (path.length > 6) return;
+        for (const edgeIndex of adjacency[node]) {
+          path.push(edgeIndex);
+          walk(edges[edgeIndex].b, path);
+          path.pop();
+        }
+      };
+      for (let i = 0; i < nodeCount; i++) if (nodeRole[i] === ROLE_SOURCE) walk(i, []);
+
+      /* Stars land on grid intersections, so even the scatter obeys the
+         ruling — the field looks placed rather than sprinkled. Rejecting
+         cells already occupied by a functional node keeps the two readable
+         as different things. */
+      const taken = new Set<number>();
+      for (let i = 0; i < nodeCount; i++) {
+        taken.add(Math.round(nodeX[i] / GRID) * 1000 + Math.round(nodeY[i] / GRID));
+      }
+
+      const wanted = tier.stars;
+      const sx: number[] = [];
+      const sy: number[] = [];
+      for (let attempt = 0; attempt < wanted * 3 && sx.length < wanted; attempt++) {
+        const c = 1 + ((Math.random() * (cols - 1)) | 0);
+        const r = 1 + ((Math.random() * (rows - 1)) | 0);
+        const key = c * 1000 + r;
+        if (taken.has(key)) continue;
+        taken.add(key);
+        sx.push(c * GRID);
+        sy.push(r * GRID);
+      }
+
+      starCount = sx.length;
+      starX = Float32Array.from(sx);
+      starY = Float32Array.from(sy);
+      starPhase = new Float32Array(starCount);
+      starRate = new Float32Array(starCount);
+      starBase = new Float32Array(starCount);
+      for (let i = 0; i < starCount; i++) {
+        starPhase[i] = Math.random() * Math.PI * 2;
+        // Wide spread of periods, so no two ever pulse in step.
+        starRate[i] = 0.00018 + Math.random() * 0.00042;
+        starBase[i] = 0.06 + Math.random() * 0.16;
+      }
 
       drawSubstrate();
     };
 
-    const applyTier = () => {
-      tier = TIERS[tierIndex];
-      let streams = 0;
-      let telemetry = 0;
-      for (let i = 0; i < POOL; i++) {
-        if (!pActive[i]) continue;
-        if (pClass[i] === CLASS_STREAM && ++streams > tier.streams) pActive[i] = 0;
-        if (pClass[i] === CLASS_TELEMETRY && ++telemetry > tier.telemetry) pActive[i] = 0;
+    /* ── Substrate ──────────────────────────────────────────────────────── */
+
+    const drawSubstrate = () => {
+      if (!subCtx || w === 0 || h === 0) return;
+
+      subCtx.setTransform(1, 0, 0, 1, 0, 0);
+      subCtx.clearRect(0, 0, substrate.width, substrate.height);
+      const dpr = Math.min(window.devicePixelRatio || 1, tier.dprCap);
+      subCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      subCtx.lineWidth = 1;
+
+      // Minor grid.
+      subCtx.strokeStyle = `hsl(${foregroundHSL} / 0.03)`;
+      subCtx.beginPath();
+      for (let x = 0; x <= w; x += GRID) {
+        subCtx.moveTo(x, 0);
+        subCtx.lineTo(x, h);
       }
+      for (let y = 0; y <= h; y += GRID) {
+        subCtx.moveTo(0, y);
+        subCtx.lineTo(w, y);
+      }
+      subCtx.stroke();
+
+      // Major grid.
+      subCtx.strokeStyle = `hsl(${foregroundHSL} / 0.06)`;
+      subCtx.beginPath();
+      for (let x = 0; x <= w; x += MAJOR) {
+        subCtx.moveTo(x, 0);
+        subCtx.lineTo(x, h);
+      }
+      for (let y = 0; y <= h; y += MAJOR) {
+        subCtx.moveTo(0, y);
+        subCtx.lineTo(w, y);
+      }
+      subCtx.stroke();
+
+      // The traces — the exact polylines packets travel.
+      subCtx.strokeStyle = `hsl(${foregroundHSL} / 0.05)`;
+      subCtx.lineWidth = 1;
+      subCtx.beginPath();
+      for (const edge of edges) {
+        subCtx.moveTo(edge.pts[0], edge.pts[1]);
+        for (let i = 1; i < edge.pts.length / 2; i++) {
+          subCtx.lineTo(edge.pts[i * 2], edge.pts[i * 2 + 1]);
+        }
+      }
+      subCtx.stroke();
+
+      // Pads.
+      subCtx.strokeStyle = `hsl(${primaryHSL} / 0.12)`;
+      subCtx.beginPath();
+      for (let i = 0; i < nodeCount; i++) {
+        if (nodeRole[i] !== ROLE_HUB) continue;
+        subCtx.moveTo(nodeX[i] + 5.5, nodeY[i]);
+        subCtx.arc(nodeX[i], nodeY[i], 5.5, 0, Math.PI * 2);
+      }
+      subCtx.stroke();
     };
 
-    /* Measured synchronously before the first spawn — the previous
-       implementation spawned before the ResizeObserver had fired, so cols and
-       rows were still 0 and every pulse started at (0,0). */
-    const initialRect = parent.getBoundingClientRect();
-    buildTopology(initialRect.width, initialRect.height);
+    /* ── Spawning ───────────────────────────────────────────────────────── */
 
-    for (let i = 0; i < tier.streams; i++) spawnStream();
-    for (let i = 0; i < tier.telemetry; i++) spawnTelemetry();
+    const freeSlot = () => {
+      for (let i = 0; i < MAX_PACKETS; i++) if (!pkActive[i]) return i;
+      return -1;
+    };
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target !== parent) continue;
-        const { width, height } = entry.contentRect;
-        if (Math.round(width) === Math.round(w) && Math.round(height) === Math.round(h)) continue;
-        if (width === 0 || height === 0) continue;
-        buildTopology(width, height);
-        rectDirty = true;
+    const spawnPacket = (routeIndex: number) => {
+      if (!routes.length) return;
+      const slot = freeSlot();
+      if (slot === -1) return;
+
+      const streak = Math.random() < STREAK_CHANCE;
+
+      pkActive[slot] = 1;
+      pkRoute[slot] = routeIndex >= 0 ? routeIndex : (Math.random() * routes.length) | 0;
+      pkLeg[slot] = 0;
+      pkDist[slot] = 0;
+      pkBase[slot] = streak
+        ? STREAK_SPEED * (0.85 + Math.random() * 0.3)
+        : DRIFT_SPEED * (0.8 + Math.random() * 0.5);
+      pkSpeed[slot] = pkBase[slot];
+      pkDwell[slot] = 0;
+      // The trail is proportional to speed, which is what makes a streak
+      // read as a streak rather than as the same dot moving faster.
+      pkTail[slot] = streak ? 130 : 26;
+      pkSize[slot] = streak ? 1.9 : 1.3;
+    };
+
+    const flash = (node: number, strength: number) => {
+      for (let i = 0; i < MAX_FLASHES; i++) {
+        if (flActive[i]) continue;
+        flActive[i] = 1;
+        flNode[i] = node;
+        flLife[i] = 0;
+        flMax[i] = strength;
+        return;
       }
-    });
-    resizeObserver.observe(parent);
+    };
 
     /* ── Input ──────────────────────────────────────────────────────────── */
 
     const onPointerMove = (e: PointerEvent) => {
       if (e.pointerType === 'touch') return;
-
       const x = e.clientX - rectLeft;
       const y = e.clientY - rectTop;
-
-      // Only claim the pointer while it is genuinely over the board, so the
-      // probe doesn't trail a cursor that has moved on to the nav or console.
       hasPointer = x >= 0 && y >= 0 && x <= rectWidth && y <= rectHeight;
       pointerX = x;
       pointerY = y;
-
-      if (hasPointer) activity = Math.min(1, activity + 0.012);
+      if (hasPointer) activity = Math.min(1, activity + 0.01);
     };
 
     const onPointerLeave = () => {
@@ -682,21 +580,13 @@ const CircuitCanvas = React.memo(() => {
         externalLoad = Math.max(0, Math.min(1, signal.value));
         return;
       }
-
-      activity = Math.min(1, activity + (signal.strength ?? 0.45));
-
-      // A discrete event fires a visible packet out of a hub, so running a
-      // command in the terminal is legible on the board rather than merely
-      // raising a number.
-      if (hubCount) {
-        const hub = hubList[(Math.random() * hubCount) | 0];
-        const hx = colOf(hub) * GRID;
-        const hy = rowOf(hub) * GRID;
-        triggerShockwave(hx, hy, 64, false);
-        activateNode(hub);
-        if (countClass(CLASS_RELAY) < tier.maxRelays) {
-          spawnRelay(hx, hy, (Math.random() * 4) | 0);
-        }
+      activity = Math.min(1, activity + (signal.strength ?? 0.5));
+      // A command sends a real burst down one route, so running something in
+      // the terminal is legible on the board as traffic rather than as a
+      // number quietly ticking up.
+      if (routes.length) {
+        burstRoute = (Math.random() * routes.length) | 0;
+        burstQueue = tier.burst + 1;
       }
     });
 
@@ -711,169 +601,105 @@ const CircuitCanvas = React.memo(() => {
     );
     intersectionObserver.observe(canvas);
 
+    let lastTime = 0;
     const onVisibility = () => {
       running = !document.hidden;
-      // Reset the clock so returning from a background tab doesn't apply one
-      // enormous delta and teleport every pulse across the board.
+      // Reset the clock so returning from a background tab does not apply one
+      // enormous delta and teleport every packet across the board.
       lastTime = 0;
     };
     document.addEventListener('visibilitychange', onVisibility);
 
-    /* ── Theme observation ──────────────────────────────────────────────── */
-
     const themeObserver = new MutationObserver(() => {
       if (readTheme()) {
-        rebuildSprites();
+        glowSprite = makeGlowSprite(primaryHSL, 9);
         drawSubstrate();
       }
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target !== parent) continue;
+        const { width, height } = entry.contentRect;
+        if (Math.round(width) === Math.round(w) && Math.round(height) === Math.round(h)) continue;
+        if (width === 0 || height === 0) continue;
+        buildTopology(width, height);
+        rectDirty = true;
+      }
+    });
+
+    const initial = parent.getBoundingClientRect();
+    buildTopology(initial.width, initial.height);
+    resizeObserver.observe(parent);
+
+    // Warm start, so the first painted frame already carries traffic rather
+    // than filling in over the first two seconds.
+    for (let i = 0; i < tier.packets; i++) {
+      spawnPacket(-1);
+      const slot = i;
+      if (pkActive[slot]) {
+        const route = routes[pkRoute[slot]];
+        if (route) {
+          const leg = (Math.random() * route.legs) | 0;
+          pkLeg[slot] = leg;
+          pkDist[slot] = Math.random() * edges[route.edges[leg]].len;
+        }
+      }
+    }
+
     /* ── Simulation ─────────────────────────────────────────────────────── */
 
-    const retire = (i: number) => {
-      pActive[i] = 0;
+    const advance = (i: number, ratio: number) => {
+      const route = routes[pkRoute[i]];
+      if (!route) {
+        pkActive[i] = 0;
+        return;
+      }
+
+      if (pkDwell[i] > 0) {
+        pkDwell[i] -= ratio;
+        return;
+      }
+
+      const edge = edges[route.edges[pkLeg[i]]];
+      const nodeIndex = route.forward[pkLeg[i]] === 1 ? edge.b : edge.a;
+
+      /* Ease into and out of a node. A packet that arrives at constant speed
+         reads as a dot passing a coordinate; decelerating into the pad, then
+         accelerating away, is what makes it look like it was *handled*. */
+      const remaining = edge.len - pkDist[i];
+      const approach = Math.min(1, remaining / 46);
+      const depart = Math.min(1, pkDist[i] / 46);
+      // Eased in and out of every node, so a corner is a glide rather than a
+      // stop. Never below half speed: a packet that visibly halts mid-board
+      // draws the eye, which is the opposite of what this is for.
+      pkSpeed[i] = pkBase[i] * (0.55 + 0.45 * Math.min(approach, depart));
+
+      pkDist[i] += pkSpeed[i] * ratio;
+
+      if (pkDist[i] < edge.len) return;
+
+      // Arrived at the node terminating this leg.
+      nodeAct[nodeIndex] = 1;
+
+      if (pkLeg[i] + 1 >= route.legs) {
+        // Absorbed at the sink.
+        flash(nodeIndex, 0.6);
+        pkActive[i] = 0;
+        return;
+      }
+
+      flash(nodeIndex, 0.3);
+      pkLeg[i] += 1;
+      pkDist[i] = 0;
+      // A drifter pauses at the hub, so routing looks like a decision. A
+      // streak does not — it is already past.
+      pkDwell[i] = pkBase[i] > 2 ? 0 : 6 + Math.random() * 14;
     };
-
-    const updatePulse = (i: number, dtRatio: number) => {
-      pAccum[i] += pSpeed[i] * dtRatio;
-      const step = Math.floor(pAccum[i]);
-      if (step <= 0) return;
-      pAccum[i] -= step;
-
-      // Append the current position to the ring buffer.
-      const base = i * TRAIL_CAP * 2;
-      const head = pTrailHead[i];
-      trailXY[base + head * 2] = pX[i];
-      trailXY[base + head * 2 + 1] = pY[i];
-      pTrailHead[i] = (head + 1) % TRAIL_CAP;
-      if (pTrailLen[i] < Math.min(pMaxTrail[i], TRAIL_CAP)) pTrailLen[i]++;
-
-      const dir = pDir[i];
-      const prevCol = Math.floor(pX[i] / GRID);
-      const prevRow = Math.floor(pY[i] / GRID);
-
-      pX[i] += DX[dir] * step;
-      pY[i] += DY[dir] * step;
-
-      const currCol = Math.floor(pX[i] / GRID);
-      const currRow = Math.floor(pY[i] / GRID);
-
-      // Snap to the intersection actually crossed this step.
-      let hitX = -1;
-      let hitY = -1;
-      if (dir === 1 && currCol > prevCol) {
-        hitX = currCol * GRID;
-        hitY = Math.round(pY[i] / GRID) * GRID;
-      } else if (dir === 3 && currCol < prevCol) {
-        hitX = prevCol * GRID;
-        hitY = Math.round(pY[i] / GRID) * GRID;
-      } else if (dir === 2 && currRow > prevRow) {
-        hitX = Math.round(pX[i] / GRID) * GRID;
-        hitY = currRow * GRID;
-      } else if (dir === 0 && currRow < prevRow) {
-        hitX = Math.round(pX[i] / GRID) * GRID;
-        hitY = prevRow * GRID;
-      }
-
-      if (hitX !== -1) {
-        pX[i] = hitX;
-        pY[i] = hitY;
-
-        const col = Math.round(hitX / GRID);
-        const row = Math.round(hitY / GRID);
-        const idx = row * cols + col;
-        const onBoard = col >= 0 && col < cols && idx >= 0 && idx < nodeCount;
-
-        if (onBoard) {
-          activateNode(idx);
-
-          if (pClass[i] === CLASS_STREAM) {
-            if (Math.random() < 0.25) emitSpark(hitX, hitY, dir);
-
-            /* Arrived at its sink. The ring is occasional, not guaranteed:
-               a handful of sinks absorbing a dozen streams meant an arrival
-               every few frames in one small area, reading as a malfunction
-               rather than as traffic. */
-            if (idx === pTarget[i]) {
-              if (Math.random() < 0.18) triggerShockwave(hitX, hitY, 24, true);
-              retire(i);
-              pendingStreams++;
-              return;
-            }
-
-            // Crossing a hub: flare and fork a relay onto the perpendicular.
-            if (nodeRole[idx] === ROLE_HUB) {
-              if (Math.random() < 0.15) triggerShockwave(hitX, hitY, 38, false);
-              if (countClass(CLASS_RELAY) < tier.maxRelays) {
-                spawnRelay(hitX, hitY, perpDir(dir));
-              }
-            }
-          }
-        }
-
-        /* Routing. A stream with a destination performs Manhattan routing —
-           it picks an axis that reduces the remaining distance and never
-           reverses into itself, which is what makes the traffic read as
-           deliberate rather than as a random walk. */
-        const target = pTarget[i];
-        if (target >= 0) {
-          const dc = colOf(target) - col;
-          const dr = rowOf(target) - row;
-
-          if (Math.random() < ROUTE_CHANCE) {
-            let choiceA = -1;
-            let choiceB = -1;
-            if (dc > 0) choiceA = 1;
-            else if (dc < 0) choiceA = 3;
-            if (dr > 0) choiceB = 2;
-            else if (dr < 0) choiceB = 0;
-
-            const back = opposite(dir);
-            if (choiceA === back) choiceA = -1;
-            if (choiceB === back) choiceB = -1;
-
-            if (choiceA !== -1 && choiceB !== -1) {
-              // Favour the axis with further to go, so paths stay direct.
-              pDir[i] = Math.abs(dc) >= Math.abs(dr) ? choiceA : choiceB;
-            } else if (choiceA !== -1) {
-              pDir[i] = choiceA;
-            } else if (choiceB !== -1) {
-              pDir[i] = choiceB;
-            }
-          }
-        } else if (Math.random() < DRIFT_TURN_CHANCE) {
-          pDir[i] = perpDir(dir);
-        }
-      }
-
-      // Retire once the head and its whole trail have left the board.
-      const margin = GRID * 2;
-      if (pX[i] < -margin || pX[i] > w + margin || pY[i] < -margin || pY[i] > h + margin) {
-        const trailSpan = pTrailLen[i] * pSpeed[i];
-        if (
-          pX[i] < -margin - trailSpan ||
-          pX[i] > w + margin + trailSpan ||
-          pY[i] < -margin - trailSpan ||
-          pY[i] > h + margin + trailSpan
-        ) {
-          const cls = pClass[i];
-          retire(i);
-          if (cls === CLASS_STREAM) pendingStreams++;
-          else if (cls === CLASS_TELEMETRY) spawnTelemetry();
-        }
-      }
-    };
-
-    // Warm start, so the first painted frame isn't an empty board.
-    for (let n = 0; n < 140; n++) {
-      for (let i = 0; i < POOL; i++) if (pActive[i]) updatePulse(i, 1);
-    }
 
     /* ── Render ─────────────────────────────────────────────────────────── */
 
-    let lastTime = 0;
-    let frame = 0;
     let frameAvg = 16.7;
     let slowFrames = 0;
 
@@ -888,15 +714,14 @@ const CircuitCanvas = React.memo(() => {
       const dt = time - lastTime;
       lastTime = time;
       const ratio = Math.min(dt, 50) / (1000 / 60);
-      frame++;
 
-      /* Self-tuning quality. Degrading gracefully beats locking a weak device
-         at 20fps. Only ever steps down, after a sustained run of slow frames. */
+      // Self-tuning quality: degrading gracefully beats locking a weak device
+      // at 20fps. Steps down only, after a sustained run of slow frames.
       frameAvg += (dt - frameAvg) * 0.05;
       if (frameAvg > 24 && tierIndex > 0) {
         if (++slowFrames > 120) {
           tierIndex--;
-          applyTier();
+          tier = TIERS[tierIndex];
           slowFrames = 0;
           frameAvg = 16.7;
         }
@@ -913,322 +738,192 @@ const CircuitCanvas = React.memo(() => {
         rectDirty = false;
       }
 
-      // Activity decays toward the level the page is holding.
-      activity *= Math.pow(0.988, ratio);
+      activity *= Math.pow(0.99, ratio);
       const load = Math.max(activity, externalLoad);
 
-      // Budget is expressed as a queue; the drain below paces it. Counting
-      // what is already queued stops the top-up from over-ordering while
-      // earlier requests are still waiting to launch.
-      if (frame % 30 === 0) {
-        const desired = tier.streams + Math.round(load * 2);
-        const have = countClass(CLASS_STREAM) + pendingStreams;
-        if (have < desired) pendingStreams += desired - have;
-      }
-
+      /* Traffic arrives in bursts rather than a steady drip — a handful of
+         packets down one route in convoy, then a gap. Even spacing reads as
+         a screensaver; convoys read as messages. */
       spawnCooldown -= ratio;
-      if (pendingStreams > 0 && spawnCooldown <= 0) {
-        spawnStream();
-        pendingStreams--;
-        spawnCooldown = 22 + Math.random() * 45;
+      if (spawnCooldown <= 0) {
+        let live = 0;
+        for (let i = 0; i < MAX_PACKETS; i++) if (pkActive[i]) live++;
+
+        const target = tier.packets + Math.round(load * 6);
+        if (burstQueue > 0) {
+          spawnPacket(burstRoute);
+          burstQueue--;
+          spawnCooldown = 10;
+        } else if (live < target) {
+          const convoy = 1 + ((Math.random() * tier.burst) | 0);
+          const route = (Math.random() * routes.length) | 0;
+          for (let n = 0; n < convoy && live + n < target; n++) spawnPacket(route);
+          spawnCooldown = 70 + Math.random() * 110;
+        } else {
+          spawnCooldown = 45;
+        }
       }
 
       ctx.clearRect(0, 0, w, h);
-
-      // 1. Substrate — one blit, no path work.
       ctx.drawImage(substrate, 0, 0, w, h);
 
-      // 2. Shockwaves.
+      /* 1. Star field. Each light breathes on its own period, so the field
+            shimmers without anything in it ever demanding attention. */
+      ctx.fillStyle = `hsl(${foregroundHSL})`;
+      // Clamped to the current tier rather than the count generated at build
+      // time, so dropping a tier actually sheds this work — the field is
+      // generated once and simply drawn shorter.
+      const visibleStars = Math.min(starCount, tier.stars);
+      for (let i = 0; i < visibleStars; i++) {
+        const pulse = 0.72 + 0.28 * Math.sin(starPhase[i] + time * starRate[i]);
+        ctx.globalAlpha = starBase[i] * pulse;
+        ctx.fillRect(starX[i] - 0.6, starY[i] - 0.6, 1.2, 1.2);
+      }
+      ctx.globalAlpha = 1;
+
+      /* 2. Node flashes — an expanding ring where a packet was handled. */
       ctx.lineWidth = 1;
-      for (let i = 0; i < MAX_SHOCKWAVES; i++) {
-        if (!wActive[i]) continue;
-
-        if (wInward[i]) {
-          wR[i] -= wSpeed[i] * ratio;
-          if (wR[i] <= 1) {
-            wActive[i] = 0;
-            continue;
-          }
-        } else {
-          wR[i] += wSpeed[i] * ratio;
-          if (wR[i] >= wMaxR[i]) {
-            wActive[i] = 0;
-            continue;
-          }
-        }
-
-        wAlpha[i] *= Math.pow(0.95, ratio);
-        if (wAlpha[i] < 0.02) {
-          wActive[i] = 0;
+      for (let i = 0; i < MAX_FLASHES; i++) {
+        if (!flActive[i]) continue;
+        flLife[i] += ratio * 0.03;
+        if (flLife[i] >= 1) {
+          flActive[i] = 0;
           continue;
         }
-
-        ctx.strokeStyle = `hsl(${primaryHSL} / ${wAlpha[i] * 0.4})`;
+        const node = flNode[i];
+        const eased = 1 - Math.pow(1 - flLife[i], 2);
+        const radius = 4 + eased * 22 * flMax[i];
+        ctx.strokeStyle = `hsl(${primaryHSL} / ${(1 - flLife[i]) * 0.22 * flMax[i]})`;
         ctx.beginPath();
-        ctx.arc(wX[i], wY[i], wR[i], 0, Math.PI * 2);
+        ctx.arc(nodeX[node], nodeY[node], radius, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      // 3. Functional nodes — role-shaped so the topology reads without labels.
-      const breathe = 6.5 + Math.sin(time * 0.003) * 1.8;
-      ctx.fillStyle = `hsl(${primaryHSL})`;
-
-      for (let i = 0; i < hubCount; i++) {
-        const idx = hubList[i];
-        const x = colOf(idx) * GRID;
-        const y = rowOf(idx) * GRID;
-        drawnStamp[idx] = frame;
-
-        ctx.globalAlpha = Math.max(0.2 + load * 0.15, nodeAct[idx] * 0.85);
-        ctx.beginPath();
-        ctx.arc(x, y, 2.8, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = `hsl(${primaryHSL} / ${(0.12 + nodeAct[idx] * 0.3) * (0.6 + load * 0.4)})`;
-        ctx.beginPath();
-        ctx.arc(x, y, breathe, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      // Sources: ringed, to read as an inlet.
-      for (let i = 0; i < sourceCount; i++) {
-        const idx = sourceList[i];
-        const x = colOf(idx) * GRID;
-        const y = rowOf(idx) * GRID;
-        drawnStamp[idx] = frame;
-
-        ctx.globalAlpha = Math.max(0.3, nodeAct[idx] * 0.9);
-        ctx.beginPath();
-        ctx.arc(x, y, 2.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = `hsl(${primaryHSL} / 0.3)`;
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      // Sinks: diamonds, a distinct silhouette from every other node.
-      for (let i = 0; i < sinkCount; i++) {
-        const idx = sinkList[i];
-        const x = colOf(idx) * GRID;
-        const y = rowOf(idx) * GRID;
-        drawnStamp[idx] = frame;
-
-        ctx.globalAlpha = Math.max(0.3, nodeAct[idx] * 0.9);
-        ctx.beginPath();
-        ctx.moveTo(x, y - 3.6);
-        ctx.lineTo(x + 3.6, y);
-        ctx.lineTo(x, y + 3.6);
-        ctx.lineTo(x - 3.6, y);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      // Lit plain nodes, decayed in the same pass and compacted by swap-remove.
+      /* 3. Nodes. Role-shaped so the topology reads without labels. */
       const decay = 0.02 * ratio;
-      for (let k = activeCount - 1; k >= 0; k--) {
-        const idx = activeList[k];
-        const act = nodeAct[idx] - decay;
+      for (let i = 0; i < nodeCount; i++) {
+        const act = nodeAct[i];
+        if (act > 0) nodeAct[i] = Math.max(0, act - decay);
 
-        if (act <= 0) {
-          nodeAct[idx] = 0;
-          activeFlag[idx] = 0;
-          activeList[k] = activeList[--activeCount];
-          continue;
-        }
-        nodeAct[idx] = act;
+        const x = nodeX[i];
+        const y = nodeY[i];
+        const role = nodeRole[i];
+        const lit = 0.16 + act * 0.55 + load * 0.08;
 
-        if (drawnStamp[idx] === frame) continue;
-        drawnStamp[idx] = frame;
+        ctx.fillStyle = `hsl(${primaryHSL} / ${Math.min(1, lit)})`;
 
-        ctx.globalAlpha = act * 0.85;
-        ctx.beginPath();
-        ctx.arc(colOf(idx) * GRID, rowOf(idx) * GRID, 1.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      // Nodes near the cursor — only the local neighbourhood is visited.
-      if (hasPointer) {
-        const reach = 150;
-        const span = Math.ceil(reach / GRID);
-        const cc = Math.floor(pointerX / GRID);
-        const cr = Math.floor(pointerY / GRID);
-
-        for (let r = Math.max(0, cr - span); r <= Math.min(rows - 1, cr + span); r++) {
-          for (let c = Math.max(0, cc - span); c <= Math.min(cols - 1, cc + span); c++) {
-            const idx = r * cols + c;
-            if (drawnStamp[idx] === frame) continue;
-
-            const nx = c * GRID;
-            const ny = r * GRID;
-            const dx = nx - pointerX;
-            const dy = ny - pointerY;
-            const distSq = dx * dx + dy * dy;
-            if (distSq > reach * reach) continue;
-
-            const prox = 1 - Math.sqrt(distSq) / reach;
-            drawnStamp[idx] = frame;
-            ctx.globalAlpha = prox * 0.4;
-            ctx.beginPath();
-            ctx.arc(nx, ny, 1.2 + prox * 0.8, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      // 4. Sparks.
-      if (tier.sparks) {
-        for (let i = 0; i < MAX_SPARKS; i++) {
-          if (!sActive[i]) continue;
-          sX[i] += sVX[i] * ratio;
-          sY[i] += sVY[i] * ratio;
-          sLife[i] += ratio;
-          if (sLife[i] >= sMaxLife[i]) {
-            sActive[i] = 0;
-            continue;
-          }
-          const progress = sLife[i] / sMaxLife[i];
-          ctx.fillStyle = `hsl(${primaryHSL} / ${(1 - progress) * 0.55})`;
+        if (role === ROLE_SINK) {
+          /* Square, not a diamond. A rotated square is drawn from four
+             diagonal edges, which put the only off-axis lines on the board
+             right on the nodes traffic terminates at. Axis-aligned keeps the
+             silhouette distinct from the round hubs without breaking the
+             ruling. */
+          const r = 2.6 + act * 0.9;
+          ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        } else if (role === ROLE_SOURCE) {
           ctx.beginPath();
-          ctx.arc(sX[i], sY[i], sSize[i] * (1 - progress * 0.5), 0, Math.PI * 2);
+          ctx.arc(x, y, 1.9 + act * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = `hsl(${primaryHSL} / ${0.16 + act * 0.3})`;
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(x, y, 2.1 + act * 1, 0, Math.PI * 2);
           ctx.fill();
         }
       }
 
-      // 5. Pulses — simulated and stroked straight out of the ring buffer.
+      /* 4. Packets — trail sampled back along the wire, then the head. */
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      const trailBoost = 1 + load * 0.35;
 
-      for (let i = 0; i < POOL; i++) {
-        if (!pActive[i]) continue;
-        updatePulse(i, ratio);
-        if (!pActive[i]) continue;
+      for (let i = 0; i < MAX_PACKETS; i++) {
+        if (!pkActive[i]) continue;
+        advance(i, ratio);
+        if (!pkActive[i]) continue;
 
-        const len = pTrailLen[i];
-        if (len < 2) continue;
+        const size = pkSize[i];
 
-        const cls = pClass[i];
-        const base = i * TRAIL_CAP * 2;
-        const head = pTrailHead[i];
-        const bands = cls === CLASS_TELEMETRY ? 2 : 4;
-        const maxAlpha =
-          (cls === CLASS_TELEMETRY ? 0.09 : cls === CLASS_RELAY ? 0.42 : 0.28) * trailBoost;
-        const width = cls === CLASS_TELEMETRY ? 3.5 : cls === CLASS_RELAY ? 1.5 : 1.8;
-        const bandSize = Math.ceil(len / bands);
-
-        for (let b = 0; b < bands; b++) {
-          const start = b * bandSize;
-          if (start >= len) break;
-          const end = Math.min(start + bandSize, len - 1);
-          if (end <= start) continue;
-
-          ctx.strokeStyle = `hsl(${primaryHSL} / ${Math.min(1, ((b + 1) / bands) * maxAlpha)})`;
-          ctx.lineWidth = width;
+        // Trail: three bands of decreasing alpha, each a polyline that bends
+        // with the trace because every sample is taken on the path itself.
+        for (let band = 2; band >= 0; band--) {
+          const from = (TAIL_SAMPLES / 3) * band;
+          const to = Math.min(TAIL_SAMPLES, from + TAIL_SAMPLES / 3 + 1);
+          ctx.strokeStyle = `hsl(${primaryHSL} / ${(0.26 - band * 0.08) * (0.75 + load * 0.4)})`;
+          ctx.lineWidth = size * (1 - band * 0.22);
           ctx.beginPath();
-
-          for (let j = start; j <= end; j++) {
-            const slot = (head - len + j + TRAIL_CAP * 2) % TRAIL_CAP;
-            const px = trailXY[base + slot * 2];
-            const py = trailXY[base + slot * 2 + 1];
-            if (j === start) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
+          for (let s = from; s < to; s++) {
+            pointBehind(i, (pkTail[i] * s) / TAIL_SAMPLES);
+            if (s === from) ctx.moveTo(out[0], out[1]);
+            else ctx.lineTo(out[0], out[1]);
           }
           ctx.stroke();
         }
 
-        if (cls !== CLASS_TELEMETRY) {
-          const sprite = cls === CLASS_STREAM ? glowStream : glowRelay;
-          const half = sprite.width / 2;
-          ctx.drawImage(sprite, pX[i] - half, pY[i] - half);
+        // Head.
+        pointBehind(i, 0);
+        const hx = out[0];
+        const hy = out[1];
+
+        if (tier.glow) {
+          const half = glowSprite.width / 2;
+          ctx.drawImage(glowSprite, hx - half, hy - half);
         }
+
+        ctx.fillStyle = `hsl(${primaryHSL})`;
+        ctx.beginPath();
+        ctx.arc(hx, hy, size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // A white-hot core sells it as energy rather than as a coloured dot.
+        ctx.fillStyle = `hsl(${foregroundHSL} / 0.85)`;
+        ctx.beginPath();
+        ctx.arc(hx, hy, size * 0.42, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      /* 6. Cursor probe — links to the two nearest nodes. Two reads as a
-            triangulating instrument; one reads as a single leader line and
-            loses the sense of the cursor sitting inside a mesh. */
+      /* 5. Cursor probe — the nearest node, as an instrument reading. */
       if (hasPointer) {
+        let best = -1;
         let bestSq = Infinity;
-        let secondSq = Infinity;
-        let bestX = 0;
-        let bestY = 0;
-        let secondX = 0;
-        let secondY = 0;
-
-        const cc = Math.floor(pointerX / GRID);
-        const cr = Math.floor(pointerY / GRID);
-
-        for (let r = Math.max(0, cr - 1); r <= Math.min(rows - 1, cr + 2); r++) {
-          for (let c = Math.max(0, cc - 1); c <= Math.min(cols - 1, cc + 2); c++) {
-            const nx = c * GRID;
-            const ny = r * GRID;
-            const dx = nx - pointerX;
-            const dy = ny - pointerY;
-            const distSq = dx * dx + dy * dy;
-
-            if (distSq < bestSq) {
-              secondSq = bestSq;
-              secondX = bestX;
-              secondY = bestY;
-              bestSq = distSq;
-              bestX = nx;
-              bestY = ny;
-            } else if (distSq < secondSq) {
-              secondSq = distSq;
-              secondX = nx;
-              secondY = ny;
-            }
+        for (let i = 0; i < nodeCount; i++) {
+          const dx = nodeX[i] - pointerX;
+          const dy = nodeY[i] - pointerY;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < bestSq) {
+            bestSq = distSq;
+            best = i;
           }
         }
 
-        const probeReach = 140;
-        ctx.lineWidth = 1;
-
-        for (let n = 0; n < 2; n++) {
-          const distSq = n === 0 ? bestSq : secondSq;
-          if (distSq === Infinity) continue;
-
-          const dist = Math.sqrt(distSq);
-          if (dist >= probeReach) continue;
-
-          const alpha = (1 - dist / probeReach) * 0.3;
-          const tx = n === 0 ? bestX : secondX;
-          const ty = n === 0 ? bestY : secondY;
-
+        const reach = 170;
+        if (best !== -1 && bestSq < reach * reach) {
+          const alpha = (1 - Math.sqrt(bestSq) / reach) * 0.35;
           ctx.strokeStyle = `hsl(${primaryHSL} / ${alpha})`;
-          ctx.setLineDash([3, 3]);
+          ctx.setLineDash([3, 4]);
+          ctx.lineWidth = 1;
+
+          /* Routed, not straight-lined. This was the last diagonal on the
+             board: a direct pointer-to-node line sits at whatever angle the
+             cursor happens to be at, which is the one thing nothing else
+             here does. Now it turns a corner like every other connection. */
+          const probe = edgePoints(pointerX, pointerY, nodeX[best], nodeY[best], true);
           ctx.beginPath();
-          ctx.moveTo(pointerX, pointerY);
-          ctx.lineTo(tx, ty);
+          ctx.moveTo(probe[0], probe[1]);
+          for (let i = 1; i < probe.length / 2; i++) ctx.lineTo(probe[i * 2], probe[i * 2 + 1]);
           ctx.stroke();
           ctx.setLineDash([]);
 
-          ctx.fillStyle = `hsl(${primaryHSL} / ${alpha * 1.5})`;
-          ctx.beginPath();
-          ctx.arc(tx, ty, 2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Grid address of the nearest node — the cursor as an instrument
-        // rather than a decoration that follows the mouse.
-        if (bestSq < probeReach * probeReach) {
           ctx.font = '9px ui-monospace, "JetBrains Mono", monospace';
-          ctx.fillStyle = `hsl(${primaryHSL} / 0.32)`;
+          ctx.fillStyle = `hsl(${primaryHSL} / ${alpha * 1.4})`;
           ctx.fillText(
-            `[${Math.round(bestX / GRID)},${Math.round(bestY / GRID)}]`,
+            `[${Math.round(nodeX[best] / GRID)},${Math.round(nodeY[best] / GRID)}]`,
             pointerX + 12,
             pointerY - 8
           );
         }
-
-        ctx.strokeStyle = `hsl(${primaryHSL} / 0.22)`;
-        ctx.beginPath();
-        ctx.arc(pointerX, pointerY, 8, 0, Math.PI * 2);
-        ctx.stroke();
       }
     };
 
@@ -1255,12 +950,10 @@ const CircuitCanvas = React.memo(() => {
         aria-hidden="true"
         style={{
           backgroundImage: `
-            linear-gradient(to right, hsl(var(--foreground) / 0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, hsl(var(--foreground) / 0.05) 1px, transparent 1px),
-            linear-gradient(to right, hsl(var(--foreground) / 0.08) 1px, transparent 1px),
-            linear-gradient(to bottom, hsl(var(--foreground) / 0.08) 1px, transparent 1px)
+            linear-gradient(to right, hsl(var(--foreground) / 0.04) 1px, transparent 1px),
+            linear-gradient(to bottom, hsl(var(--foreground) / 0.04) 1px, transparent 1px)
           `,
-          backgroundSize: `${GRID}px ${GRID}px, ${GRID}px ${GRID}px, ${MAJOR}px ${MAJOR}px, ${MAJOR}px ${MAJOR}px`,
+          backgroundSize: `${GRID}px ${GRID}px`,
           maskImage: 'radial-gradient(ellipse 70% 65% at 50% 45%, #000 35%, transparent 100%)',
           WebkitMaskImage: 'radial-gradient(ellipse 70% 65% at 50% 45%, #000 35%, transparent 100%)',
         }}
@@ -1275,11 +968,10 @@ const CircuitCanvas = React.memo(() => {
         className="block w-full h-full"
         aria-hidden="true"
         style={{
-          /* The edge falloff used to be a full-canvas destination-in
-             composite with a fresh gradient allocated every frame. As a CSS
-             mask it costs nothing per frame and composites on the GPU. */
-          maskImage: 'radial-gradient(ellipse 72% 68% at 50% 45%, #000 32%, transparent 100%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 72% 68% at 50% 45%, #000 32%, transparent 100%)',
+          /* Edge falloff as a CSS mask rather than a per-frame composite —
+             costs nothing each frame and composites on the GPU. */
+          maskImage: 'radial-gradient(ellipse 78% 72% at 50% 45%, #000 34%, transparent 100%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 78% 72% at 50% 45%, #000 34%, transparent 100%)',
         }}
       />
     </div>

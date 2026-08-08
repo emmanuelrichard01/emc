@@ -64,6 +64,10 @@ export const ALIASES: Record<string, string> = {
   clr: 'clear',
   cls: 'clear',
   man: 'man',
+  // The projects section is labelled "Work" in the nav and the hero chips, so
+  // the word a visitor actually sees has to resolve to something.
+  work: 'projects',
+  projects: 'projects',
 };
 
 /** Commands whose argument is a project id, for completion purposes. */
@@ -420,6 +424,33 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
             ),
           };
         },
+      },
+      {
+        name: 'ai',
+        summary: 'ask questions in plain english',
+        usage: 'ai   (esc to leave)',
+        detail: [
+          'Switches the prompt into a grounded question-answering mode.',
+          '',
+          'The model does not recall facts about this work — it queries for them.',
+          'Every count, metric and status in an answer comes from the same SQL',
+          'engine `sql` uses, over the same arrays this page renders, and each',
+          'answer can show the query and rows it was built from.',
+          '',
+          'That constraint is the point: a number in an answer cannot disagree',
+          'with the number on the card beside it, because the model never wrote',
+          'the number.',
+          '',
+          'Answers are labelled as generated. With no provider configured the',
+          'mode still works, falling back to a keyword match over the site.',
+        ].join('\n'),
+        run: () => ({
+          output: 'entering ai mode — esc to leave.',
+          // The registry has no reference to the hero's state, so entry is
+          // signalled rather than called. Keeps the command list a pure data
+          // structure that `help`, `man` and completion can read.
+          sideEffect: () => window.dispatchEvent(new CustomEvent('emc:enter-ai')),
+        }),
       },
       {
         name: 'ping',

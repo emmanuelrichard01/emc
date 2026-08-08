@@ -19,6 +19,19 @@ const DIRECTION_THRESHOLD = 12;
 /** Below this, the bar is always shown regardless of direction. */
 const ALWAYS_VISIBLE_ABOVE = 300;
 
+/* Fraction of the viewport the visitor must scroll before the navigation
+   exists at all on the landing page.
+
+   The hero is a full-screen terminal, and navigating it is the point — you
+   type, or you press a chip. A floating nav pill hovering over that undercuts
+   the idea and repeats the logo a third time before anyone has done anything.
+   So the site opens as a terminal and *becomes* a website on scroll: the nav
+   arrives with the first real section, and from then on behaves normally.
+
+   Only the landing route is affected. A case study is an ordinary page and
+   needs its navigation immediately. */
+const NAV_REVEAL_FRACTION = 0.55;
+
 /* -------------------------------------------------------------------------- */
 /* LOGO                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -129,6 +142,18 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
   const prefersReduced = useReducedMotion();
   const { pathname } = useLocation();
 
+  const isLanding = pathname === '/';
+
+  /* Seeded from the live scroll position, then maintained by the same
+     scroll subscription the hide-on-scroll behaviour already uses — rather
+     than a second listener and an effect that would have to setState on
+     mount to catch up. Only the landing route consults it; everywhere else
+     the nav is unconditional. */
+  const [scrolledPastHero, setScrolledPastHero] = useState(
+    () => typeof window !== 'undefined' && window.scrollY > window.innerHeight * NAV_REVEAL_FRACTION
+  );
+  const pastHero = !isLanding || scrolledPastHero;
+
   // Reading progress across the document, smoothed so it glides rather than
   // snapping on every wheel tick.
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, restDelta: 0.001 });
@@ -138,6 +163,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
     lastScrollY.current = latest;
 
     setIsScrolled(latest > 100);
+    setScrolledPastHero(latest > window.innerHeight * NAV_REVEAL_FRACTION);
 
     if (latest <= ALWAYS_VISIBLE_ABOVE) {
       travel.current = 0;
@@ -182,17 +208,29 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
 
   const shortcutLabel = `${MODIFIER_KEY}+K`;
 
+  /* Hidden either because the visitor is scrolling down, or because they have
+     not yet left the hero. Pointer events and tab order are dropped too — an
+     invisible bar that still swallows clicks and takes focus is worse than a
+     visible one. */
+  const concealed = isHidden || !pastHero;
+  const concealedProps = {
+    style: { pointerEvents: concealed ? ('none' as const) : ('auto' as const) },
+    'aria-hidden': concealed || undefined,
+    inert: concealed,
+  };
+
   return (
     <>
       {/* --- DESKTOP: floating structural pill --- */}
       <motion.nav
         initial={{ y: prefersReduced ? 0 : -100, opacity: 0 }}
-        animate={{ y: isHidden && !prefersReduced ? -100 : 0, opacity: isHidden ? 0 : 1 }}
+        animate={{ y: concealed && !prefersReduced ? -100 : 0, opacity: concealed ? 0 : 1 }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         className="fixed top-6 left-0 right-0 z-50 hidden md:flex justify-center px-4"
         aria-label="Main"
         onFocusCapture={handleFocus}
         onBlurCapture={handleBlur}
+        {...concealedProps}
       >
         <div
           className={`relative flex items-center gap-4 px-3 py-2 border transition-all duration-500 ${
@@ -261,12 +299,14 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
       {/* --- MOBILE: floating bottom island --- */}
       <motion.nav
         initial={{ y: prefersReduced ? 0 : 100, opacity: 0 }}
-        animate={{ y: isHidden && !prefersReduced ? 100 : 0, opacity: isHidden ? 0 : 1 }}
+        animate={{ y: concealed && !prefersReduced ? 100 : 0, opacity: concealed ? 0 : 1 }}
         transition={{ type: 'tween', ease: 'easeOut', duration: 0.3 }}
         className="fixed bottom-6 left-0 right-0 z-50 md:hidden flex justify-center px-4 pointer-events-none"
         aria-label="Sections"
         onFocusCapture={handleFocus}
         onBlurCapture={handleBlur}
+        aria-hidden={concealed || undefined}
+        inert={concealed}
       >
         <div className="pointer-events-auto flex items-stretch gap-0.5 p-1.5 bg-card/95 backdrop-blur-xl border border-border shadow-2xl">
           {SECTIONS.map((section) => {

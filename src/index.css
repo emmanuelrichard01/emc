@@ -67,6 +67,15 @@
 
     /* Surface */
     --surface-elevated: 0 0% 6%;
+
+    /* Hero surface.
+
+       Deliberately lifted off the page's near-black and given a faint cool
+       cast, which is what the reference this hero is built toward actually
+       does — a dim muted slate rather than pure black. On #050505 the
+       terminal had nothing to sit on and the whole screen read as a void;
+       a few points of lightness give it a surface without turning it grey. */
+    --hero-surface: 220 8% 6%;
   }
 
   /* Hidden accent. Reachable only with clearance — via the Konami code, the
@@ -239,6 +248,137 @@
 
   .status-live {
     animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* Terminal block cursor.
+
+     Stepped rather than eased, because a real caret is on or off — a fade
+     reads as a pulsing shape rather than as a cursor. Shown only while the
+     prompt is empty; once typing starts the native caret takes over so text
+     selection still behaves the way the OS draws it. */
+  @keyframes terminal-caret-blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+
+  .terminal-caret {
+    animation: terminal-caret-blink 1.06s steps(1, end) infinite;
+  }
+
+  /* AI mode — a conic gradient rotating behind the prompt, masked to the
+     border only.
+
+     Done as a masked pseudo-element rather than an animated border-image
+     because only `background-position` on the ::before is animating: the
+     border itself never changes, so nothing reflows and the whole effect
+     composites on the GPU. A hero already running a canvas cannot afford a
+     decorative border that triggers layout on every frame. */
+  @property --ai-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes ai-border-spin {
+    to { --ai-angle: 360deg; }
+  }
+
+  .ai-border {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .ai-border::before,
+  .ai-border::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    /* Punches out the middle so only the 1px ring paints. */
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+  }
+
+  /* Travelling arc — one bright comet with a long falloff. */
+  .ai-border::before {
+    background: conic-gradient(
+      from var(--ai-angle),
+      transparent 0deg,
+      hsl(var(--primary) / 0.08) 24deg,
+      hsl(var(--primary) / 0.55) 52deg,
+      hsl(var(--primary)) 74deg,
+      hsl(168 85% 62%) 88deg,
+      hsl(198 92% 64%) 100deg,
+      hsl(var(--primary) / 0.4) 122deg,
+      hsl(var(--primary) / 0.06) 156deg,
+      transparent 200deg,
+      transparent 360deg
+    );
+    animation: ai-border-spin 3.2s linear infinite;
+    z-index: 1;
+  }
+
+  /* Second arc, slower and counter-rotating, so the two cross at varying
+     points instead of the ring reading as one dot on a loop. */
+  .ai-border::after {
+    background: conic-gradient(
+      from var(--ai-angle),
+      transparent 0deg,
+      hsl(198 92% 64% / 0.28) 40deg,
+      hsl(var(--primary) / 0.5) 70deg,
+      transparent 130deg,
+      transparent 360deg
+    );
+    animation: ai-border-spin 7.5s linear infinite reverse;
+    z-index: 1;
+    opacity: 0.75;
+  }
+
+  /* A dim rail underneath, so the box is still clearly bounded in the gaps
+     between the two arcs rather than losing its edges. */
+  .ai-border {
+    box-shadow:
+      inset 0 0 0 1px hsl(var(--primary) / 0.16),
+      0 0 26px -6px hsl(var(--primary) / 0.28);
+  }
+
+  /* Firefox and any engine without @property leaves --ai-angle unanimatable,
+     so the ring would sit frozen at one angle. A steady lit border is the
+     honest degradation — still clearly "a different mode", just not spinning. */
+  @supports not (background: conic-gradient(from var(--ai-angle), red, blue)) {
+    .ai-border::before {
+      background: linear-gradient(90deg, hsl(var(--primary) / 0.6), hsl(198 92% 64% / 0.6));
+      animation: none;
+    }
+    .ai-border::after {
+      display: none;
+    }
+  }
+
+  /* The ring is decoration; under reduced motion it holds still and the mode
+     is signalled by the steady lit border alone. */
+  @media (prefers-reduced-motion: reduce) {
+    .ai-border::before,
+    .ai-border::after {
+      animation: none;
+    }
+  }
+
+  /* Three dots that cycle while a question is in flight. */
+  @keyframes ai-thinking {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+
+  .ai-dot {
+    animation: ai-thinking 1.4s ease-in-out infinite;
   }
 
 

@@ -3,6 +3,9 @@ import { motion, AnimatePresence, useScroll, useSpring, useInView } from "framer
 import { ArrowUp, Terminal } from "lucide-react";
 import { scrollToSection } from "@/lib/scrollToSection";
 import { SECTIONS } from "@/data/sections";
+// Shared with the hero's message-of-the-day, so the footer and the shell can
+// never report different builds.
+import { COMMIT_SHA, formatRelativeBuildTime } from "@/lib/buildInfo";
 
 /* -------------------------------------------------------------------------- */
 /*  DATA                                                                       */
@@ -50,24 +53,6 @@ function useLagosClock() {
   }, [formatter]);
 
   return time;
-}
-
-/* -------------------------------------------------------------------------- */
-/*  BUILD METADATA — real commit SHA + relative deploy time, injected at      */
-/*  build time via vite.config.ts (see __COMMIT_SHA__ / __BUILD_TIME__).      */
-/* -------------------------------------------------------------------------- */
-
-function formatRelativeBuildTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return "unknown";
-
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-  const diffMin = Math.round((then - Date.now()) / 60000);
-
-  if (Math.abs(diffMin) < 60) return rtf.format(diffMin, "minute");
-  const diffHr = Math.round(diffMin / 60);
-  if (Math.abs(diffHr) < 24) return rtf.format(diffHr, "hour");
-  return rtf.format(Math.round(diffHr / 24), "day");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -239,7 +224,7 @@ const Footer = () => {
         {/* Bottom line — real build metadata, not decorative text */}
         <div className="mt-12 pt-6 border-t border-border flex justify-center">
           <span className="text-[9px] font-mono text-muted-foreground/60 tracking-[0.3em] uppercase" aria-hidden="true">
-            # {__COMMIT_SHA__} // deployed {formatRelativeBuildTime(__BUILD_TIME__)}
+            # {COMMIT_SHA} // deployed {formatRelativeBuildTime() ?? "unknown"}
           </span>
         </div>
       </motion.div>
