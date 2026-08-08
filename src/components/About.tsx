@@ -5,7 +5,7 @@ import {
   SiPython, SiTypescript, SiReact, SiPostgresql,
   SiDocker, SiTerraform, SiRedis, SiApacheairflow,
   SiNextdotjs, SiFastapi, SiDjango, SiNestjs,
-  SiDbt, SiDuckdb, SiPrometheus,
+  SiDbt, SiDuckdb, SiPrometheus, SiGrafana,
 } from "react-icons/si";
 import { StructuralCard } from "@/components/ui/StructuralCard";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
@@ -81,6 +81,7 @@ const TECH_GROUPS = [
       { name: "Docker", icon: SiDocker },
       { name: "Redis", icon: SiRedis },
       { name: "Prometheus", icon: SiPrometheus },
+      { name: "Grafana", icon: SiGrafana },
       { name: "Terraform", icon: SiTerraform },
     ],
   },
@@ -199,9 +200,9 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
 /* -------------------------------------------------------------------------- */
 
 const TechChip = ({ name, icon: Icon }: { name: string; icon: React.ElementType }) => (
-  <div className="flex items-center gap-2 px-3 py-1.5 border border-border text-muted-foreground whitespace-nowrap hover:text-foreground hover:border-foreground/30 transition-colors cursor-default">
+  <div className="flex items-center gap-1.5 px-2 py-1 border border-border text-muted-foreground whitespace-nowrap hover:text-foreground hover:border-foreground/30 transition-colors cursor-default">
     <Icon className="w-3.5 h-3.5" aria-hidden="true" />
-    <span className="text-[10px] font-mono tracking-widest uppercase">{name}</span>
+    <span className="text-[10px] font-mono tracking-wider uppercase">{name}</span>
   </div>
 );
 
@@ -211,13 +212,13 @@ const TechGroups = () => {
   const prefersReduced = useReducedMotion();
 
   return (
-    <div ref={ref} className="flex flex-col gap-4 border-t border-b border-border py-5 my-4">
+    <div ref={ref} className="flex flex-col gap-3 border-t border-b border-border py-4 my-3">
       {TECH_GROUPS.map((group, groupIndex) => (
-        <div key={group.label} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:w-32 sm:shrink-0 sm:pt-1.5">
+        <div key={group.label} className="flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-4">
+          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:w-28 sm:shrink-0 sm:pt-1">
             {group.label}
           </span>
-          <ul className="flex flex-wrap gap-2">
+          <ul className="flex flex-wrap gap-1.5">
             {group.items.map((tech, i) => (
               <motion.li
                 key={tech.name}
