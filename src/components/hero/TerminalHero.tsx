@@ -372,7 +372,26 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             compact ? 'flex-1 mb-5' : 'shrink-0 mb-12 md:mb-16'
           }`}
         >
-          <div className="space-y-1.5">
+          {/* The banner folds away once the shell is in use.
+
+              Collapsed to zero height rather than unmounted, deliberately:
+              the identity line is this page's h1, and removing it would take
+              the document's only heading with it the moment anyone typed a
+              command — leaving assistive tech and crawlers with a page that
+              has no name. Height and opacity animate; the text stays in the
+              DOM and stays exposed.
+
+              Clearing the session brings it back, which is the natural way
+              back to a resting screen. */}
+          <motion.div
+            initial={false}
+            animate={{
+              height: compact ? 0 : 'auto',
+              opacity: compact ? 0 : 1,
+            }}
+            transition={{ duration: prefersReduced ? 0 : 0.4, ease: EASE }}
+            className="space-y-1.5 overflow-hidden"
+          >
             {motd.map((line, i) =>
               line.tone === 'identity' ? (
                 <motion.h1
@@ -392,11 +411,11 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                 </motion.p>
               )
             )}
-          </div>
+          </motion.div>
 
           {hasOutput && (
             <div
-              className="mt-5 border-l border-primary/20 pl-4 leading-[1.75]"
+              className={`border-l border-primary/20 pl-4 leading-[1.75] ${compact ? '' : 'mt-5'}`}
               role="log"
               aria-live="polite"
               aria-relevant="additions"
@@ -431,7 +450,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           )}
 
           {aiMode && (
-            <div className="mt-5">
+            <div className={compact ? '' : 'mt-5'}>
               {ai.turns.length === 0 && !ai.busy && (
                 <div className="text-muted-foreground/50">
                   ask anything about his work. answers are grounded in this site's own data —
