@@ -1,15 +1,32 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence, useScroll, useSpring, useInView } from "framer-motion";
-import { ArrowUp, Terminal } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { scrollToSection } from "@/lib/scrollToSection";
 import { SECTIONS } from "@/data/sections";
 // Shared with the hero's message-of-the-day, so the footer and the shell can
 // never report different builds.
-import { COMMIT_SHA, formatRelativeBuildTime } from "@/lib/buildInfo";
+import { COMMIT_SHA, IS_DEV_BUILD, formatRelativeBuildTime } from "@/lib/buildInfo";
 
-/* -------------------------------------------------------------------------- */
-/*  DATA                                                                       */
-/* -------------------------------------------------------------------------- */
+/* ==========================================================================
+   FOOTER
+
+   A colophon and a build receipt — not a second contact section.
+
+   The previous footer ran four equal columns of mono text: identity,
+   sitemap, connect, status. Three of them restated what Contact says
+   immediately above it — the same socials, the same city, the same
+   timezone — so the page ended by repeating its own last section in a
+   smaller font. Meanwhile the one thing here that exists nowhere else, the
+   commit and deploy time, sat at nine pixels and sixty percent opacity.
+
+   So the weights are swapped. Identity and status compress to a single
+   line, the two link lists lie flat instead of standing as columns, and
+   the build metadata becomes a legible receipt whose SHA links to the
+   commit it names — which is the same claim the rest of the site makes
+   about its numbers, applied to itself.
+   ========================================================================== */
+
+const REPO_URL = "https://github.com/emmanuelrichard01/emc";
 
 const CONNECT_LINKS = [
   { label: "GitHub", href: "https://github.com/emmanuelrichard01" },
@@ -126,9 +143,13 @@ const FooterColumnLabel = ({ children }: { children: React.ReactNode }) => (
   </span>
 );
 
+/** Shared styling for the two flat link lists. */
+const footerLink =
+  "relative text-[11px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors";
+
 const Footer = () => {
   const year = new Date().getFullYear();
-  const quarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}`;
+  const deployed = formatRelativeBuildTime();
   const footerRef = useRef<HTMLElement>(null);
   const isInView = useInView(footerRef, { once: true, amount: 0.3 });
   const lagosTime = useLagosClock();
@@ -147,25 +168,47 @@ const Footer = () => {
         transition={{ duration: 0.5 }}
         className="relative z-10 container px-6 md:px-12 lg:px-24 max-w-7xl mx-auto py-12 md:py-16"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 text-center sm:text-left">
-
-          {/* Identity */}
-          <div className="flex flex-col items-center sm:items-start gap-2">
-            <span className="text-[13px] font-bold text-foreground tracking-widest uppercase">
+        {/* Identity and status on one line. Both were columns; neither is a
+            column's worth of content. */}
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <span className="block text-[13px] font-bold text-foreground tracking-widest uppercase">
               Emmanuel Moghalu
             </span>
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-              Software & Data Engineer
+            <span className="block text-[10px] font-mono text-muted-foreground uppercase tracking-widest mt-1.5">
+              Software &amp; Data Engineer
             </span>
           </div>
 
-          {/* Sitemap */}
-          <div className="flex flex-col items-center sm:items-start">
-            <FooterColumnLabel>Sitemap</FooterColumnLabel>
+          <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+            <span className="w-1.5 h-1.5 bg-emerald-500 status-live shrink-0" aria-hidden="true" />
+            <span>Abuja, NG — {lagosTime}</span>
+          </div>
+        </div>
+
+        {/* Colophon — the one thing a footer can say that the sections above
+            cannot, and the place to state the site's own claim about itself. */}
+        <div className="mt-10 pt-8 border-t border-border">
+          <FooterColumnLabel>// Colophon</FooterColumnLabel>
+          <p className="text-[13px] text-muted-foreground font-light leading-relaxed max-w-xl">
+            React, TypeScript and Tailwind, deployed on Vercel. The figures on this page
+            are not written by hand — they are queried from the same dataset the terminal
+            reads, so{" "}
+            <code className="font-mono text-foreground/80">ask</code> will reproduce any
+            of them, and show the query it used.
+          </p>
+        </div>
+
+        {/* Both lists lie flat. As columns they were two stacks of five short
+            mono strings, which is most of what made the footer feel like a
+            second contact section. */}
+        <div className="mt-10 grid gap-8 sm:grid-cols-2">
+          <div>
+            <FooterColumnLabel>// Sitemap</FooterColumnLabel>
             {/* Real anchors, sharing the nav's section list — the footer used
                 to keep its own copy, which is how "Work" and "Experience"
                 drift apart from the pill above. */}
-            <nav className="flex flex-col items-center sm:items-start gap-2.5" aria-label="Footer section links">
+            <nav className="flex flex-wrap gap-x-5 gap-y-2.5" aria-label="Footer section links">
               {SECTIONS.map((section) => (
                 <a
                   key={section.id}
@@ -175,7 +218,7 @@ const Footer = () => {
                     e.preventDefault();
                     scrollToSection(section.id);
                   }}
-                  className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                  className={footerLink}
                 >
                   {section.label}
                 </a>
@@ -183,10 +226,9 @@ const Footer = () => {
             </nav>
           </div>
 
-          {/* Connect */}
-          <div className="flex flex-col items-center sm:items-start">
-            <FooterColumnLabel>Connect</FooterColumnLabel>
-            <nav className="flex flex-col items-center sm:items-start gap-2.5" aria-label="External profiles and contact">
+          <div>
+            <FooterColumnLabel>// Connect</FooterColumnLabel>
+            <nav className="flex flex-wrap gap-x-5 gap-y-2.5" aria-label="External profiles and contact">
               {CONNECT_LINKS.map((link) => {
                 const isExternal = link.href.startsWith("http");
                 return (
@@ -194,7 +236,7 @@ const Footer = () => {
                     key={link.label}
                     href={link.href}
                     {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                    className="relative text-[11px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+                    className={`${footerLink} group`}
                     aria-label={isExternal ? `${link.label} (opens in new tab)` : link.label}
                   >
                     {link.label}
@@ -204,27 +246,36 @@ const Footer = () => {
               })}
             </nav>
           </div>
-
-          {/* Status */}
-          <div className="flex flex-col items-center sm:items-start">
-            <FooterColumnLabel>Status</FooterColumnLabel>
-            <div className="flex flex-col items-center sm:items-start gap-2.5 text-[11px] font-mono text-muted-foreground uppercase tracking-widest">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-emerald-500 status-live shrink-0" />
-                <span>Abuja, NG — {lagosTime}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Terminal className="w-3 h-3 text-primary shrink-0" />
-                <span>© {year} // {quarter}</span>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Bottom line — real build metadata, not decorative text */}
-        <div className="mt-12 pt-6 border-t border-border flex justify-center">
-          <span className="text-[9px] font-mono text-muted-foreground/60 tracking-[0.3em] uppercase" aria-hidden="true">
-            # {COMMIT_SHA} // deployed {formatRelativeBuildTime() ?? "unknown"}
+        {/* Build receipt.
+
+            Previously aria-hidden at 60% opacity, which measured about 2.6:1
+            — the only unique content in the footer, and the least readable
+            thing in it. The SHA now links to the commit it names: the site
+            asks to be taken at its word about its numbers, so it should be
+            checkable about its own build too. */}
+        <div className="mt-12 pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            © {year} Emmanuel Moghalu
+          </span>
+
+          <span className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground tracking-widest">
+            <span className="text-primary" aria-hidden="true">#</span>
+            {IS_DEV_BUILD ? (
+              <span>local build</span>
+            ) : (
+              <a
+                href={`${REPO_URL}/commit/${COMMIT_SHA}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                aria-label={`Commit ${COMMIT_SHA} on GitHub (opens in new tab)`}
+              >
+                {COMMIT_SHA}
+              </a>
+            )}
+            {deployed && <span>· deployed {deployed}</span>}
           </span>
         </div>
       </motion.div>
