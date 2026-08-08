@@ -20,20 +20,46 @@ import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
    stacks, with Terraform appearing once, in design-stage work. */
 const ROLES = ["Data Engineering", "Backend Systems", "Fintech Infrastructure"];
 
-const TECH_STACK = [
-  { name: "Python", icon: SiPython },
-  { name: "TypeScript", icon: SiTypescript },
-  { name: "React", icon: SiReact },
-  { name: "PostgreSQL", icon: SiPostgresql },
-  { name: "AWS", icon: SiAmazonwebservices },
-  { name: "Docker", icon: SiDocker },
-  { name: "Kafka", icon: SiApachekafka },
-  { name: "Terraform", icon: SiTerraform },
-  { name: "Redis", icon: SiRedis },
-  { name: "Snowflake", icon: SiSnowflake },
-  { name: "Spark", icon: SiApachespark },
-  { name: "Airflow", icon: SiApacheairflow },
+/* Grouped by what each thing is for.
+
+   This was a flat list scrolling past in a marquee — a logo wall, which
+   tells a reader nothing they could not guess and was the busiest element
+   on a page that is otherwise deliberately calm. Grouped and still, the
+   same twelve entries say something: where the weight sits. */
+const TECH_GROUPS = [
+  {
+    label: "Languages",
+    items: [
+      { name: "Python", icon: SiPython },
+      { name: "TypeScript", icon: SiTypescript },
+    ],
+  },
+  {
+    label: "Data & Pipelines",
+    items: [
+      { name: "PostgreSQL", icon: SiPostgresql },
+      { name: "Kafka", icon: SiApachekafka },
+      { name: "Airflow", icon: SiApacheairflow },
+      { name: "Spark", icon: SiApachespark },
+      { name: "Snowflake", icon: SiSnowflake },
+    ],
+  },
+  {
+    label: "Infrastructure",
+    items: [
+      { name: "Docker", icon: SiDocker },
+      { name: "AWS", icon: SiAmazonwebservices },
+      { name: "Terraform", icon: SiTerraform },
+      { name: "Redis", icon: SiRedis },
+    ],
+  },
+  {
+    label: "Interface",
+    items: [{ name: "React", icon: SiReact }],
+  },
 ];
+
+const TECH_COUNT = TECH_GROUPS.reduce((sum, group) => sum + group.items.length, 0);
 
 /* Each of these maps onto a shipped project rather than a generic capability
    list. "Cloud Infrastructure Automation (IaC)" was the previous outlier —
@@ -86,16 +112,29 @@ const RevealWord = ({
   total: number;
   progress: MotionValue<number>;
 }) => {
-  // Each word's fade occupies a 2-word-wide window of scroll progress, so
+  // Each word's reveal occupies a 2-word-wide window of scroll progress, so
   // adjacent words overlap slightly and the line reads as a sweep rather
   // than a sequence of discrete pops.
   const start = index / total;
   const end = Math.min(start + 2 / total, 1);
-  const opacity = useTransform(progress, [start, end], [0.15, 1]);
-  const blur = useTransform(progress, [start, end], ["blur(4px)", "blur(0px)"]);
+
+  /* Colour, not opacity.
+     This used to fade 0.15 → 1, which put roughly a third of the paragraph
+     below 1.2:1 at any given scroll position where AA wants 4.5:1 — and left
+     the bio fully legible only at one exact offset, fading back out as you
+     scrolled past. Flooring the alpha instead would mean a 0.9 → 1 range,
+     since nothing below 0.9 passes here: technically accessible and
+     visually nothing.
+
+     Interpolating between two colours that BOTH pass keeps the sweep clearly
+     visible — muted grey to near-white — while the worst case is 5.67:1.
+     Literal values rather than tokens because framer cannot interpolate
+     `hsl(var(--x))`; these two are theme-invariant (only --primary changes
+     between the amber, purple and phosphor themes). */
+  const color = useTransform(progress, [start, end], ["hsl(0 0% 53%)", "hsl(0 0% 93%)"]);
 
   return (
-    <motion.span style={{ opacity, filter: blur }} className="relative inline-block mr-1.5">
+    <motion.span style={{ color }} className="relative inline-block mr-1.5">
       {word}
     </motion.span>
   );
@@ -116,7 +155,7 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
 };
 
 /* -------------------------------------------------------------------------- */
-/* TECH MARQUEE                                                               */
+/* TECH STACK                                                                 */
 /* -------------------------------------------------------------------------- */
 
 const TechChip = ({ name, icon: Icon }: { name: string; icon: React.ElementType }) => (
@@ -126,58 +165,33 @@ const TechChip = ({ name, icon: Icon }: { name: string; icon: React.ElementType 
   </div>
 );
 
-const TechMarquee = () => {
-  const [isPaused, setIsPaused] = useState(false);
-  const marqueeRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(marqueeRef, { once: true, amount: 0.3 });
+const TechGroups = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
   const prefersReduced = useReducedMotion();
 
-  /* Under reduced motion this becomes a plain wrapped list rather than a
-     paused marquee. The global `prefers-reduced-motion` rule clamps every
-     animation to 0.01ms, which would otherwise snap the strip to its end
-     position and simply hide half the stack off-screen. */
-  if (prefersReduced) {
-    return (
-      <div ref={marqueeRef} className="w-full border-t border-b border-border py-4 my-6">
-        <ul className="flex flex-wrap gap-3">
-          {TECH_STACK.map((tech) => (
-            <li key={tech.name}>
-              <TechChip name={tech.name} icon={tech.icon} />
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
-
   return (
-    <motion.div
-      ref={marqueeRef}
-      initial={{ opacity: 0 }}
-      animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-      transition={{ duration: 0.6 }}
-      className="relative flex overflow-hidden w-full border-t border-b border-border py-4 my-6"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
-      {/* Fades match the page background, not the card. This module renders on
-          a transparent card, so `from-card` painted a visibly lighter band
-          against the darker section behind it. */}
-      <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-      <div
-        className="flex flex-none gap-4 pr-4 items-center marquee-strip"
-        style={{ animationPlayState: isPaused ? "paused" : "running" }}
-      >
-        {/* Duplicated so the -50% translate loops seamlessly. The copy is
-            hidden from assistive tech so the stack is announced once. */}
-        {[...TECH_STACK, ...TECH_STACK].map((tech, i) => (
-          <div key={`${tech.name}-${i}`} aria-hidden={i >= TECH_STACK.length ? "true" : undefined}>
-            <TechChip name={tech.name} icon={tech.icon} />
-          </div>
-        ))}
-      </div>
-    </motion.div>
+    <div ref={ref} className="flex flex-col gap-4 border-t border-b border-border py-5 my-4">
+      {TECH_GROUPS.map((group, groupIndex) => (
+        <div key={group.label} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:w-32 sm:shrink-0 sm:pt-1.5">
+            {group.label}
+          </span>
+          <ul className="flex flex-wrap gap-2">
+            {group.items.map((tech, i) => (
+              <motion.li
+                key={tech.name}
+                initial={prefersReduced ? false : { opacity: 0, y: 4 }}
+                animate={isInView || prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
+                transition={{ duration: 0.35, delay: groupIndex * 0.08 + i * 0.03 }}
+              >
+                <TechChip name={tech.name} icon={tech.icon} />
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 };
 
@@ -237,16 +251,22 @@ const MetricsModule = () => (
   </StructuralCard>
 );
 
+/* "Tech Telemetry" collided with itself. Telemetry means something specific
+   on this site now — the live fps/heap/uptime rail in the hero — and using
+   it for a static list of logos made one of the two meaningless. "[12
+   NODES]" was decorative jargon for a count of technologies. */
 const StackModule = () => (
   <StructuralCard className="col-span-1 md:col-span-2 p-0 border-none bg-transparent">
     <div className="flex items-center justify-between mb-2">
       <div className="flex items-center gap-3">
         <Cpu className="w-4 h-4 text-primary" aria-hidden="true" />
-        <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground">Tech Telemetry</span>
+        <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground">Stack</span>
       </div>
-      <span className="text-[10px] font-mono text-primary tracking-widest">[{TECH_STACK.length} NODES]</span>
+      <span className="text-[10px] font-mono text-muted-foreground tracking-widest tabular-nums">
+        {TECH_COUNT} tools
+      </span>
     </div>
-    <TechMarquee />
+    <TechGroups />
   </StructuralCard>
 );
 
@@ -306,7 +326,7 @@ const About: React.FC = () => {
                   one makes a claim about approach that every project on the
                   page actually backs up: circuit breakers, idempotency
                   guards, gap detection, reconciliation loops. */}
-              <h2 className="text-3xl font-bold text-foreground leading-tight mb-8">
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-[1.15] mb-8">
                 Most systems work on the happy path. I build for what happens after that.
               </h2>
 

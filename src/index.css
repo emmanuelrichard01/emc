@@ -216,14 +216,9 @@
     z-index: 10;
   }
 
-  @keyframes marquee {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-50%); }
-  }
-
-  .marquee-strip {
-    animation: marquee 30s linear infinite;
-  }
+  /* The marquee keyframes lived here. Removed with the scrolling tech strip
+     in About — nothing references them, and dead animation CSS is the kind
+     of thing that survives three redesigns because deleting it feels risky. */
 
   /* Long, eased grayscale/opacity reveal for project detail hero images.
      Named here rather than as inline arbitrary Tailwind duration/easing
