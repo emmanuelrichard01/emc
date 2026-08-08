@@ -17,6 +17,7 @@ import {
 import { PROJECTS } from "@/data/projects";
 import { STATUS_CLASS, STATUS_LABEL, projectStatus } from "@/lib/project";
 import SEOHead from "@/components/SEOHead";
+import CaseStudyNav, { type CaseStudySection } from "@/components/projects/CaseStudyNav";
 import type { Project, SEOMetadata } from "@/types";
 
 const SITE_URL = "https://www.builtbyem.dev";
@@ -34,32 +35,53 @@ function truncate(text: string, max = 155): string {
 /* ── Section heading ── */
 
 const SectionHeading = ({
+  id,
   num,
   label,
   icon: Icon,
 }: {
+  id: string;
   num: string;
   label: string;
   icon: React.ElementType;
 }) => (
-  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
-    <Icon className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
-    <h2 className="text-sm font-mono uppercase tracking-widest text-foreground">{label}</h2>
-    <span className="ml-auto font-mono text-[10px] text-muted-foreground/40 tracking-widest">{num}</span>
+  /* scroll-mt clears the fixed navbar: without it an in-page jump lands with
+     the heading tucked underneath the bar. */
+  <div id={id} className="flex items-center gap-3 mb-6 pb-4 border-b border-border scroll-mt-28">
+    <span className="font-mono text-[11px] tabular-nums text-primary">{num}</span>
+    <Icon className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
+    <h2 className="text-[13px] font-mono uppercase tracking-[0.18em] text-foreground">{label}</h2>
+    <span className="flex-1 h-px bg-border" aria-hidden="true" />
   </div>
 );
 
 /* ── Sidebar ── */
 
-const MetaSidebar = ({ project }: { project: Project }) => {
+const MetaSidebar = ({
+  project,
+  sections,
+}: {
+  project: Project;
+  sections: CaseStudySection[];
+}) => {
   const status = projectStatus(project);
 
   return (
     // Column placement is owned by the motion wrapper that renders this, so
     // no col-span here — it would be inert anyway, since this is not a direct
     // child of the grid.
-    <aside>
+    /* h-full is load-bearing. A sticky element can only travel inside its
+       nearest scrolling ancestor's *box*, and this aside was sizing to its
+       own content — 684px against a 1929px article — so the sidebar detached
+       and scrolled away a third of the way down every long case study. The
+       grid cell already stretches; the aside has to claim that height for
+       the sticky child to have anywhere to go. */
+    <aside className="h-full">
       <div className="lg:sticky lg:top-28 flex flex-col gap-8">
+        {/* Contents leads: on a page of four sections of real writing, the
+            first thing a skimming reader needs is the shape of it. */}
+        <CaseStudyNav sections={sections} />
+
         {/* Status */}
         <div>
           <span className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-3 block">
@@ -86,11 +108,11 @@ const MetaSidebar = ({ project }: { project: Project }) => {
             </span>
             <dl className="border border-border bg-card divide-y divide-border">
               {project.metrics.map((metric) => (
-                <div key={metric.label} className="flex items-baseline justify-between gap-4 px-3 py-2.5">
-                  <dt className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                <div key={metric.label} className="flex flex-col gap-1 px-3 py-2.5">
+                  <dt className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
                     {metric.label}
                   </dt>
-                  <dd className="text-[12px] font-mono text-primary text-right">{metric.value}</dd>
+                  <dd className="font-mono text-[15px] text-primary tabular-nums">{metric.value}</dd>
                 </div>
               ))}
             </dl>
@@ -243,6 +265,28 @@ const ProjectDetail = () => {
   const { caseStudy } = project;
   const headline = `${project.title} — ${project.subtitle}`;
 
+  /* Derived from what this page actually renders, not a fixed list — a
+     project without a case study shows Overview, and one whose trade-offs
+     supersede its decisions never renders the decisions block at all. A
+     hardcoded contents would link to headings that are not there. */
+  const sections: CaseStudySection[] = caseStudy
+    ? [
+        { id: "problem", num: "01", label: "The Problem" },
+        { id: "approach", num: "02", label: "The Approach" },
+        { id: "outcome", num: "03", label: "The Outcome" },
+        ...(caseStudy.tradeoffs?.length
+          ? [{ id: "tradeoffs", num: "04", label: "Trade-offs" }]
+          : project.decisions.length
+            ? [{ id: "decisions", num: "04", label: "Architecture Decisions" }]
+            : []),
+      ]
+    : [
+        { id: "overview", num: "01", label: "Overview" },
+        ...(project.decisions.length
+          ? [{ id: "decisions", num: "02", label: "Architecture Decisions" }]
+          : []),
+      ];
+
   const metadata: SEOMetadata = {
     title: `${headline} | Emmanuel Moghalu`,
     description: seo.description,
@@ -304,17 +348,17 @@ const ProjectDetail = () => {
             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" aria-hidden="true" />
             Home
           </Link>
-          <span className="text-muted-foreground/30 font-mono text-[11px]" aria-hidden="true">
+          <span className="text-muted-foreground font-mono text-[11px]" aria-hidden="true">
             /
           </span>
           {/* Now a real link — this was inert text before. */}
           <Link
             to="/#projects"
-            className="text-muted-foreground/60 hover:text-foreground transition-colors font-mono text-[11px] uppercase tracking-widest"
+            className="text-muted-foreground hover:text-foreground transition-colors font-mono text-[11px] uppercase tracking-widest"
           >
             Projects
           </Link>
-          <span className="text-muted-foreground/30 font-mono text-[11px]" aria-hidden="true">
+          <span className="text-muted-foreground font-mono text-[11px]" aria-hidden="true">
             /
           </span>
           <span className="text-primary font-mono text-[11px] uppercase tracking-widest" aria-current="page">
@@ -338,10 +382,12 @@ const ProjectDetail = () => {
             </span>
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-5 leading-[1.1]">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4 leading-[1.1]">
             {project.title}
           </h1>
-          <p className="text-xl text-muted-foreground font-light max-w-3xl leading-relaxed">
+          {/* Mono, matching the subtitle treatment the index and cards use —
+              this page was the last place still setting it in large sans. */}
+          <p className="font-mono text-[13px] md:text-[15px] text-muted-foreground max-w-[60ch] leading-relaxed">
             {project.subtitle}
           </p>
         </motion.header>
@@ -378,7 +424,7 @@ const ProjectDetail = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="lg:col-span-8 flex flex-col gap-16"
+            className="lg:col-span-8 flex flex-col gap-14"
           >
             {/* Scope notice — stated up front, not buried. Being explicit about
                 what is synthetic is a credibility gain, not a disclaimer. */}
@@ -399,22 +445,22 @@ const ProjectDetail = () => {
             {caseStudy ? (
               <>
                 <section>
-                  <SectionHeading num="01" label="The Problem" icon={AlertTriangle} />
-                  <p className="text-[15px] text-muted-foreground leading-relaxed font-light">
+                  <SectionHeading id="problem" num="01" label="The Problem" icon={AlertTriangle} />
+                  <p className="text-[15px] text-muted-foreground leading-[1.75] font-light max-w-[68ch]">
                     {caseStudy.problem}
                   </p>
                 </section>
 
                 <section>
-                  <SectionHeading num="02" label="The Approach" icon={Layers} />
-                  <p className="text-[15px] text-muted-foreground leading-relaxed font-light">
+                  <SectionHeading id="approach" num="02" label="The Approach" icon={Layers} />
+                  <p className="text-[15px] text-muted-foreground leading-[1.75] font-light max-w-[68ch]">
                     {caseStudy.approach}
                   </p>
                 </section>
 
                 <section>
-                  <SectionHeading num="03" label="The Outcome" icon={Target} />
-                  <p className="text-[15px] text-muted-foreground leading-relaxed font-light">
+                  <SectionHeading id="outcome" num="03" label="The Outcome" icon={Target} />
+                  <p className="text-[15px] text-muted-foreground leading-[1.75] font-light max-w-[68ch]">
                     {caseStudy.outcome}
                   </p>
 
@@ -426,7 +472,7 @@ const ProjectDetail = () => {
                             className="w-3.5 h-3.5 text-primary shrink-0 mt-1"
                             aria-hidden="true"
                           />
-                          <span className="text-[13px] text-foreground/75 leading-relaxed font-light">
+                          <span className="text-[13px] text-foreground leading-relaxed font-light">
                             {item}
                           </span>
                         </li>
@@ -437,30 +483,55 @@ const ProjectDetail = () => {
 
                 {caseStudy.tradeoffs && caseStudy.tradeoffs.length > 0 && (
                   <section>
-                    <SectionHeading num="04" label="Trade-offs" icon={GitBranch} />
-                    <div className="flex flex-col gap-px bg-border border border-border">
-                      {caseStudy.tradeoffs.map((tradeoff) => (
-                        <div key={tradeoff.decision} className="bg-card p-5">
-                          <span className="block text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground mb-3">
-                            {tradeoff.decision}
+                    <SectionHeading id="tradeoffs" num="04" label="Trade-offs" icon={GitBranch} />
+                    {/* The strongest content on the site, given the weight to
+                        match. A trade-off names the option that lost, which is
+                        the thing almost no portfolio does and the reason an
+                        engineer reading this page believes the rest of it.
+                        Previously it rendered at the same weight as every
+                        other paragraph, four sections down. */}
+                    <p className="font-mono text-[11px] text-muted-foreground mb-5 max-w-[68ch]">
+                      Each decision below names the option that was rejected, and why.
+                    </p>
+
+                    <ol className="flex flex-col gap-px bg-border border border-border">
+                      {caseStudy.tradeoffs.map((tradeoff, i) => (
+                        <li key={tradeoff.decision} className="bg-card p-5 md:p-6">
+                          <span className="flex items-baseline gap-2.5 mb-4">
+                            <span className="font-mono text-[10px] tabular-nums text-primary">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground">
+                              {tradeoff.decision}
+                            </span>
                           </span>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
-                            <span className="text-[12px] font-mono text-emerald-400 border border-emerald-500/25 bg-emerald-500/5 px-2 py-0.5">
+
+                          {/* Chosen and rejected on their own rows with a
+                              shared label column, so the pair reads as one
+                              comparison rather than a run-on line that wraps
+                              unpredictably once a name gets long. */}
+                          <div className="grid grid-cols-[3.5rem_1fr] gap-x-3 gap-y-2 mb-4">
+                            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground pt-1">
+                              chose
+                            </span>
+                            <span className="font-mono text-[13px] text-emerald-400 leading-snug">
                               {tradeoff.chose}
                             </span>
-                            <span className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">
+
+                            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground pt-1">
                               over
                             </span>
-                            <span className="text-[12px] font-mono text-muted-foreground/70 border border-border px-2 py-0.5 line-through decoration-muted-foreground/40">
+                            <span className="font-mono text-[13px] text-muted-foreground leading-snug line-through decoration-muted-foreground/50">
                               {tradeoff.rejected}
                             </span>
                           </div>
-                          <p className="text-[13px] text-muted-foreground leading-relaxed font-light">
+
+                          <p className="text-[13px] text-muted-foreground leading-[1.75] font-light max-w-[68ch] border-l border-primary/30 pl-4">
                             {tradeoff.why}
                           </p>
-                        </div>
+                        </li>
                       ))}
-                    </div>
+                    </ol>
                   </section>
                 )}
               </>
@@ -468,8 +539,8 @@ const ProjectDetail = () => {
               /* No verified long-form source for this project — render the
                  short form rather than padding the template with invention. */
               <section>
-                <SectionHeading num="01" label="Overview" icon={Layers} />
-                <p className="text-[15px] text-muted-foreground leading-relaxed font-light">
+                <SectionHeading id="overview" num="01" label="Overview" icon={Layers} />
+                <p className="text-[15px] text-muted-foreground leading-[1.75] font-light max-w-[68ch]">
                   {project.description}
                 </p>
               </section>
@@ -486,6 +557,7 @@ const ProjectDetail = () => {
             {project.decisions.length > 0 && !caseStudy?.tradeoffs?.length && (
               <section>
                 <SectionHeading
+                  id="decisions"
                   num={caseStudy ? "04" : "02"}
                   label="Architecture Decisions"
                   icon={GitBranch}
@@ -513,9 +585,9 @@ const ProjectDetail = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="lg:col-span-4"
+            className="lg:col-span-4 lg:order-first"
           >
-            <MetaSidebar project={project} />
+            <MetaSidebar project={project} sections={sections} />
           </motion.div>
         </div>
 
