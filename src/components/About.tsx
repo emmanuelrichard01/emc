@@ -334,20 +334,25 @@ const About: React.FC = () => {
                 <span>Module 01 // Overview</span>
               </div>
 
-              {/* Two sentences and 71 characters became one line of six words.
+              {/* Deliberately not a thesis.
 
-                  The heading before that claimed systems "powering millions of
-                  daily operations" — an unverifiable number. This makes a
-                  claim about approach instead, which every project here backs
-                  up: circuit breakers, idempotency guards, gap detection,
-                  reconciliation loops. The paragraph below does the
-                  explaining, so the heading only has to land. */}
+                  Two headings came before this one. The first claimed systems
+                  "powering millions of daily operations" — a number nothing on
+                  the site could support. The second, "the happy path is the
+                  easy half", swapped the unverifiable number for a trope every
+                  backend engineer reaches for, which is its own kind of empty.
+
+                  This states what the work was and stops. There is no claim
+                  here to defend, because the case studies are the argument —
+                  and on a site whose whole premise is that figures should be
+                  attributable, a headline that asserts nothing is the one that
+                  cannot overstate. */}
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-[1.15] mb-8">
-                The happy path is the easy half.
+                Four years of systems that had to stay correct.
               </h2>
 
               <RevealText
-                text="Four years across fintech, logistics, health and analytics. Most of my time goes to the parts nobody demos: Redis going down mid-traffic, a settlement webhook that never arrives, two instances spending the same token at once. What I ship comes with the tests that prove those paths hold."
+                text="Fintech, logistics, health and analytics. Most of my time goes to the parts nobody demos: Redis going down mid-traffic, a settlement webhook that never arrives, two instances spending the same token at once. What I ship comes with the tests that prove those paths hold."
                 className="text-[14px] text-muted-foreground leading-relaxed font-light"
               />
             </motion.div>
