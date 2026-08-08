@@ -48,7 +48,7 @@ const Cell = ({
   children: React.ReactNode;
 }) => (
   <div className={`flex flex-col gap-[2px] ${className}`}>
-    <span className="font-mono text-[7px] uppercase tracking-[0.2em] text-muted-foreground/35 leading-none">
+    <span className="font-mono text-[7px] uppercase tracking-[0.2em] text-muted-foreground leading-none">
       {label}
     </span>
     <div className="flex items-center gap-1.5 h-[12px]">{children}</div>
@@ -59,7 +59,7 @@ const Cell = ({
 const Value = ({
   children,
   unit,
-  tone = 'text-foreground/80',
+  tone = 'text-foreground',
   width,
 }: {
   children: React.ReactNode;
@@ -72,7 +72,7 @@ const Value = ({
       {children}
     </span>
     {unit && (
-      <span className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground/35">{unit}</span>
+      <span className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground">{unit}</span>
     )}
   </span>
 );
@@ -216,7 +216,7 @@ export default function StatusRail({ active }: { active: boolean }) {
           className={`w-1.5 h-1.5 status-live ${healthy ? 'bg-emerald-500' : 'bg-amber-500'}`}
           aria-hidden="true"
         />
-        <span className="font-mono text-[8px] uppercase tracking-[0.22em] text-muted-foreground/40 hidden lg:inline">
+        <span className="font-mono text-[8px] uppercase tracking-[0.22em] text-muted-foreground hidden lg:inline">
           live
         </span>
       </div>
@@ -229,10 +229,10 @@ export default function StatusRail({ active }: { active: boolean }) {
           {pending ? '––' : fps}
         </Value>
         <span className="hidden xl:flex items-baseline gap-0.5">
-          <span className="font-mono text-[10px] tabular-nums text-muted-foreground/45" style={{ minWidth: '2.2em' }}>
+          <span className="font-mono text-[10px] tabular-nums text-muted-foreground" style={{ minWidth: '2.2em' }}>
             {frameMs === null ? '––' : frameMs.toFixed(1)}
           </span>
-          <span className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground/30">ms</span>
+          <span className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground">ms</span>
         </span>
       </Cell>
 
@@ -243,18 +243,18 @@ export default function StatusRail({ active }: { active: boolean }) {
       {telemetry.heapMB !== null ? (
         <Cell label="heap" className="shrink-0 hidden sm:flex">
           {heapRatio !== null && <Meter ratio={heapRatio} tone={heapTone} />}
-          <Value unit="mb" tone="text-primary/80" width="2.6em">
+          <Value unit="mb" tone="text-primary" width="2.6em">
             {telemetry.heapMB.toFixed(1)}
           </Value>
           {telemetry.heapTotalMB !== null && (
-            <span className="font-mono text-[9px] tabular-nums text-muted-foreground/30 hidden xl:inline">
+            <span className="font-mono text-[9px] tabular-nums text-muted-foreground hidden xl:inline">
               /{telemetry.heapTotalMB.toFixed(0)}
             </span>
           )}
         </Cell>
       ) : (
         <Cell label="dom" className="shrink-0 hidden sm:flex">
-          <Value unit="nodes" tone="text-primary/80" width="2.8em">
+          <Value unit="nodes" tone="text-primary" width="2.8em">
             {telemetry.domNodes}
           </Value>
         </Cell>
@@ -263,7 +263,7 @@ export default function StatusRail({ active }: { active: boolean }) {
       <Divider />
 
       <Cell label="session" className="shrink-0 hidden md:flex">
-        <Value tone="text-foreground/70" width="3.4em">
+        <Value tone="text-foreground" width="3.4em">
           {formatUptime(telemetry.uptimeSeconds)}
         </Value>
       </Cell>
@@ -271,10 +271,10 @@ export default function StatusRail({ active }: { active: boolean }) {
       <span className="hidden xl:contents">
         <Divider />
         <Cell label="client" className="shrink-0 hidden xl:flex">
-          <Value tone="text-muted-foreground/60">
+          <Value tone="text-muted-foreground">
             {client.width}×{client.height}
           </Value>
-          <span className="font-mono text-[9px] text-muted-foreground/30">
+          <span className="font-mono text-[9px] text-muted-foreground">
             @{client.dpr}x{client.effectiveType ? ` · ${client.effectiveType}` : ''}
           </span>
         </Cell>
@@ -292,7 +292,7 @@ export default function StatusRail({ active }: { active: boolean }) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`${social.label} (opens in a new tab)`}
-              className="flex items-center gap-1.5 text-muted-foreground/55 hover:text-primary transition-colors"
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
             >
               <social.icon className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="font-mono text-[9px] uppercase tracking-widest hidden sm:inline">

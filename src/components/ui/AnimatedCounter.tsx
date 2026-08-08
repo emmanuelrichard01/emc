@@ -39,7 +39,15 @@ export const AnimatedCounter = ({ target, suffix = "" }: AnimatedCounterProps) =
         const startTime = performance.now();
 
         const animate = (now: number) => {
-          const progress = Math.min((now - startTime) / duration, 1);
+          /* Clamped at both ends, not just the top.
+             requestAnimationFrame reports the time the frame *began*, which
+             can precede the performance.now() taken when it was scheduled —
+             so the first tick could arrive with a negative progress. Fed
+             through the cubic below that inverts the curve, and the counter
+             painted a frame of "-2.8%" for a 99.5 target, or "-1K+" for 50K,
+             before snapping upward. Rare, and exactly the kind of glitch a
+             reader reads as a broken number. */
+          const progress = Math.min(Math.max((now - startTime) / duration, 0), 1);
           // Spring-like easing: overshoots slightly then settles.
           const eased =
             progress < 0.8

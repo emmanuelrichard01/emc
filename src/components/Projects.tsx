@@ -1,79 +1,82 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { AnimatePresence, motion, useInView } from "framer-motion";
-import { ArrowRight, ExternalLink, Github, PenTool, Sparkles, Terminal } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, ExternalLink, Github, LayoutGrid, List, Sparkles, Terminal } from "lucide-react";
 
 import type { Project, ProjectMetric } from "@/types";
 import { PROJECTS } from "@/data/projects";
 import { STATUS_CLASS, STATUS_LABEL, projectStatus } from "@/lib/project";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
+import ProjectIndex from "@/components/projects/ProjectIndex";
+
+/* ==========================================================================
+   PROJECTS
+
+   One spotlight, then an index. Cards are the alternate view, not the
+   default.
+
+   This section was four self-declared tiers of cards — "01 Flagship
+   Architecture" through "04 Architecture Studies" — running 4,454px, half
+   the page, for twelve projects. Every card carried a category, a year, a
+   title, a subtitle, a metric row, a description paragraph, two architecture
+   decisions and its full stack. All of that is written better, at length, on
+   the case-study pages; repeating it here meant the section competed with
+   the thing it exists to route people into.
+
+   The four tier banners are gone, but the tier system is not. It survives
+   as a group rule inside the index — a rank glyph (▍▍▍ down to ┆) and a
+   hairline carrying the name — plus a filter. Grouping is preserved at one
+   line per tier instead of a heading block, which is what makes the
+   taxonomy available without it dominating the page.
+
+   All text runs at full token opacity. Dimming muted-foreground to 40%
+   measures 1.76:1 on this background where AA wants 4.5:1; only ≥ 0.9
+   passes. Quiet is done with size and tracking here, never with alpha.
+
+   Design-stage work stays visibly distinct wherever it appears — the status
+   column reads DESIGN STAGE in amber, and the note below the controls says
+   plainly that it is not built. That guarantee is the one thing the redesign
+   was not allowed to cost.
+   ========================================================================== */
+
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/*  SHARED UI                                                                 */
+/*  SHARED                                                                    */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-const MetricBadge = ({ metric }: { metric: ProjectMetric }) => (
-  <div className="flex items-center gap-1.5 text-[11px] font-mono whitespace-nowrap">
-    <span className="text-muted-foreground">[{metric.label}:</span>
-    <span className="text-primary">{metric.value}]</span>
+/* One grammar for a metric, everywhere.
+
+   Previously there were three: a giant animated percentage in the spotlight,
+   `[Records: 1.5M+]` brackets on flagship cards, and the same brackets
+   stacked on prototypes. Label above, figure below, mono and tabular. */
+const Metric = ({ metric }: { metric: ProjectMetric }) => (
+  <div className="flex flex-col gap-0.5 min-w-0">
+    <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-muted-foreground truncate">
+      {metric.label}
+    </span>
+    <span className="font-mono text-[12px] text-primary tabular-nums truncate">{metric.value}</span>
   </div>
 );
 
 const TechTag = ({ tech }: { tech: string }) => (
-  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest border border-border px-2 py-0.5 hover:border-primary/40 hover:text-foreground transition-colors cursor-default">
+  <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider border border-border/70 px-1.5 py-0.5">
     {tech}
   </span>
 );
 
-/* Slide-up status line, revealed on hover and on keyboard focus.
-
-   The status is derived from the project's actual links. The previous version
-   printed "→ ONLINE" on every card unconditionally, including projects with
-   no live URL and no public repository — a claim the card itself contradicted
-   two rows below. */
-const TerminalStatusStrip = ({ project }: { project: Project }) => {
-  const status = projectStatus(project);
-  const metric = project.metrics[0];
-
-  return (
-    <div
-      className="absolute inset-x-0 bottom-0 translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 transition-all duration-300 ease-out pointer-events-none z-10"
-      aria-hidden="true"
-    >
-      <div className="px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-primary/30 font-mono text-[10px] flex items-center gap-2 overflow-hidden">
-        <span className="text-primary shrink-0">$</span>
-        <span className="text-muted-foreground truncate">
-          status --check {project.id} <span className={STATUS_CLASS[status]}>→ {STATUS_LABEL[status]}</span>
-          {metric && (
-            <>
-              {" // "}
-              {metric.label}: <span className="text-primary">{metric.value}</span>
-            </>
-          )}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-const LinkButtons = ({ project }: { project: Project }) => (
-  <div className="flex items-center gap-4 shrink-0">
-    <Link
-      to={`/projects/${project.id}`}
-      className="group/link flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest text-primary hover:text-primary-hover transition-colors"
-    >
-      Details
-      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
-    </Link>
+const ExternalLinks = ({ project }: { project: Project }) => (
+  <span className="flex items-center gap-3 shrink-0">
     {project.github && (
       <a
         href={project.github}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
         className="text-muted-foreground hover:text-foreground transition-colors"
         aria-label={`${project.title} source code`}
       >
-        <Github className="w-4 h-4" aria-hidden="true" />
+        <Github className="w-3.5 h-3.5" aria-hidden="true" />
       </a>
     )}
     {project.liveUrl && (
@@ -81,339 +84,151 @@ const LinkButtons = ({ project }: { project: Project }) => (
         href={project.liveUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
         className="text-muted-foreground hover:text-foreground transition-colors"
         aria-label={`${project.title} live site`}
       >
-        <ExternalLink className="w-4 h-4" aria-hidden="true" />
+        <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
       </a>
     )}
-  </div>
-);
-
-const CARD_MOTION = {
-  layout: true,
-  initial: { opacity: 0, y: 20 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.15 },
-  exit: { opacity: 0, scale: 0.96, transition: { duration: 0.2 } },
-} as const;
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/*  CARDS                                                                     */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
-const FlagshipCard = ({ project, index }: { project: Project; index: number }) => (
-  <motion.article
-    {...CARD_MOTION}
-    transition={{ duration: 0.5, delay: Math.min(index * 0.1, 0.3), ease: EASE }}
-    className="group card-elevate card-elevate-glow relative w-full border border-border bg-card p-6 md:p-10 pb-9 hover:border-primary/40 overflow-hidden"
-  >
-    <div className="absolute top-0 left-0 w-[2px] h-full bg-primary/60 group-hover:bg-primary transition-colors" />
-    <TerminalStatusStrip project={project} />
-
-    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-8">
-      <div>
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary">{project.category}</span>
-          <span className="font-mono text-[10px] text-muted-foreground">// {project.timeline}</span>
-        </div>
-        <h3 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-2">{project.title}</h3>
-        <p className="text-sm font-mono text-muted-foreground uppercase tracking-wide">{project.subtitle}</p>
-      </div>
-      <LinkButtons project={project} />
-    </div>
-
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-4 border-y border-border mb-8">
-      {project.metrics.map((m) => (
-        <MetricBadge key={m.label} metric={m} />
-      ))}
-    </div>
-
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-      <div className="lg:col-span-5">
-        <p className="text-sm text-foreground/80 leading-relaxed font-light">{project.description}</p>
-      </div>
-
-      <div className="lg:col-span-7 space-y-4">
-        <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
-          Architecture Decisions
-        </div>
-        {project.decisions.map((d, i) => (
-          <div key={d.title} className="flex gap-4">
-            <span className="font-mono text-[11px] text-primary mt-0.5">{String(i + 1).padStart(2, "0")}</span>
-            <div>
-              <span className="block text-[13px] font-semibold text-foreground mb-1">{d.title}</span>
-              <p className="text-[12px] text-muted-foreground leading-relaxed font-light">{d.detail}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    <div className="flex flex-wrap gap-2 pt-8 mt-8 border-t border-border">
-      {project.stack.map((tech) => (
-        <TechTag key={tech} tech={tech} />
-      ))}
-    </div>
-  </motion.article>
-);
-
-const ProductionCard = ({ project, index }: { project: Project; index: number }) => (
-  <motion.article
-    {...CARD_MOTION}
-    transition={{ duration: 0.5, delay: (index % 2) * 0.1, ease: EASE }}
-    className="group card-elevate relative flex flex-col h-full border border-border bg-card hover:border-primary/30 overflow-hidden"
-  >
-    <TerminalStatusStrip project={project} />
-
-    {/* Production applications are shipped products, so a glimpse of the
-        actual interface earns its space here. Prototypes below stay
-        text-only — a screenshot of a pipeline is not informative. */}
-    {project.image && (
-      <div className="w-full aspect-[16/7] overflow-hidden bg-muted border-b border-border relative">
-        <img
-          src={project.image}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="w-full h-full object-cover object-top grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-90 transition-image-reveal"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
-      </div>
-    )}
-
-    <div className="flex flex-col flex-1 p-6 md:p-8 pb-9">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary mb-3">
-            {project.category}
-          </div>
-          <h3 className="text-xl font-bold text-foreground leading-tight mb-1">{project.title}</h3>
-          <p className="text-xs font-mono text-muted-foreground uppercase tracking-wide">{project.timeline}</p>
-        </div>
-        <LinkButtons project={project} />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 border-y border-border mb-6">
-        {project.metrics.map((m) => (
-          <MetricBadge key={m.label} metric={m} />
-        ))}
-      </div>
-
-      <p className="text-[13px] text-foreground/80 leading-relaxed font-light mb-6 flex-1">{project.description}</p>
-
-      <div className="flex flex-wrap gap-2 pt-6 mt-auto border-t border-border">
-        {project.stack.map((tech) => (
-          <TechTag key={tech} tech={tech} />
-        ))}
-      </div>
-    </div>
-  </motion.article>
-);
-
-const SystemCard = ({ project, index }: { project: Project; index: number }) => (
-  <motion.article
-    {...CARD_MOTION}
-    transition={{ duration: 0.5, delay: (index % 3) * 0.08, ease: EASE }}
-    className="group card-elevate relative flex flex-col h-full border border-border bg-card p-6 pb-9 hover:border-primary/30 overflow-hidden"
-  >
-    <TerminalStatusStrip project={project} />
-
-    <div className="mb-4">
-      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary mb-2">{project.category}</div>
-      <h3 className="text-lg font-bold text-foreground leading-tight mb-1">{project.title}</h3>
-    </div>
-
-    <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
-      {project.metrics.map((m) => (
-        <MetricBadge key={m.label} metric={m} />
-      ))}
-    </div>
-
-    <p className="text-[12px] text-muted-foreground leading-relaxed font-light mb-6 flex-1">{project.description}</p>
-
-    <div className="flex items-end justify-between gap-4 pt-4 mt-auto border-t border-border">
-      <div className="flex flex-wrap gap-2">
-        {project.stack.slice(0, 3).map((tech) => (
-          <TechTag key={tech} tech={tech} />
-        ))}
-      </div>
-      <div className="flex items-center gap-3 shrink-0">
-        <Link
-          to={`/projects/${project.id}`}
-          className="text-[10px] font-mono uppercase tracking-widest text-primary hover:text-primary-hover transition-colors"
-        >
-          Details
-        </Link>
-        {project.github && (
-          <a
-            href={project.github}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={`${project.title} source code`}
-          >
-            <Github className="w-4 h-4" aria-hidden="true" />
-          </a>
-        )}
-        {project.liveUrl && (
-          <a
-            href={project.liveUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={`${project.title} live site`}
-          >
-            <ExternalLink className="w-4 h-4" aria-hidden="true" />
-          </a>
-        )}
-      </div>
-    </div>
-  </motion.article>
-);
-
-/* Architecture study. Visually distinct from the shipped cards — a dashed
-   border and an explicit badge — because the single worst outcome here is a
-   reader assuming a blueprint is a running system. */
-const DesignCard = ({ project, index }: { project: Project; index: number }) => (
-  <motion.article
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, amount: 0.15 }}
-    transition={{ duration: 0.5, delay: (index % 2) * 0.08, ease: EASE }}
-    className="group card-elevate relative flex flex-col h-full border border-dashed border-border bg-card/40 p-6 hover:border-amber-500/40"
-  >
-    <div className="flex flex-wrap items-center gap-3 mb-4">
-      <span className="inline-flex items-center gap-1.5 border border-amber-500/30 bg-amber-500/5 px-2 py-0.5">
-        <PenTool className="w-3 h-3 text-amber-400" aria-hidden="true" />
-        <span className="text-[9px] font-mono uppercase tracking-widest text-amber-400">Design stage</span>
-      </span>
-      <span className="font-mono text-[10px] text-muted-foreground">// {project.timeline}</span>
-    </div>
-
-    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary mb-2">{project.category}</div>
-    <h3 className="text-lg font-bold text-foreground leading-tight mb-1">{project.title}</h3>
-    <p className="text-xs font-mono text-muted-foreground uppercase tracking-wide mb-4">{project.subtitle}</p>
-
-    {project.metrics.length > 0 && (
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
-        {project.metrics.map((m) => (
-          <MetricBadge key={m.label} metric={m} />
-        ))}
-      </div>
-    )}
-
-    <p className="text-[12px] text-muted-foreground leading-relaxed font-light flex-1">{project.description}</p>
-
-    {project.stack.length > 0 && (
-      <div className="flex flex-wrap gap-2 pt-4 mt-6 border-t border-border">
-        {project.stack.map((tech) => (
-          <TechTag key={tech} tech={tech} />
-        ))}
-      </div>
-    )}
-  </motion.article>
+  </span>
 );
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/*  TIER LABEL                                                                */
+/*  CARD                                                                      */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-const TierLabel = ({ label, num }: { label: string; num: string }) => {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.5 });
+/* One card, not four.
+
+   The tiers used to each get their own component and layout, which is how a
+   section ends up with three ways to draw a metric. Tier is expressed by the
+   status line and a dashed border for design work — a difference in data,
+   not in construction. */
+const ProjectCard = ({ project, index }: { project: Project; index: number }) => {
+  const status = projectStatus(project);
+  const isDesign = project.tier === "design";
 
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 10 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-      transition={{ duration: 0.5, ease: EASE }}
-      className="flex items-center gap-4 mb-8 mt-16"
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
+      transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.2), ease: EASE }}
+      className={`group relative flex flex-col p-5 bg-card/25 hover:border-primary/40 transition-colors ${
+        isDesign ? "border border-dashed border-border" : "border border-border/70"
+      }`}
     >
-      <span className="font-mono text-[13px] text-primary">{num}</span>
-      <span className="text-[11px] font-mono tracking-[0.2em] uppercase text-foreground">{label}</span>
-      <motion.div
-        className="h-[1px] flex-1 bg-border origin-left"
-        initial={{ scaleX: 0 }}
-        animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-        transition={{ duration: 0.8, delay: 0.15, ease: EASE }}
-      />
-    </motion.div>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-primary truncate">
+          {project.category}
+        </span>
+        <span className={`font-mono text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
+          {STATUS_LABEL[status]}
+        </span>
+      </div>
+
+      {/* Stretched link, rather than wrapping the card in one.
+
+          The repo links below are anchors, and an anchor cannot contain
+          another anchor — the browser force-closes the outer one and the DOM
+          comes out mangled. Pinning a pseudo-element from the title covers
+          the whole card for pointer users while leaving exactly one link in
+          the accessibility tree for the card itself. */}
+      <h3 className="font-mono text-[15px] leading-tight">
+        <Link
+          to={`/projects/${project.id}`}
+          className="text-foreground group-hover:text-primary transition-colors before:absolute before:inset-0 before:content-['']"
+        >
+          {project.title}
+        </Link>
+      </h3>
+      <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{project.subtitle}</p>
+
+      {project.metrics.length > 0 && (
+        <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-border/50">
+          {project.metrics.slice(0, 3).map((metric) => (
+            <Metric key={metric.label} metric={metric} />
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-1 mt-4">
+        {project.stack.slice(0, 5).map((tech) => (
+          <TechTag key={tech} tech={tech} />
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 mt-auto pt-4">
+        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-primary group-hover:text-primary transition-colors">
+          case study
+          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
+        </span>
+        {/* Above the stretched link, so these stay individually clickable. */}
+        <span className="relative z-10">
+          <ExternalLinks project={project} />
+        </span>
+      </div>
+    </motion.article>
   );
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/*  FLAGSHIP SPOTLIGHT                                                        */
+/*  SPOTLIGHT                                                                 */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Parses "99.5%" or "1.5M+" into a numeric target plus suffix. Returns null
-   for non-numeric metrics like "<10s" so the caller falls back to plain text. */
+/** Parses "99.5%" or "1.5M+" into a target plus suffix; null for "<10s". */
 function parseMetricForCounter(value: string): { target: number; suffix: string } | null {
   const match = value.match(/^(\d+(?:\.\d+)?)(.*)$/);
   if (!match) return null;
   return { target: parseFloat(match[1]), suffix: match[2] };
 }
 
-const FlagshipSpotlight = ({ project }: { project: Project }) => {
+const Spotlight = ({ project }: { project: Project }) => {
   const heroMetric = project.metrics[0];
   const parsed = heroMetric ? parseMetricForCounter(heroMetric.value) : null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.15 }}
-      transition={{ duration: 0.7, ease: EASE }}
-      className="relative border border-primary/30 bg-card p-8 md:p-12 mb-8 overflow-hidden"
-      style={{ boxShadow: "var(--shadow-lg), var(--shadow-glow)" }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.6, ease: EASE }}
+      className="relative border border-primary/25 bg-card/40 p-6 md:p-8 mb-10"
     >
-      <motion.div
-        initial={{ scaleX: 0 }}
-        whileInView={{ scaleX: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8, ease: EASE }}
-        className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary via-primary/60 to-transparent origin-left"
-      />
+      <span className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-primary/70 via-primary/20 to-transparent" />
 
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.2em] text-primary border border-primary/30 bg-primary/5 px-2.5 py-1">
-          <Sparkles className="w-3 h-3" aria-hidden="true" />
-          Featured System
-        </span>
-        <span className="font-mono text-[10px] text-muted-foreground">// {project.timeline}</span>
-      </div>
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+        <div className="min-w-0">
+          <span className="flex flex-wrap items-center gap-3 mb-4">
+            <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em] text-primary border border-primary/30 bg-primary/5 px-2 py-1">
+              <Sparkles className="w-3 h-3" aria-hidden="true" />
+              featured
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+              {project.category} · {project.timeline}
+            </span>
+          </span>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-end">
-        <div className="lg:col-span-8">
-          <h3 className="text-3xl md:text-4xl font-bold text-foreground leading-tight mb-3">{project.title}</h3>
-          <p className="text-sm font-mono text-muted-foreground uppercase tracking-wide mb-6">{project.subtitle}</p>
-          <p className="text-sm text-foreground/80 leading-relaxed font-light max-w-2xl mb-8">
-            {project.description}
-          </p>
-          <Link to={`/projects/${project.id}`} className="btn-structural inline-flex items-center gap-3 w-fit">
+          <h3 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">{project.title}</h3>
+          <p className="font-mono text-[12px] text-muted-foreground mt-2">{project.subtitle}</p>
+
+          <Link to={`/projects/${project.id}`} className="btn-structural inline-flex items-center gap-3 w-fit mt-6">
             View Case Study
             <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
         </div>
 
         {heroMetric && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.25, ease: EASE }}
-            className="lg:col-span-4 flex flex-col items-center lg:items-end text-center lg:text-right"
-          >
-            <span className="text-5xl md:text-6xl font-mono font-bold text-primary tabular-nums">
+          <div className="flex flex-col items-start lg:items-end shrink-0">
+            <span className="font-mono text-4xl md:text-5xl font-bold text-primary tabular-nums leading-none">
               {parsed ? <AnimatedCounter target={parsed.target} suffix={parsed.suffix} /> : heroMetric.value}
             </span>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-2">
+            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground mt-2">
               {heroMetric.label}
             </span>
-          </motion.div>
+          </div>
         )}
       </div>
     </motion.div>
@@ -421,32 +236,10 @@ const FlagshipSpotlight = ({ project }: { project: Project }) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/*  TECH FILTER                                                               */
+/*  CONTROLS                                                                  */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Ranked by how many projects actually use each technology.
-
-   Rendering all ~40 technologies as equal-weight chips produced a wall that
-   was slower to scan than the project list it filtered. The common ones —
-   the ones that say something about what this person builds — are shown by
-   default, with the long tail behind a toggle. */
-/* Design studies are excluded from every filter surface below: they were
-   never built, so ranking or filtering them by implementation stack would be
-   filtering on a stack that does not exist yet. */
-const BUILT = PROJECTS.filter((p) => p.tier !== "design");
-
-const TECH_RANKED: { name: string; count: number }[] = Object.entries(
-  BUILT.reduce<Record<string, number>>((acc, project) => {
-    for (const tech of project.stack) acc[tech] = (acc[tech] ?? 0) + 1;
-    return acc;
-  }, {})
-)
-  .map(([name, count]) => ({ name, count }))
-  .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-
-const PRIMARY_TECH_COUNT = 12;
-
-const FilterChip = ({
+const Chip = ({
   label,
   count,
   active,
@@ -461,107 +254,146 @@ const FilterChip = ({
     type="button"
     onClick={onClick}
     aria-pressed={active}
-    className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest border px-3 py-1.5 transition-colors ${
+    className={`inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest border px-2.5 py-1 transition-colors ${
       active
         ? "border-primary bg-primary/10 text-primary"
         : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
     }`}
   >
     {label}
-    {count !== undefined && <span className="text-muted-foreground/40 tabular-nums">{count}</span>}
+    {count !== undefined && <span className="text-muted-foreground tabular-nums">{count}</span>}
   </button>
 );
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/*  MAIN SECTION                                                              */
+/*  SECTION                                                                   */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-const flagships = PROJECTS.filter((p) => p.tier === "flagship");
-const production = PROJECTS.filter((p) => p.tier === "production");
-const systems = PROJECTS.filter((p) => p.tier === "system");
-const designs = PROJECTS.filter((p) => p.tier === "design");
+const TIERS = ["flagship", "production", "system", "design"] as const;
 
-// The spotlight is a fixed narrative anchor — always visible regardless of
-// the tech filter — so it's pulled out of the filterable pool entirely
-// rather than being just another card that could vanish mid-browse.
-//
-// Nullable by design: this runs at module scope, so an unconditional
-// `flagships[0].id` would throw at *import* time — turning a data edit that
-// merely retiers the last flagship into a blank page for the whole site.
-const spotlightProject: Project | undefined = flagships[0];
-const remainingFlagships = flagships.slice(1);
-const filterablePool = spotlightProject ? BUILT.filter((p) => p.id !== spotlightProject.id) : BUILT;
+// Ranked by real usage, so the common technologies — the ones that say
+// something about what this person builds — lead.
+const TECH_RANKED: { name: string; count: number }[] = Object.entries(
+  PROJECTS.reduce<Record<string, number>>((acc, project) => {
+    for (const tech of project.stack) acc[tech] = (acc[tech] ?? 0) + 1;
+    return acc;
+  }, {})
+)
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+const PRIMARY_TECH_COUNT = 10;
+
+const spotlightProject: Project | undefined = PROJECTS.find((p) => p.tier === "flagship");
+// Nullable by design: an unconditional [0].id would throw at *import* time,
+// turning a data edit that retiers the last flagship into a blank page.
+const pool = spotlightProject ? PROJECTS.filter((p) => p.id !== spotlightProject.id) : PROJECTS;
 
 const Projects: React.FC = () => {
+  const [view, setView] = React.useState<"index" | "cards">("index");
+  const [tier, setTier] = React.useState<string | null>(null);
   const [selectedTech, setSelectedTech] = React.useState<string[]>([]);
   const [showAllTech, setShowAllTech] = React.useState(false);
 
   const toggleTech = (tech: string) =>
     setSelectedTech((prev) => (prev.includes(tech) ? prev.filter((t) => t !== tech) : [...prev, tech]));
 
-  const matchesFilter = React.useCallback(
-    (project: Project) => selectedTech.length === 0 || project.stack.some((t) => selectedTech.includes(t)),
-    [selectedTech]
+  const visible = React.useMemo(
+    () =>
+      pool.filter(
+        (project) =>
+          (tier === null || project.tier === tier) &&
+          (selectedTech.length === 0 || project.stack.some((t) => selectedTech.includes(t)))
+      ),
+    [tier, selectedTech]
   );
 
-  const visibleFlagships = remainingFlagships.filter(matchesFilter);
-  const visibleProduction = production.filter(matchesFilter);
-  const visibleSystems = systems.filter(matchesFilter);
-  const visibleCount = filterablePool.filter(matchesFilter).length;
-
-  // Any selected technology stays visible even if it lives in the long tail,
-  // so collapsing the list can never hide an active filter.
+  // A selected technology stays visible even if it lives in the long tail, so
+  // collapsing the list can never hide an active filter.
   const shownTech = showAllTech
     ? TECH_RANKED
     : TECH_RANKED.filter((t, i) => i < PRIMARY_TECH_COUNT || selectedTech.includes(t.name));
   const hiddenCount = TECH_RANKED.length - shownTech.length;
 
+  const showsDesign = visible.some((p) => p.tier === "design");
+
   return (
     <section id="projects" data-section="projects" className="py-24 relative" aria-label="Projects and case studies">
       <div className="container px-6 md:px-12 lg:px-24 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.6, ease: EASE }}
-          >
-            <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px] tracking-[0.2em] uppercase mb-4">
-              <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
-              <span>Module 02 // Engineering</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-              Production <span className="text-muted-foreground font-normal font-mono">Systems</span>
-            </h2>
-          </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: EASE }}
-            className="text-muted-foreground max-w-md text-[13px] leading-relaxed font-light"
-          >
-            Real systems designed and built for scale — focusing on data pipelines, architectural decisions, and
-            resilient infrastructure.
-          </motion.p>
-        </div>
-
-        {spotlightProject && <FlagshipSpotlight project={spotlightProject} />}
-
-        {/* Filter */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
-          className="flex flex-col gap-4 mb-4 pb-8 border-b border-border"
+          transition={{ duration: 0.5, ease: EASE }}
+          className="mb-10"
+        >
+          <span className="flex items-center gap-3 font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
+            <Terminal className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+            Module 02 // Engineering
+          </span>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+            Systems <span className="text-muted-foreground font-mono font-normal">/ {PROJECTS.length}</span>
+          </h2>
+        </motion.div>
+
+        {spotlightProject && <Spotlight project={spotlightProject} />}
+
+        {/* Controls */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.4 }}
+          className="flex flex-col gap-3 mb-5"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <FilterChip label="All" active={selectedTech.length === 0} onClick={() => setSelectedTech([])} />
+            {/* View toggle */}
+            <span className="flex items-center border border-border" role="group" aria-label="View">
+              {(
+                [
+                  { key: "index", icon: List, label: "Index" },
+                  { key: "cards", icon: LayoutGrid, label: "Cards" },
+                ] as const
+              ).map(({ key, icon: Icon, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setView(key)}
+                  aria-pressed={view === key}
+                  aria-label={`${label} view`}
+                  className={`flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest px-2.5 py-1 transition-colors ${
+                    view === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="w-3 h-3" aria-hidden="true" />
+                  {label}
+                </button>
+              ))}
+            </span>
+
+            <span className="w-px h-5 bg-border mx-1" aria-hidden="true" />
+
+            {/* Tier — a filter now, not four headings down the page */}
+            <Chip label="All" active={tier === null} onClick={() => setTier(null)} />
+            {TIERS.map((name) => {
+              const count = pool.filter((p) => p.tier === name).length;
+              if (!count) return null;
+              return (
+                <Chip
+                  key={name}
+                  label={name}
+                  count={count}
+                  active={tier === name}
+                  onClick={() => setTier(tier === name ? null : name)}
+                />
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
             {shownTech.map((tech) => (
-              <FilterChip
+              <Chip
                 key={tech.name}
                 label={tech.name}
                 count={tech.count}
@@ -574,93 +406,71 @@ const Projects: React.FC = () => {
                 type="button"
                 onClick={() => setShowAllTech((v) => !v)}
                 aria-expanded={showAllTech}
-                className="text-[10px] font-mono uppercase tracking-widest text-primary hover:text-primary-hover px-3 py-1.5 transition-colors"
+                className="font-mono text-[9px] uppercase tracking-widest text-primary hover:text-primary px-2 py-1 transition-colors"
               >
-                {showAllTech ? "− Show less" : `+ ${hiddenCount} more`}
+                {showAllTech ? "− less" : `+ ${hiddenCount} more`}
+              </button>
+            )}
+            {(selectedTech.length > 0 || tier !== null) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedTech([]);
+                  setTier(null);
+                }}
+                className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
+              >
+                reset
               </button>
             )}
           </div>
 
-          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest" aria-live="polite">
-            Showing {visibleCount} of {filterablePool.length} systems
+          <span
+            className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground"
+            aria-live="polite"
+          >
+            showing {visible.length} of {pool.length}
+            {spotlightProject ? " · 1 featured above" : ""}
           </span>
         </motion.div>
 
-        {/* TIER 1 */}
-        {visibleFlagships.length > 0 && (
-          <motion.div layout>
-            <TierLabel num="01" label="Flagship Architecture" />
-            <div className="flex flex-col gap-8">
-              <AnimatePresence mode="popLayout">
-                {visibleFlagships.map((project, index) => (
-                  <FlagshipCard key={project.id} project={project} index={index} />
-                ))}
-              </AnimatePresence>
-            </div>
-          </motion.div>
+        {/* Design-stage caveat, shown only when such a row is actually on
+            screen — the one guarantee this redesign was not allowed to cost. */}
+        {showsDesign && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed mb-5 max-w-2xl">
+            Rows marked <span className="text-amber-400 font-mono">DESIGN STAGE</span> are reference
+            architectures produced ahead of implementation — specified, not built, and not running in
+            production.
+          </p>
         )}
 
-        {/* TIER 2 */}
-        {visibleProduction.length > 0 && (
-          <motion.div layout>
-            <TierLabel num="02" label="Production Applications" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <AnimatePresence mode="popLayout">
-                {visibleProduction.map((project, index) => (
-                  <ProductionCard key={project.id} project={project} index={index} />
-                ))}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-
-        {/* TIER 3 */}
-        {visibleSystems.length > 0 && (
-          <motion.div layout>
-            <TierLabel num="03" label="System Prototypes" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <AnimatePresence mode="popLayout">
-                {visibleSystems.map((project, index) => (
-                  <SystemCard key={project.id} project={project} index={index} />
-                ))}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-
-        {/* The empty state belongs with the filtered tiers above it, not
-            after the unfiltered section below. */}
-        {visibleCount === 0 && (
-          <div className="py-16 text-center">
-            <p className="text-muted-foreground font-mono text-sm uppercase tracking-widest mb-4">
-              No systems match this filter.
+        {/* Results */}
+        {visible.length === 0 ? (
+          <div className="py-16 text-center border border-border/60">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-3">
+              nothing matches this filter
             </p>
             <button
               type="button"
-              onClick={() => setSelectedTech([])}
-              className="text-[11px] font-mono uppercase tracking-widest text-primary hover:text-primary-hover transition-colors"
+              onClick={() => {
+                setSelectedTech([]);
+                setTier(null);
+              }}
+              className="font-mono text-[10px] uppercase tracking-widest text-primary hover:text-primary-hover transition-colors"
             >
-              Clear filter
+              reset filters
             </button>
           </div>
-        )}
-
-        {/* TIER 4 — always rendered. These sit outside the tech filter
-            entirely, so they neither appear in the count above nor vanish
-            when a filter is applied. */}
-        {designs.length > 0 && (
-          <div>
-            <TierLabel num="04" label="Architecture Studies" />
-            <p className="text-[12px] text-muted-foreground leading-relaxed font-light max-w-2xl -mt-4 mb-8">
-              Design-stage work — reference architectures and blueprints produced ahead of implementation. Not
-              built, and not running in production.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {designs.map((project, index) => (
-                <DesignCard key={project.id} project={project} index={index} />
+        ) : view === "index" ? (
+          <ProjectIndex projects={visible} grouped={tier === null} />
+        ) : (
+          <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AnimatePresence mode="popLayout">
+              {visible.map((project, index) => (
+                <ProjectCard key={project.id} project={project} index={index} />
               ))}
-            </div>
-          </div>
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </section>
