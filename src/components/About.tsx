@@ -282,8 +282,11 @@ const MetricsModule = () => (
             {m.label}
           </span>
           {/* Attribution, not decoration. A number a reader can trace is worth
-              more than a larger one they can't. */}
-          <span className="text-[8px] font-mono text-muted-foreground/40 mt-1.5 leading-tight">
+              more than a larger one they can't — which is precisely why this
+              line cannot be the faintest thing in the module. It measured
+              1.79:1 against a 4.5:1 requirement, so the source of every figure
+              here was the one part a reader could not actually read. */}
+          <span className="text-[9px] font-mono text-muted-foreground mt-1.5 leading-tight">
             {m.source}
           </span>
         </div>

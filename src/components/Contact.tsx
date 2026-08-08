@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Github, Linkedin,
-  ArrowRight, Copy, CheckCircle2,
+  Copy, CheckCircle2,
   Terminal, Send, AlertCircle
 } from "lucide-react";
 import { XLogo } from "@/components/ui/XLogo";
@@ -220,7 +220,7 @@ const ContactForm = () => {
             )}
             <span
               id="contact-message-count"
-              className={`tracking-normal normal-case ${formData.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-amber-400' : 'text-muted-foreground/40'}`}
+              className={`tracking-normal normal-case ${formData.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-amber-400' : 'text-muted-foreground'}`}
             >
               {formData.message.length}/{MAX_MESSAGE_LENGTH}
             </span>
@@ -331,7 +331,7 @@ const Contact: React.FC = () => {
             </p>
             {/* Timezone up front — the first practical question anyone
                 scheduling a call has, and it saves an email to ask it. */}
-            <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mt-4">
+            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mt-4">
               Abuja, Nigeria — UTC+1 · Remote &amp; hybrid
             </p>
           </div>
@@ -377,20 +377,25 @@ const Contact: React.FC = () => {
                 <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-4">
                   // Socials
                 </div>
-                <div className="flex flex-col gap-2">
+                {/* Three tiles rather than three full-width rows.
+
+                    Stacked, the socials made five near-identical bordered
+                    boxes down this column — email, three links, CV — so the
+                    two blocks that are actually actions read with exactly the
+                    same weight as the three that are just links. Sitting them
+                    side by side subordinates them and returns about ninety
+                    vertical pixels to the column. */}
+                <div className="grid grid-cols-3 gap-2">
                   {SOCIAL_LINKS.map((link) => (
                     <a
                       key={link.id}
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex items-center justify-between border border-border bg-card px-4 py-3 hover:border-primary/40 transition-all"
+                      className="group flex flex-col items-center justify-center gap-2 border border-border bg-card py-4 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all"
                     >
-                      <div className="flex items-center gap-3 text-muted-foreground group-hover:text-foreground transition-colors">
-                        <link.icon className="w-4 h-4" />
-                        <span className="text-[13px] uppercase tracking-wider font-mono">{link.label}</span>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                      <link.icon className="w-4 h-4" />
+                      <span className="text-[10px] uppercase tracking-wider font-mono">{link.label}</span>
                     </a>
                   ))}
                 </div>
@@ -402,6 +407,13 @@ const Contact: React.FC = () => {
 
             {/* Right: Form */}
             <div className="lg:col-span-8">
+              {/* The form is two thirds of the section and was the only block
+                  in it without a heading, so the column that matters most
+                  opened on an unlabelled input while every smaller block
+                  beside it announced itself. */}
+              <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-4">
+                // Message
+              </div>
               <ContactForm />
             </div>
 

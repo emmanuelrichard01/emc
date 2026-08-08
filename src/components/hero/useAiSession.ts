@@ -48,6 +48,15 @@ interface WireMessage {
   toolCallId?: string;
 }
 
+/** What /api/ask replies with, on any of its paths. */
+interface WireResponse {
+  type?: 'answer' | 'tool_calls' | 'error' | 'unconfigured';
+  text?: string;
+  error?: string;
+  provider?: string;
+  calls?: ToolCall[];
+}
+
 export interface AiSession {
   turns: AiTurn[];
   busy: boolean;
@@ -115,7 +124,27 @@ export function useAiSession(): AiSession {
             signal: controller.signal,
           });
 
-          const data = await response.json().catch(() => ({ type: 'error', error: 'bad response' }));
+          /* A non-JSON body is a transport failure, not a model failure, and
+             collapsing it to "bad response" cost real debugging time: the
+             endpoint was 404ing with an empty body under `vite dev` — where
+             the Edge Function does not exist — and the message said nothing
+             about status, body, or which of the two it was. Report the status
+             and a slice of whatever did come back instead. */
+          const raw = await response.text();
+          let data: WireResponse;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            data = {
+              type: 'error',
+              error:
+                response.status === 404
+                  ? 'no /api/ask endpoint — the answering function is not running. locally, `npm run dev` now serves it; check the dev server restarted.'
+                  : `endpoint returned ${response.status} with a non-JSON body${
+                      raw.trim() ? `: ${raw.slice(0, 120)}` : ' (empty)'
+                    }`,
+            };
+          }
 
           if (data.type === 'unconfigured') {
             setUnconfigured(true);

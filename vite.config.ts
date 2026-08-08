@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import fs from "fs";
 import path from "path";
@@ -6,6 +6,70 @@ import path from "path";
 import { PROJECTS } from "./src/data/projects";
 
 const SITE_URL = "https://www.builtbyem.dev";
+
+/**
+ * Mounts api/ask.ts at /api/ask during `npm run dev`.
+ *
+ * Vercel runs that file as an Edge Function in preview and production, but
+ * the Vite dev server knows nothing about it: every request fell through to
+ * the SPA fallback and 404'd with an empty body, so the client's
+ * `response.json()` threw and the terminal reported a flat "bad response".
+ * The AI was not broken — it was unreachable, and only when developing
+ * locally, which is the one place you would notice.
+ *
+ * The handler is a standard Fetch handler (Request in, Response out), so
+ * bridging it to Node's req/res is mechanical. Loading it through
+ * ssrLoadModule rather than a static import keeps HMR: editing the prompt or
+ * the tool schema takes effect on the next request, with no server restart.
+ *
+ * Provider keys are read from .env into process.env for the dev server
+ * process only. They are never passed through `define`, so nothing here can
+ * leak a key into the client bundle — the reason this endpoint exists.
+ */
+function devApiPlugin(mode: string): Plugin {
+  return {
+    name: "dev-api",
+    apply: "serve",
+    configureServer(server) {
+      const env = loadEnv(mode, process.cwd(), "");
+      for (const key of ["GEMINI_API_KEY", "GROQ_API_KEY"]) {
+        if (!process.env[key] && env[key]) process.env[key] = env[key];
+      }
+
+      server.middlewares.use("/api/ask", async (req, res) => {
+        try {
+          const chunks: Buffer[] = [];
+          for await (const chunk of req) chunks.push(chunk as Buffer);
+
+          const { default: handler } = await server.ssrLoadModule("/api/ask.ts");
+
+          const response: Response = await handler(
+            new Request(`http://localhost${req.url ?? "/"}`, {
+              method: req.method,
+              headers: req.headers as Record<string, string>,
+              body: chunks.length ? Buffer.concat(chunks) : undefined,
+            }),
+          );
+
+          res.statusCode = response.status;
+          response.headers.forEach((value, key) => res.setHeader(key, value));
+          res.end(Buffer.from(await response.arrayBuffer()));
+        } catch (error) {
+          // Answer in the shape the client parses, so a dev-server fault
+          // surfaces as a readable message instead of another empty 404.
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            JSON.stringify({
+              type: "error",
+              error: `dev api: ${error instanceof Error ? error.message : String(error)}`,
+            }),
+          );
+        }
+      });
+    },
+  };
+}
 
 /**
  * Emits sitemap.xml from the same PROJECTS array the site renders.
@@ -98,12 +162,12 @@ function screenshotPlugin(): Plugin {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(() => ({
+export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
   },
-  plugins: [react(), sitemapPlugin(), screenshotPlugin()],
+  plugins: [react(), devApiPlugin(mode), sitemapPlugin(), screenshotPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -39,7 +39,7 @@ export const EXPERIENCE: ExperienceItem[] = [
   {
     id: "freelance",
     company: "Independent Consultant",
-    role: "Freelance Software & Data Engineer",
+    role: "Freelance Software Engineer",
     type: "Freelance",
     period: "Oct 2020 — Mar 2024",
     summary:

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T09:00:51.414Z",
+  "generatedAt": "2026-08-08T09:49:38.574Z",
   "person": {
     "name": "Emmanuel Moghalu",
     "role": "Data & Backend Engineer",
@@ -393,7 +393,7 @@
     {
       "id": "freelance",
       "company": "Independent Consultant",
-      "role": "Freelance Software & Data Engineer",
+      "role": "Freelance Software Engineer",
       "type": "Freelance",
       "period": "Oct 2020 — Mar 2024",
       "summary": "Delivered web development and data solutions for independent and small-business clients, managing full project lifecycles from proposal through delivery — sustained throughout a full-time engineering degree.",

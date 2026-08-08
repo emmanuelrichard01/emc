@@ -203,7 +203,7 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
               >
                 {statusLabel[status]}
               </span>
-              <span id="cv-file-info" className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">
+              <span id="cv-file-info" className="text-[9px] font-mono text-muted-foreground mt-0.5">
                 {FILE_NAME} · {FILE_SIZE}
               </span>
             </div>
