@@ -99,9 +99,11 @@ const Evidence = ({ items }: { items: ToolResult[] }) => {
 interface AiTranscriptProps {
   turns: AiTurn[];
   busy: boolean;
+  /** Stops the in-flight question. Ctrl+C does the same, on devices that have one. */
+  onCancel?: () => void;
 }
 
-export default function AiTranscript({ turns, busy }: AiTranscriptProps) {
+export default function AiTranscript({ turns, busy, onCancel }: AiTranscriptProps) {
   return (
     <div
       className="font-mono text-[12px] md:text-[13px] leading-[1.9]"
@@ -144,11 +146,30 @@ export default function AiTranscript({ turns, busy }: AiTranscriptProps) {
         );
       })}
 
+      {/* Tappable as well as Ctrl+C, for the same reason the shell's running
+          command is: a phone has no Ctrl key, so a keyboard-only cancel leaves
+          touch users watching a request they cannot stop. */}
       {busy && (
-        <div className="mt-3 flex items-center gap-2 text-muted-foreground/50">
-          <TerminalIcon className="w-3 h-3" aria-hidden="true" />
-          <span className="font-mono text-[11px]">querying the site</span>
-          <span className="flex gap-0.5" aria-hidden="true">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={!onCancel}
+          /* No aria-label, deliberately. This row is inserted into an
+             aria-live log, so an override would announce "stop the current
+             question" in place of the status a waiting user actually needs.
+             The visible text already says both. */
+          className="group mt-3 flex items-center gap-2 py-2 -my-2 text-left text-muted-foreground/50 enabled:hover:text-primary transition-colors"
+        >
+          <TerminalIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
+          <span className="font-mono text-[11px]">
+            querying the site
+            {/* Full strength while the rest of the row stays ambient: this
+                half is an instruction, and at /40 it measured about 2:1. */}
+            {onCancel && (
+              <span className="text-muted-foreground group-hover:text-primary"> — tap or ^C to stop</span>
+            )}
+          </span>
+          <span className="flex gap-0.5 shrink-0" aria-hidden="true">
             {[0, 1, 2].map((i) => (
               <span
                 key={i}
@@ -157,7 +178,7 @@ export default function AiTranscript({ turns, busy }: AiTranscriptProps) {
               />
             ))}
           </span>
-        </div>
+        </button>
       )}
     </div>
   );

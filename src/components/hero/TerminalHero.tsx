@@ -481,7 +481,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   behind it.
                 </div>
               )}
-              <AiTranscript turns={ai.turns} busy={ai.busy} />
+              <AiTranscript turns={ai.turns} busy={ai.busy} onCancel={ai.cancel} />
             </div>
           )}
         </div>
@@ -622,6 +622,35 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   )}
                 </div>
 
+                {/* The way out, as a control rather than a keybinding.
+
+                    AI mode advertised "esc to leave" at every width, and a
+                    phone has no Escape key — so the only exit on touch was
+                    typing `exit`, which nothing on screen mentioned. Same
+                    reasoning as the cancel row above: a keyboard-only verb
+                    strands the devices that cannot press it.
+
+                    Labelled `exit` rather than `esc` because that is also the
+                    word the prompt accepts, so the button and the command
+                    agree. py-2 -my-2 clears the 24px minimum without changing
+                    the row's height. */}
+                {aiMode && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      exitAi();
+                    }}
+                    /* Full-strength, not the /60 the rail's other mono labels
+                       use: at 11px that measured 2.65:1, and this is the one
+                       control on the row a stuck visitor is looking for. */
+                    className="shrink-0 -mr-2 px-2 py-2 -my-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-primary transition-colors"
+                    aria-label="Leave AI mode"
+                  >
+                    exit
+                  </button>
+                )}
+
                 {unlocked && (
                   <span
                     className="font-mono text-[10px] text-primary/70 shrink-0 hidden sm:inline"
@@ -642,8 +671,16 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         >
           {aiMode ? (
             <>
-              <span className="text-primary/70">esc</span> to leave · answers are generated and
-              cite the data behind them
+              {/* Same split as the resting hint below: name the gesture the
+                  device actually has. "esc to leave" was shown on phones that
+                  have no Escape key. */}
+              <span className="md:hidden">
+                tap <span className="text-primary/70">exit</span> to leave
+              </span>
+              <span className="hidden md:inline">
+                <span className="text-primary/70">esc</span> to leave
+              </span>{' '}
+              · answers are generated and cite the data behind them
             </>
           ) : (
             <>
