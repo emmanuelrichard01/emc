@@ -1,12 +1,11 @@
 import React, { useMemo, useRef, useState } from "react";
 import { motion, useInView, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
-import { ArrowRight, Cpu, Terminal } from "lucide-react";
+import { ArrowRight, Cpu, Database, Radio, Terminal, Workflow } from "lucide-react";
 import {
   SiPython, SiTypescript, SiReact, SiPostgresql,
-  SiAmazonwebservices, SiDocker, SiApachekafka,
-  SiTerraform, SiRedis,
-  SiSnowflake, SiApachespark,
-  SiApacheairflow
+  SiDocker, SiTerraform, SiRedis, SiApacheairflow,
+  SiNextdotjs, SiFastapi, SiDjango, SiNestjs,
+  SiDbt, SiDuckdb, SiPrometheus,
 } from "react-icons/si";
 import { StructuralCard } from "@/components/ui/StructuralCard";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
@@ -15,47 +14,75 @@ import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 /* DATA                                                                       */
 /* -------------------------------------------------------------------------- */
 
-/* Narrowed to what the work actually demonstrates. "Cloud Infrastructure"
-   was the weakest of the three — the projects run on Docker and local
-   stacks, with Terraform appearing once, in design-stage work. */
+/* Narrowed to what the work actually demonstrates.
+
+   "Cloud Infrastructure" has now been considered and rejected twice. Counted
+   against the data: five projects are fintech — mmr-engine, medvax, evanty,
+   modern-warehouse, cbn-data-residency — against one cloud-infrastructure
+   project, and AWS appears in zero project stacks with Terraform in exactly
+   one. Fintech is the strongest of the three claims here; cloud would be the
+   weakest thing on the page. */
 const ROLES = ["Data Engineering", "Backend Systems", "Fintech Infrastructure"];
 
-/* Grouped by what each thing is for.
+/* Derived from what the work actually contains, then grouped by role.
 
-   This was a flat list scrolling past in a marquee — a logo wall, which
-   tells a reader nothing they could not guess and was the busiest element
-   on a page that is otherwise deliberately calm. Grouped and still, the
-   same twelve entries say something: where the weight sits. */
+   This list used to show Kafka, Spark, Snowflake and AWS. An audit against
+   PROJECTS and EXPERIENCE found all four appear in exactly zero project
+   stacks and zero roles — and Kafka is worse than merely absent: it is the
+   option two case studies explicitly name as *rejected*, in favour of
+   Redpanda. Advertising the tool you turned down, beside the trade-off
+   explaining why you turned it down, is the same defect as the invented
+   metrics this site has already removed twice.
+
+   Meanwhile the genuinely load-bearing pieces were missing: Next.js in four
+   projects, FastAPI and dbt in three each, Redpanda and DuckDB in two, SQL
+   in four roles.
+
+   Every entry below is backed by at least one shipped project or role. When
+   the projects change, this should be re-derived, not edited from memory. */
 const TECH_GROUPS = [
   {
     label: "Languages",
     items: [
       { name: "Python", icon: SiPython },
       { name: "TypeScript", icon: SiTypescript },
+      { name: "SQL", icon: Database },
     ],
   },
   {
     label: "Data & Pipelines",
     items: [
       { name: "PostgreSQL", icon: SiPostgresql },
-      { name: "Kafka", icon: SiApachekafka },
+      { name: "dbt", icon: SiDbt },
+      { name: "Dagster", icon: Workflow },
       { name: "Airflow", icon: SiApacheairflow },
-      { name: "Spark", icon: SiApachespark },
-      { name: "Snowflake", icon: SiSnowflake },
+      { name: "Redpanda", icon: Radio },
+      { name: "DuckDB", icon: SiDuckdb },
+    ],
+  },
+  {
+    label: "Services & APIs",
+    items: [
+      { name: "FastAPI", icon: SiFastapi },
+      { name: "Django", icon: SiDjango },
+      { name: "NestJS", icon: SiNestjs },
+    ],
+  },
+  {
+    label: "Interface",
+    items: [
+      { name: "Next.js", icon: SiNextdotjs },
+      { name: "React", icon: SiReact },
     ],
   },
   {
     label: "Infrastructure",
     items: [
       { name: "Docker", icon: SiDocker },
-      { name: "AWS", icon: SiAmazonwebservices },
-      { name: "Terraform", icon: SiTerraform },
       { name: "Redis", icon: SiRedis },
+      { name: "Prometheus", icon: SiPrometheus },
+      { name: "Terraform", icon: SiTerraform },
     ],
-  },
-  {
-    label: "Interface",
-    items: [{ name: "React", icon: SiReact }],
   },
 ];
 
@@ -346,9 +373,18 @@ const About: React.FC = () => {
                   here to defend, because the case studies are the argument —
                   and on a site whose whole premise is that figures should be
                   attributable, a headline that asserts nothing is the one that
-                  cannot overstate. */}
+                  cannot overstate.
+
+                  "Since 2018" rather than a duration. The copy said "four
+                  years" while the ledger below it starts in October 2018,
+                  which understated the record by about half — and any
+                  duration invites the follow-up question of whether the
+                  part-time roles held during the diploma and the B.Eng.
+                  count. A start date has no such argument in it, and the
+                  Experience section already states which roles overlapped
+                  study. */}
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-[1.15] mb-8">
-                Four years of systems that had to stay correct.
+                Systems that had to stay correct, since 2018.
               </h2>
 
               <RevealText

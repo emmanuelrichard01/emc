@@ -25,7 +25,7 @@ const StructuredData = () => {
     "jobTitle": "Data Engineer & Backend Systems Engineer",
     "url": origin,
     "image": `${origin}/profile.webp`,
-    "description": "Data and backend engineer with 4+ years building production APIs, event-driven data pipelines, and analytics platforms — validated with automated test suites. Deep working knowledge of the Nigerian and broader African fintech ecosystem, including multi-PSP integration, CBN regulatory requirements, and NDPR compliance.",
+    "description": "Data and backend engineer building production APIs, event-driven data pipelines, and analytics platforms since 2018 — validated with automated test suites. Deep working knowledge of the Nigerian and broader African fintech ecosystem, including multi-PSP integration, CBN regulatory requirements, and NDPR compliance.",
     "knowsAbout": [
       "Data Engineering",
       "Backend Engineering",
@@ -42,7 +42,6 @@ const StructuredData = () => {
       "Data Warehousing",
       "Apache Kafka",
       "Redpanda",
-      "Apache Spark",
       "Dagster",
       "Prefect",
       "dbt",
@@ -176,7 +175,7 @@ const StructuredData = () => {
         "name": "What tech stack does Emmanuel Moghalu use?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Emmanuel's primary stack is Python and TypeScript across FastAPI, Django, Django Ninja, NestJS, React and Next.js. For data he uses dbt, Dagster, Prefect, DuckDB, PostgreSQL (including pgvector for semantic search) and Apache Spark; for streaming, Kafka and Redpanda with Celery and Redis. Infrastructure runs on Docker and Terraform, with Prometheus and Grafana for observability."
+          "text": "Emmanuel's primary stack is Python and TypeScript across FastAPI, Django, Django Ninja, NestJS, React and Next.js. For data he uses dbt, Dagster, Prefect, DuckDB and PostgreSQL, including pgvector for semantic search; for streaming, Redpanda with Celery and Redis. Infrastructure runs on Docker and Terraform, with Prometheus and Grafana for observability. Every technology listed here appears in a shipped project or a recorded role."
         }
       },
       {
