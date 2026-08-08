@@ -23,18 +23,31 @@ export interface SystemTelemetry {
   uptimeSeconds: number;
   /** Used JS heap in MB. Chromium-only; null elsewhere. */
   heapMB: number | null;
+  /**
+   * Currently *allocated* heap in MB, which is what used should be read
+   * against — not the ~4GB jsHeapSizeLimit, where every real reading would
+   * render as a bar pinned near zero. used/total is the ratio that actually
+   * moves as the page works.
+   */
+  heapTotalMB: number | null;
   /** Live element count for this document. */
   domNodes: number;
 }
 
 interface PerformanceWithMemory extends Performance {
-  memory?: { usedJSHeapSize: number };
+  memory?: { usedJSHeapSize: number; totalJSHeapSize?: number };
 }
 
 export function readHeapMB(): number | null {
   const mem = (performance as PerformanceWithMemory).memory;
   if (!mem || typeof mem.usedJSHeapSize !== 'number') return null;
   return mem.usedJSHeapSize / 1048576;
+}
+
+export function readHeapTotalMB(): number | null {
+  const mem = (performance as PerformanceWithMemory).memory;
+  if (!mem || typeof mem.totalJSHeapSize !== 'number') return null;
+  return mem.totalJSHeapSize / 1048576;
 }
 
 export function readDomNodes(): number {
@@ -81,6 +94,7 @@ export function useSystemTelemetry(enabled = true): SystemTelemetry {
     fpsHistory: [],
     uptimeSeconds: 0,
     heapMB: readHeapMB(),
+    heapTotalMB: readHeapTotalMB(),
     domNodes: typeof document === 'undefined' ? 0 : document.getElementsByTagName('*').length,
   }));
 
@@ -122,6 +136,7 @@ export function useSystemTelemetry(enabled = true): SystemTelemetry {
         // reports true page uptime rather than component uptime.
         uptimeSeconds: Math.floor((Date.now() - performance.timeOrigin) / 1000),
         heapMB: readHeapMB(),
+        heapTotalMB: readHeapTotalMB(),
         domNodes: document.getElementsByTagName('*').length,
       }));
     };

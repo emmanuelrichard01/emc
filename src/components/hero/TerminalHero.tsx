@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Github, Linkedin, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
-import { XLogo } from '@/components/ui/XLogo';
 import { LOGO_PATHS } from '@/components/ui/LogoMark';
 import { buildMotd, type MotdTone } from '@/lib/motd';
-import { FPS_SAMPLES, formatUptime, useSystemTelemetry } from './useSystemTelemetry';
 import { useTerminalSession } from './useTerminalSession';
+import StatusRail from './StatusRail';
 import { useAiSession } from './useAiSession';
 import AiTranscript, { AI_SUGGESTIONS } from './AiTranscript';
 
@@ -38,12 +37,6 @@ import AiTranscript, { AI_SUGGESTIONS } from './AiTranscript';
 
 const PROMPT = 'em@builtbyem:~/$';
 
-const SOCIALS = [
-  { icon: Github, href: 'https://github.com/emmanuelrichard01', label: 'GitHub', short: 'gh' },
-  { icon: Linkedin, href: 'https://linkedin.com/in/e-mc', label: 'LinkedIn', short: 'in' },
-  { icon: XLogo, href: 'https://x.com/mrebr', label: 'X', short: 'x' },
-];
-
 const MOTD_TONE_CLASS: Record<MotdTone, string> = {
   identity: 'text-foreground/90',
   meta: 'text-muted-foreground',
@@ -57,86 +50,6 @@ const MOTD_TONE_CLASS: Record<MotdTone, string> = {
 const CHIPS = ['ai', 'ask', 'work', 'resume', 'contact'] as const;
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-
-/* ── Live status rail ───────────────────────────────────────────────────── */
-
-const SPARK_W = 44;
-const SPARK_H = 10;
-const FPS_CEILING = 70;
-
-const StatusRail = ({ active }: { active: boolean }) => {
-  const telemetry = useSystemTelemetry(active);
-
-  const points = useMemo(
-    () =>
-      telemetry.fpsHistory
-        .map((value, i) => {
-          const x = (i / (FPS_SAMPLES - 1)) * SPARK_W;
-          const y = SPARK_H - Math.min(1, value / FPS_CEILING) * SPARK_H;
-          return `${x.toFixed(1)},${y.toFixed(1)}`;
-        })
-        .join(' '),
-    [telemetry.fpsHistory]
-  );
-
-  const pending = telemetry.fps === null;
-  const healthy = pending || telemetry.fps >= 50;
-
-  return (
-    <div className="flex items-center gap-3 text-[9px] font-mono uppercase tracking-widest min-w-0">
-      <div className="flex items-center gap-1.5 shrink-0">
-        <span className={`w-1.5 h-1.5 status-live ${healthy ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-        <svg
-          width={SPARK_W}
-          height={SPARK_H}
-          viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
-          className={`shrink-0 hidden sm:block ${healthy ? 'text-emerald-400/60' : 'text-amber-400/60'}`}
-          aria-hidden="true"
-        >
-          {telemetry.fpsHistory.length > 1 && (
-            <polyline
-              points={points}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          )}
-        </svg>
-        <span className={`tabular-nums ${healthy ? 'text-emerald-400/80' : 'text-amber-400/80'}`}>
-          {pending ? '--' : telemetry.fps}
-        </span>
-        <span className="text-muted-foreground/40">fps</span>
-      </div>
-
-      <span className="w-px h-3 bg-border shrink-0 hidden sm:block" />
-
-      <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-        <span className="text-muted-foreground/70 tabular-nums">
-          {formatUptime(telemetry.uptimeSeconds)}
-        </span>
-        <span className="text-muted-foreground/40">up</span>
-      </div>
-
-      <span className="w-px h-3 bg-border shrink-0 hidden lg:block" />
-
-      <div className="hidden lg:flex items-center gap-1.5 shrink-0">
-        {telemetry.heapMB !== null ? (
-          <>
-            <span className="text-primary/70 tabular-nums">{telemetry.heapMB.toFixed(1)}</span>
-            <span className="text-muted-foreground/40">mb</span>
-          </>
-        ) : (
-          <>
-            <span className="text-primary/70 tabular-nums">{telemetry.domNodes}</span>
-            <span className="text-muted-foreground/40">nodes</span>
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
 
@@ -211,6 +124,15 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
     const el = inputRef.current;
     if (el) setCaretIndex(el.selectionStart ?? el.value.length);
   }, [inputRef]);
+
+  /* Clamped to the current value rather than tracked independently.
+
+     Submitting clears the input through the session hook, which does not go
+     via setInput — so the stored index survived the clear and the block sat
+     two cells right of an empty prompt. Deriving it costs nothing and cannot
+     drift, where an effect syncing the two would be the cascading-render
+     pattern React's rules flag. */
+  const caret = Math.min(caretIndex, inputValue.length);
 
   /** Sets the value and parks the caret at the end, as a shell would. */
   const setInput = useCallback(
@@ -393,13 +315,34 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           transition: { duration: 0.5, delay, ease: EASE },
         };
 
+  /* Compact once the shell is in use.
+     The wordmark is the largest thing on a resting screen and the least
+     useful one on a working screen, so it gives up its space to output. */
+  const compact = hasOutput || aiMode;
+
   return (
-    <div className="relative flex-1 flex flex-col justify-center min-h-0">
-      {/* pb clears the status rail pinned below, which is absolutely
-          positioned and would otherwise sit under the chips. */}
-      <div className="w-full max-w-3xl mx-auto px-1 pb-16">
+    /* The rail is a flex sibling, not absolutely positioned.
+       It used to be pinned with `absolute bottom-0` inside this container —
+       which is fine at rest and wrong the moment a command produces output:
+       the container grows past the viewport and takes the rail, and the
+       socials with it, off the bottom of the screen. As a sibling it cannot
+       be pushed anywhere; the scrollback above absorbs the growth instead. */
+    <div className="relative flex-1 flex flex-col min-h-0">
+      <div className="w-full max-w-3xl mx-auto px-1 flex-1 flex flex-col justify-center min-h-0 py-2">
         {/* ── Wordmark ── */}
-        <motion.div {...reveal(0.05)} className="flex items-end gap-5 md:gap-6 mb-12 md:mb-16">
+        <motion.div
+          {...reveal(0.05)}
+          animate={{
+            // Scale rather than a font/size swap: it is one compositor
+            // property, so the shrink is smooth and costs no layout.
+            scale: compact ? 0.62 : 1,
+            marginBottom: compact ? 4 : 44,
+            opacity: compact ? 0.75 : 1,
+          }}
+          transition={{ duration: prefersReduced ? 0 : 0.45, ease: EASE }}
+          style={{ transformOrigin: 'left top' }}
+          className="flex items-end gap-5 md:gap-6 shrink-0"
+        >
           <svg
             viewBox="0 0 200 120"
             className="w-14 h-8 md:w-[72px] md:h-11 text-primary shrink-0"
@@ -425,7 +368,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="max-h-[38vh] overflow-y-auto font-mono text-[12px] md:text-[13px] leading-[2] mb-12 md:mb-16 pr-2 -mr-2"
+          className={`min-h-0 overflow-y-auto font-mono text-[12px] md:text-[13px] leading-[2] pr-2 -mr-2 ${
+            compact ? 'flex-1 mb-5' : 'shrink-0 mb-12 md:mb-16'
+          }`}
         >
           <div className="space-y-1.5">
             {motd.map((line, i) =>
@@ -500,7 +445,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         </div>
 
         {/* ── The prompt ── */}
-        <motion.div {...reveal(0.45)} className="relative">
+        <motion.div {...reveal(0.45)} className="relative shrink-0">
           {/* Corner brackets — the box reads as an instrument, not a form
               field, and they brighten with focus. */}
           {(['top-0 left-0 border-t border-l', 'top-0 right-0 border-t border-r', 'bottom-0 left-0 border-b border-l', 'bottom-0 right-0 border-b border-r'] as const).map(
@@ -617,7 +562,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                           ? `bg-primary ${autoTyping ? '' : 'terminal-caret'}`
                           : 'border border-primary/50'
                       }`}
-                      style={{ left: `${caretIndex * charWidth}px` }}
+                      style={{ left: `${caret * charWidth}px` }}
                     />
                   )}
 
@@ -648,7 +593,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         {/* ── Hint ── */}
         <motion.p
           {...reveal(0.55)}
-          className="mt-4 font-mono text-[11px] md:text-[12px] text-muted-foreground/45"
+          className={`font-mono text-[11px] md:text-[12px] text-muted-foreground/45 shrink-0 ${compact ? 'mt-2.5' : 'mt-4'}`}
         >
           {aiMode ? (
             <>
@@ -665,7 +610,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         {/* ── Chips ──
             In AI mode these become starter questions instead of commands, so
             the empty prompt is never a blank stare. */}
-        <motion.div {...reveal(0.65)} className="mt-8 flex flex-wrap items-center gap-x-1 gap-y-2">
+        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center gap-x-1 gap-y-2 shrink-0 ${compact ? 'mt-4' : 'mt-8'}`}>
           {aiMode
             ? AI_SUGGESTIONS.map((suggestion) => (
                 <button
@@ -713,27 +658,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         initial={prefersReduced ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.9 }}
-        className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-4 border-t border-border/60 px-1 py-2.5"
+        className="shrink-0 border-t border-border/60 px-1 pt-2 pb-1"
       >
         <StatusRail active={live} />
-
-        <div className="flex items-center gap-3.5 shrink-0">
-          {SOCIALS.map((social) => (
-            <a
-              key={social.label}
-              href={social.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${social.label} (opens in a new tab)`}
-              className="flex items-center gap-1.5 text-muted-foreground/60 hover:text-primary transition-colors"
-            >
-              <social.icon className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="font-mono text-[9px] uppercase tracking-widest hidden sm:inline">
-                {social.short}
-              </span>
-            </a>
-          ))}
-        </div>
       </motion.div>
     </div>
   );

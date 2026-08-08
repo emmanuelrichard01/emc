@@ -66,7 +66,7 @@ export default function Hero() {
          suppressed until the visitor scrolls past this section. The hero is a
          terminal occupying a whole screen; a floating pill over it would be
          the site apologising for its own idea. */
-      className="relative min-h-[100svh] flex flex-col overflow-hidden px-6 md:px-10 lg:px-16 pt-16 pb-12"
+      className="relative h-[100svh] min-h-[520px] flex flex-col overflow-hidden px-6 md:px-10 lg:px-16 pt-14 pb-4"
     >
       {shouldBoot && !live && <BootOverlay onDone={handleBooted} />}
 
