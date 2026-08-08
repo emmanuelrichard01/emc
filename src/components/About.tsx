@@ -65,10 +65,10 @@ const TECH_COUNT = TECH_GROUPS.reduce((sum, group) => sum + group.items.length, 
    list. "Cloud Infrastructure Automation (IaC)" was the previous outlier —
    nothing on this site demonstrates it at production scale. */
 const DELIVERABLES = [
-  "Event-Driven Pipelines & ETL/ELT",
-  "Payment Reconciliation & Multi-PSP Integration",
-  "Real-Time Streaming & Alerting",
-  "Analytics Warehouses & Dashboards",
+  "Event-driven pipelines and ETL",
+  "Payment reconciliation across PSPs",
+  "Real-time streaming and alerting",
+  "Analytics warehouses and dashboards",
 ];
 
 /* Every figure is countable, and every figure states where it came from.
@@ -118,23 +118,28 @@ const RevealWord = ({
   const start = index / total;
   const end = Math.min(start + 2 / total, 1);
 
-  /* Colour, not opacity.
-     This used to fade 0.15 → 1, which put roughly a third of the paragraph
-     below 1.2:1 at any given scroll position where AA wants 4.5:1 — and left
-     the bio fully legible only at one exact offset, fading back out as you
-     scrolled past. Flooring the alpha instead would mean a 0.9 → 1 range,
-     since nothing below 0.9 passes here: technically accessible and
-     visually nothing.
+  /* Blur carries the reveal; colour and a floored opacity carry the lift.
 
-     Interpolating between two colours that BOTH pass keeps the sweep clearly
-     visible — muted grey to near-white — while the worst case is 5.67:1.
-     Literal values rather than tokens because framer cannot interpolate
-     `hsl(var(--x))`; these two are theme-invariant (only --primary changes
-     between the amber, purple and phosphor themes). */
+     The original faded 0.15 → 1 opacity, which put about a third of the
+     paragraph near 1.16:1 where AA wants 4.5:1, and left the bio fully
+     legible only at one exact scroll offset. Alpha alone cannot be rescued —
+     nothing under 0.9 passes here, so an "accessible" fade is a 0.9 → 1
+     sweep, which is invisible.
+
+     Blur is what makes the sweep read, and it costs no contrast: a blurred
+     glyph and a sharp one are the same colour. So the word can also brighten
+     (muted grey → near-white) and lift from 0.9 → 1 opacity, and the worst
+     point on the whole sweep still measures 4.75:1.
+
+     Literal colours rather than tokens because framer cannot interpolate
+     `hsl(var(--x))`; these two are theme-invariant — only --primary changes
+     between the amber, purple and phosphor themes. */
+  const blur = useTransform(progress, [start, end], ["blur(5px)", "blur(0px)"]);
   const color = useTransform(progress, [start, end], ["hsl(0 0% 53%)", "hsl(0 0% 93%)"]);
+  const opacity = useTransform(progress, [start, end], [0.9, 1]);
 
   return (
-    <motion.span style={{ color }} className="relative inline-block mr-1.5">
+    <motion.span style={{ filter: blur, color, opacity }} className="relative inline-block mr-1.5">
       {word}
     </motion.span>
   );
@@ -144,6 +149,14 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
   const container = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: container, offset: ["start 0.95", "start 0.55"] });
   const words = useMemo(() => text.split(" "), [text]);
+  const prefersReduced = useReducedMotion();
+
+  /* Under reduced motion the paragraph is simply a paragraph. Scroll-linked
+     blur is exactly the kind of movement the preference is asking us to drop,
+     and a softened version of it would still be motion tied to scrolling. */
+  if (prefersReduced) {
+    return <p className={`text-foreground ${className}`}>{text}</p>;
+  }
 
   return (
     <div ref={container} className={`flex flex-wrap ${className}`}>
@@ -207,7 +220,7 @@ const DeliverablesModule = () => {
     <StructuralCard className="col-span-1 md:col-span-2">
       <div ref={ref} className="flex items-center gap-3 mb-6">
         <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
-        <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground">Core Competencies</span>
+        <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground">What I Build</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {DELIVERABLES.map((item, i) => (
@@ -321,17 +334,20 @@ const About: React.FC = () => {
                 <span>Module 01 // Overview</span>
               </div>
 
-              {/* The previous heading claimed systems "that power millions of
-                  daily operations" — another round, unverifiable number. This
-                  one makes a claim about approach that every project on the
-                  page actually backs up: circuit breakers, idempotency
-                  guards, gap detection, reconciliation loops. */}
+              {/* Two sentences and 71 characters became one line of six words.
+
+                  The heading before that claimed systems "powering millions of
+                  daily operations" — an unverifiable number. This makes a
+                  claim about approach instead, which every project here backs
+                  up: circuit breakers, idempotency guards, gap detection,
+                  reconciliation loops. The paragraph below does the
+                  explaining, so the heading only has to land. */}
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-[1.15] mb-8">
-                Most systems work on the happy path. I build for what happens after that.
+                The happy path is the easy half.
               </h2>
 
               <RevealText
-                text="Four years in, across fintech, logistics, health and analytics. I spend most of my time on the parts nobody demos — what happens when Redis goes down mid-traffic, when a settlement webhook never arrives, when two instances try to spend the same token at once. The systems I ship come with the tests that prove those paths work, not just the happy ones."
+                text="Four years across fintech, logistics, health and analytics. Most of my time goes to the parts nobody demos: Redis going down mid-traffic, a settlement webhook that never arrives, two instances spending the same token at once. What I ship comes with the tests that prove those paths hold."
                 className="text-[14px] text-muted-foreground leading-relaxed font-light"
               />
             </motion.div>
