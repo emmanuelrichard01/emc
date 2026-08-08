@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
 import { LOGO_PATHS } from '@/components/ui/LogoMark';
+import { MAX_QUESTION_CHARS as AI_MAX_QUESTION_CHARS } from '@/lib/aiHistory';
 import { buildMotd, type MotdTone } from '@/lib/motd';
 import { useTerminalSession } from './useTerminalSession';
 import StatusRail from './StatusRail';
@@ -276,6 +277,15 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
       if (!question) return;
       if (question === 'exit' || question === 'quit') {
         exitAi();
+        return;
+      }
+      // Caught here rather than as a 400 from the endpoint. The server keeps
+      // its own cap as the real boundary; this only spares the user a round
+      // trip to be told something the input already knew.
+      if (question.length > AI_MAX_QUESTION_CHARS) {
+        ai.reject(
+          `question is ${question.length} characters — keep it under ${AI_MAX_QUESTION_CHARS}.`
+        );
         return;
       }
       setInput('');

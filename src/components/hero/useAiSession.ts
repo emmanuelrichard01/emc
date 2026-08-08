@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { trimHistory, type WireMessage } from '@/lib/aiHistory';
 import { executeToolCall, extractiveAnswer, type ToolCall, type ToolResult } from '@/lib/aiTools';
 
 /* ==========================================================================
@@ -36,17 +37,10 @@ export interface AiTurn {
   local?: boolean;
 }
 
-interface WireMessage {
-  role: 'user' | 'assistant' | 'tool';
-  content: string;
-  /* Echoed back structurally, not narrated. Both providers need to see their
-     own tool call as an action they took; describing it in prose left the
-     model reading its own call as something a user had typed. Gemini's
-     thoughtSignature rides along untouched. */
-  toolCalls?: ToolCall[];
-  toolName?: string;
-  toolCallId?: string;
-}
+/* Kept under the endpoint's own MAX_MESSAGES (16) with room for the rounds
+   this question will add, so a long session drops its oldest exchanges
+   instead of hitting "conversation too long" and refusing to continue. */
+const MAX_HISTORY = 10;
 
 /** What /api/ask replies with, on any of its paths. */
 interface WireResponse {
@@ -63,6 +57,8 @@ export interface AiSession {
   /** Set once the endpoint reports no key is configured. */
   unconfigured: boolean;
   send: (question: string) => Promise<void>;
+  /** Refuse a question locally, without spending a request to be told why. */
+  reject: (reason: string) => void;
   reset: () => void;
   cancel: () => void;
 }
@@ -90,6 +86,13 @@ export function useAiSession(): AiSession {
     setBusy(false);
   }, []);
 
+  const reject = useCallback(
+    (reason: string) => {
+      push({ role: 'system', text: reason, local: true });
+    },
+    [push]
+  );
+
   const cancel = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -102,7 +105,12 @@ export function useAiSession(): AiSession {
       if (!trimmed || busy) return;
 
       push({ role: 'user', text: trimmed });
-      historyRef.current = [...historyRef.current, { role: 'user', content: trimmed }];
+      // Trimmed before the new question is appended, so the exchange about to
+      // start always has the full round budget available to it.
+      historyRef.current = [
+        ...trimHistory(historyRef.current, MAX_HISTORY),
+        { role: 'user', content: trimmed },
+      ];
       setBusy(true);
 
       const controller = new AbortController();
@@ -218,5 +226,5 @@ export function useAiSession(): AiSession {
     [busy, push]
   );
 
-  return { turns, busy, unconfigured, send, reset, cancel };
+  return { turns, busy, unconfigured, send, reject, reset, cancel };
 }
