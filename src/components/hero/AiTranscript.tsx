@@ -20,12 +20,32 @@ import type { ToolResult } from '@/lib/aiTools';
    screenshot of one answer should still know what produced it.
    ========================================================================== */
 
-/** Starter questions, phrased the way a visitor would actually ask. */
+/* Starter questions, phrased the way a visitor would actually ask.
+
+   Chosen against three constraints, not for variety:
+
+     · Every one is answerable from the site's own data. A starter that leads
+       to "I don't have that" teaches a visitor the feature is broken on their
+       very first use of it, which is an expensive way to fill a chip.
+     · Between them they exercise all three tools — run_sql for the counting
+       and filtering questions, get_project for the how-it-works one,
+       get_experience for the roles one. A visitor clicking two of these sees
+       two different kinds of evidence open underneath.
+     · They are the questions this site is actually for. The first is what a
+       recruiter is really asking; the last is the one a careful reader wants
+       and most portfolios will not answer, so it is offered rather than
+       waited for.
+
+   Named by what they describe, never by internal id — "the reconciliation
+   engine" reads to someone who has not scrolled to the projects yet, where
+   "mmr-engine" only reads to someone who already has. */
 export const AI_SUGGESTIONS = [
   'what has he actually shipped?',
   'how does the reconciliation engine work?',
   'what would he bring to a data platform team?',
   'which projects use python and postgres?',
+  'where has he worked, and for how long?',
+  "what's design-stage rather than built?",
 ] as const;
 
 const Evidence = ({ items }: { items: ToolResult[] }) => {
@@ -33,10 +53,15 @@ const Evidence = ({ items }: { items: ToolResult[] }) => {
 
   return (
     <div className="mt-2">
+      {/* The one control that makes the whole feature checkable, and it was
+          the least visible thing on the screen: 9px at 40% opacity measures
+          about 1.8:1 on this background, and stood 12px tall against a 24px
+          minimum. Raised to full token strength and given a real hit area.
+          Quiet is done with size and tracking here, not with alpha. */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-colors"
+        className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors py-2 -my-1.5 pr-2 -mr-2"
         aria-expanded={open}
       >
         {open ? '− hide' : '+ show'} evidence ({items.length})
@@ -46,7 +71,7 @@ const Evidence = ({ items }: { items: ToolResult[] }) => {
         <div className="mt-2 border-l border-primary/20 pl-3 space-y-3">
           {items.map((item) => (
             <div key={item.callId} className="font-mono text-[11px]">
-              <div className="text-muted-foreground/40 uppercase tracking-widest text-[9px] mb-1">
+              <div className="text-muted-foreground uppercase tracking-widest text-[9px] mb-1">
                 {item.name}
               </div>
 
@@ -62,7 +87,7 @@ const Evidence = ({ items }: { items: ToolResult[] }) => {
                         {item.table.columns.map((col) => (
                           <th
                             key={col}
-                            className="text-left pr-5 pb-1 text-[9px] uppercase tracking-widest text-muted-foreground/40 font-normal"
+                            className="text-left pr-5 pb-1 text-[9px] uppercase tracking-widest text-muted-foreground font-normal"
                           >
                             {col}
                           </th>
@@ -101,9 +126,19 @@ interface AiTranscriptProps {
   busy: boolean;
   /** Stops the in-flight question. Ctrl+C does the same, on devices that have one. */
   onCancel?: () => void;
+  /** Re-asks the last question. Rendered only on the newest failed turn. */
+  onRetry?: () => void;
+  /** Whether that offer currently stands — see `canRetry` in useAiSession. */
+  canRetry?: boolean;
 }
 
-export default function AiTranscript({ turns, busy, onCancel }: AiTranscriptProps) {
+export default function AiTranscript({
+  turns,
+  busy,
+  onCancel,
+  onRetry,
+  canRetry,
+}: AiTranscriptProps) {
   return (
     <div
       className="font-mono text-[12px] md:text-[13px] leading-[1.9]"
@@ -112,10 +147,16 @@ export default function AiTranscript({ turns, busy, onCancel }: AiTranscriptProp
       aria-relevant="additions"
       aria-label="AI conversation"
     >
-      {turns.map((turn) => {
+      {turns.map((turn, index) => {
+        const isNewest = index === turns.length - 1;
+
         if (turn.role === 'user') {
           return (
-            <div key={turn.id} className="mt-4 first:mt-0 text-foreground">
+            /* data-anchor marks where the scroll region should park this
+               exchange. The shell anchors to the newest *command* for the
+               same reason: an answer taller than the viewport should open at
+               its beginning, not scrolled past its own first line. */
+            <div key={turn.id} data-anchor className="mt-4 first:mt-0 text-foreground">
               <span className="text-primary/60 select-none">? </span>
               {turn.text}
             </div>
@@ -126,6 +167,19 @@ export default function AiTranscript({ turns, busy, onCancel }: AiTranscriptProp
           return (
             <div key={turn.id} className="mt-1.5 text-amber-400/80 whitespace-pre-wrap">
               {turn.text}
+              {/* A failure used to be the end of the conversation: the message
+                  said what went wrong and left retyping the question as the
+                  only way forward, which on a phone means summoning the
+                  keyboard again to reproduce something you already typed. */}
+              {isNewest && turn.retryable && canRetry && onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="ml-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-primary transition-colors py-2 -my-1 px-1 -mx-1"
+                >
+                  retry
+                </button>
+              )}
             </div>
           );
         }

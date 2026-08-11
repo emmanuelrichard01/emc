@@ -97,6 +97,26 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
 
   const hasOutput = sessionLog.length > 0;
 
+  /* ── AI mode ─────────────────────────────────────────────────────────────
+     A distinct mode rather than a replacement for the shell. Commands stay
+     commands: `ls` still lists, `sql` still queries, and "command not found"
+     still suggests a correction. Routing unrecognised input to a model would
+     have removed all of that and turned every typo into a billed call.
+
+     Declared here rather than beside the handlers that use it because the
+     scrollback effect below reads `ai.turns` in its dependency array — and a
+     dependency array is evaluated during render, so a `const ai` further down
+     the body would still be in the temporal dead zone and throw. */
+  const ai = useAiSession();
+  const [aiMode, setAiMode] = useState(false);
+
+  /* Where the visitor is standing in their own question history. */
+  const [askedHistoryIndex, setAskedHistoryIndex] = useState<number | null>(null);
+  const askedQuestions = useMemo(
+    () => ai.turns.filter((turn) => turn.role === 'user').map((turn) => turn.text),
+    [ai.turns]
+  );
+
   /* ── Block caret ─────────────────────────────────────────────────────────
      A terminal's cursor is a filled cell, not the hairline the browser draws.
      Rendering a real block means knowing where it goes, and the font here is
@@ -107,8 +127,17 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
      focus, selection and IME behaviour, and only its painted caret is
      replaced. */
   const rulerRef = useRef<HTMLSpanElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const [charWidth, setCharWidth] = useState(0);
   const [caretIndex, setCaretIndex] = useState(0);
+
+  /* How far the input has scrolled itself.
+     Once the value is longer than the field, the browser scrolls the input to
+     keep the real caret in view — so `index * charWidth` stops describing a
+     position on screen and starts describing a position in the *string*. See
+     the block below for what that looked like. */
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [trackWidth, setTrackWidth] = useState(0);
 
   useEffect(() => {
     const measure = () => {
@@ -117,6 +146,8 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
       // A ten-character sample, so sub-pixel advance width does not compound
       // into a visible drift by the end of a long command.
       setCharWidth(el.getBoundingClientRect().width / 10);
+      const track = trackRef.current;
+      if (track) setTrackWidth(track.getBoundingClientRect().width);
     };
     measure();
     window.addEventListener('resize', measure);
@@ -136,7 +167,22 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
      pattern React's rules flag. */
   const syncCaret = useCallback(() => {
     const el = inputRef.current;
-    if (el) setCaretIndex(el.selectionStart ?? el.value.length);
+    if (!el) return;
+    setCaretIndex(el.selectionStart ?? el.value.length);
+    setScrollLeft(el.scrollLeft);
+  }, [inputRef]);
+
+  /* The input's own scroll is the authoritative correction.
+
+     Reading it in the key and pointer handlers is not enough on its own: the
+     browser adjusts scrollLeft as part of laying the field out, which can
+     land after the event that caused it. `scroll` fires exactly when that
+     adjustment happens, so it catches the cases the others miss — held
+     backspace, IME commits, autofill, and momentum-scrolling the field with
+     a finger, which is a gesture that exists only on touch. */
+  const syncScroll = useCallback(() => {
+    const el = inputRef.current;
+    if (el) setScrollLeft(el.scrollLeft);
   }, [inputRef]);
 
   /* Clamped to the current value rather than tracked independently.
@@ -147,6 +193,42 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
      drift, where an effect syncing the two would be the cascading-render
      pattern React's rules flag. */
   const caret = Math.min(caretIndex, inputValue.length);
+
+  /* Where the block actually goes, in the field's visible coordinates.
+
+     Clamped out of existence rather than pinned to an edge when it falls
+     outside the window. A block parked against the left rule while the caret
+     is really 40 characters away is a lie about where typing will land; drawn
+     nowhere, the field simply reads as scrolled, which is what it is. In
+     normal use this never triggers — the browser keeps the caret in view —
+     so it only catches the edge cases, chiefly a blurred field whose scroll
+     has been reset under a stale index. */
+  const rawCaretLeft = caret * charWidth - scrollLeft;
+
+  /* Held one cell inside the right edge.
+
+     A field scrolled as far as it goes puts the caret exactly on the
+     boundary — there is nowhere further to scroll — so a full cell drawn from
+     there hangs a whole character outside the input, over the `exit` control
+     at the narrowest width. Trimming the cell to fit was the first attempt
+     and measured worse: at the end of a long line it left 0.6px of block,
+     which is no cursor at all, and losing the cursor while typing is the
+     complaint rather than the fix.
+
+     So the block is pulled back instead, and sits over the last character
+     rather than in the empty cell after it. Min() only bites at the boundary;
+     everywhere else the caret already has its cell of room and this is a
+     no-op. */
+  const caretLeft = trackWidth > 0 ? Math.min(rawCaretLeft, trackWidth - charWidth) : rawCaretLeft;
+
+  /* Drawn nowhere rather than pinned to an edge when the caret is genuinely
+     off-screen to the left. A block parked against the left rule while the
+     caret is 40 characters away is a lie about where typing will land; absent,
+     the field simply reads as scrolled, which is what it is. In normal use
+     this never fires — the browser keeps the caret in view — so it only
+     catches the edge cases, chiefly a blurred field whose scroll has been
+     reset under a stale index. */
+  const caretVisible = trackWidth === 0 || (rawCaretLeft >= -1 && caretLeft >= -1);
 
   /** Sets the value and parks the caret at the end, as a shell would. */
   const setInput = useCallback(
@@ -176,13 +258,22 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
     const el = scrollRef.current;
     if (!el) return;
 
-    if (running || !stickToBottom.current) {
+    if (running || ai.busy || !stickToBottom.current) {
       if (stickToBottom.current) el.scrollTop = el.scrollHeight;
       return;
     }
 
-    const commandLines = el.querySelectorAll<HTMLElement>('[data-line-type="cmd"]');
-    const latest = commandLines[commandLines.length - 1];
+    /* Both kinds of exchange, not just shell commands.
+
+       This queried `[data-line-type="cmd"]` alone and ran on `[sessionLog,
+       running]` — neither of which changes when an AI turn arrives. So the
+       transcript never scrolled itself at all: ask a second question and the
+       answer landed below the fold with nothing indicating it had. The AI
+       question rows now carry `data-anchor` and the deps include the turn
+       count, so an answer opens at its own first line the way a command's
+       output does. */
+    const anchors = el.querySelectorAll<HTMLElement>('[data-line-type="cmd"], [data-anchor]');
+    const latest = anchors[anchors.length - 1];
     if (!latest) {
       el.scrollTop = el.scrollHeight;
       return;
@@ -192,7 +283,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
     // against the scroll container rather than trusting the layout tree.
     const delta = latest.getBoundingClientRect().top - el.getBoundingClientRect().top;
     el.scrollTop = Math.min(el.scrollTop + delta, el.scrollHeight - el.clientHeight);
-  }, [sessionLog, running]);
+  }, [sessionLog, running, ai.turns, ai.busy]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -247,14 +338,6 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
     [autoTyping, prefersReduced, running, setInput, submit]
   );
 
-  /* ── AI mode ─────────────────────────────────────────────────────────────
-     A distinct mode rather than a replacement for the shell. Commands stay
-     commands: `ls` still lists, `sql` still queries, and "command not found"
-     still suggests a correction. Routing unrecognised input to a model would
-     have removed all of that and turned every typo into a billed call. */
-  const ai = useAiSession();
-  const [aiMode, setAiMode] = useState(false);
-
   const enterAi = useCallback(() => {
     setAiMode(true);
     setInput('');
@@ -265,6 +348,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
     setAiMode(false);
     ai.cancel();
     setInput('');
+    setAskedHistoryIndex(null);
     focusInput();
   }, [ai, focusInput, setInput]);
 
@@ -302,6 +386,10 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         return;
       }
       setInput('');
+      // Back to the live prompt, as a shell does the moment you run something
+      // — otherwise the next up-arrow resumes from wherever the last recall
+      // left off rather than from the question just asked.
+      setAskedHistoryIndex(null);
       void ai.send(question);
     },
     [ai, aiMode, exitAi, inputValue, setInput, submit]
@@ -313,8 +401,8 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         handleKeyDown(e);
         return;
       }
-      // In AI mode the shell's history and completion bindings do not apply;
-      // Escape leaves, Ctrl+C cancels an in-flight question.
+      // In AI mode the shell's completion bindings do not apply; Escape
+      // leaves, Ctrl+C cancels an in-flight question.
       if (e.key === 'Escape') {
         e.preventDefault();
         exitAi();
@@ -323,9 +411,48 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
       if (e.key === 'c' && e.ctrlKey) {
         e.preventDefault();
         ai.cancel();
+        return;
+      }
+
+      /* History does apply, though — it just has to be this mode's own.
+
+         Up-arrow recalls the last command everywhere else on this prompt, and
+         in AI mode it did nothing at all, which is the sort of small
+         inconsistency that makes a terminal feel like a costume. The list is
+         derived from the transcript rather than tracked separately, so it
+         cannot fall out of step with what is on screen.
+
+         Rephrasing is the common case here in a way it isn't for `ls`: a
+         question that got a vague answer is usually asked again with two
+         words changed, and retyping the other eight is the whole friction. */
+      // `null` is the live prompt, one step below the newest entry — the
+      // position a shell returns you to when you arrow back down past the end.
+      if (e.key === 'ArrowUp') {
+        if (!askedQuestions.length) return;
+        e.preventDefault();
+        const target =
+          askedHistoryIndex === null
+            ? askedQuestions.length - 1
+            : Math.max(askedHistoryIndex - 1, 0);
+        setAskedHistoryIndex(target);
+        setInput(askedQuestions[target]);
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        if (askedHistoryIndex === null) return;
+        e.preventDefault();
+        const target = askedHistoryIndex + 1;
+        if (target >= askedQuestions.length) {
+          setAskedHistoryIndex(null);
+          setInput('');
+          return;
+        }
+        setAskedHistoryIndex(target);
+        setInput(askedQuestions[target]);
       }
     },
-    [ai, aiMode, exitAi, handleKeyDown]
+    [ai, aiMode, askedHistoryIndex, askedQuestions, exitAi, handleKeyDown, setInput]
   );
 
   /* Reveal runs on mount, never gated on `live`. */
@@ -474,14 +601,24 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
 
           {aiMode && (
             <div className={compact ? '' : 'mt-5'}>
+              {/* Shorter and legible, where this was three lines at 50%
+                  opacity — about 2.4:1 — restating both the placeholder above
+                  it ("ask anything about his work") and the hint below it
+                  ("answers are generated and cite the data behind them").
+                  What is left is the one claim neither of those makes. */}
               {ai.turns.length === 0 && !ai.busy && (
-                <div className="text-muted-foreground/50">
-                  ask anything about his work. answers are grounded in this site's own data —
-                  every figure comes from the query engine, and you can open the evidence
-                  behind it.
+                <div className="text-muted-foreground">
+                  every figure comes from this site's own query engine, and the evidence opens
+                  under the answer.
                 </div>
               )}
-              <AiTranscript turns={ai.turns} busy={ai.busy} onCancel={ai.cancel} />
+              <AiTranscript
+                turns={ai.turns}
+                busy={ai.busy}
+                onCancel={ai.cancel}
+                onRetry={ai.retry}
+                canRetry={ai.canRetry}
+              />
             </div>
           )}
         </div>
@@ -507,7 +644,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             onClick={() => focusInput()}
             className={`flex items-center gap-2.5 border px-5 md:px-6 py-4 md:py-5 bg-background/30 backdrop-blur-sm transition-colors duration-300 cursor-text ${
               aiMode
-                ? 'ai-border border-transparent'
+                ? `ai-border border-transparent ${ai.busy ? 'ai-border--busy' : ''}`
                 : inputFocused
                   ? 'border-primary/60'
                   : 'border-border'
@@ -549,7 +686,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   )}
                 </span>
 
-                <div className="relative flex-1 min-w-0 flex items-center">
+                <div ref={trackRef} className="relative flex-1 min-w-0 flex items-center">
                   {/* Off-screen ruler for the monospace advance width. */}
                   <span
                     ref={rulerRef}
@@ -568,11 +705,18 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                     onKeyUp={syncCaret}
                     onClick={syncCaret}
                     onSelect={syncCaret}
+                    onScroll={syncScroll}
                     onFocus={() => {
                       setInputFocused(true);
                       syncCaret();
                     }}
-                    onBlur={() => setInputFocused(false)}
+                    onBlur={() => {
+                      setInputFocused(false);
+                      // Blurring can reset the field's scroll to 0 while the
+                      // caret index stays where it was; without this the
+                      // hollow block reappears far to the right of the text.
+                      syncScroll();
+                    }}
                     spellCheck={false}
                     autoComplete="off"
                     autoCorrect="off"
@@ -595,8 +739,23 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
 
                   {/* The block. Solid and blinking while focused; hollow and
                       still when not, which is how a terminal shows that the
-                      window no longer has the keyboard. */}
-                  {charWidth > 0 && !running && (
+                      window no longer has the keyboard.
+
+                      Offset by the field's own scroll, which is the whole
+                      difference between a caret and a runaway. `caret *
+                      charWidth` is a distance into the *string*; the field
+                      only shows a window onto that string, and once the value
+                      outgrows the box the browser slides the window along.
+                      Without the subtraction the block kept walking right —
+                      out of the prompt, over the `exit` control, and off the
+                      edge of the screen — while the text it was supposed to
+                      be sitting on scrolled the other way underneath it.
+
+                      Worst on a phone by construction: the field is at its
+                      narrowest and the type at its largest (16px, to stop iOS
+                      zooming), so a value overflows after far fewer
+                      characters than it does on a desktop. */}
+                  {charWidth > 0 && !running && caretVisible && (
                     <span
                       aria-hidden="true"
                       className={`pointer-events-none absolute top-1/2 -translate-y-1/2 z-20 h-[1.2em] ${
@@ -607,7 +766,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                       /* One cell wide, measured rather than assumed. The
                          hardcoded 8px matched 14px text only, so it no longer
                          covered a character once mobile rendered at 16px. */
-                      style={{ left: `${caret * charWidth}px`, width: `${charWidth}px` }}
+                      style={{ left: `${caretLeft}px`, width: `${charWidth}px` }}
                     />
                   )}
 
@@ -615,6 +774,10 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                     <span
                       aria-hidden="true"
                       className={`pointer-events-none absolute inset-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-foreground/25 flex items-center`}
+                      /* Same correction as the block: the completion is drawn
+                         after an invisible copy of the value, so it has to
+                         travel with the text it is completing. */
+                      style={{ transform: `translateX(${-scrollLeft}px)` }}
                     >
                       <span className="invisible">{inputValue}</span>
                       {ghost}
@@ -702,7 +865,21 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             the empty prompt is never a blank stare. */}
         <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center gap-x-2 md:gap-x-1 gap-y-2 shrink-0 ${compact ? 'mt-4' : 'mt-8'}`}>
           {aiMode
-            ? AI_SUGGESTIONS.map((suggestion) => (
+            ? /* Only while the transcript is empty.
+
+                 These exist to answer "what do I even ask it", and once a
+                 question has been asked that is answered — by the visitor,
+                 demonstrably. Six of them are four rows of chips on a phone,
+                 which is most of what is left of a 375px viewport after the
+                 keyboard takes its share, and every row of that is space the
+                 answer is not getting. Same trade the wordmark makes when the
+                 shell starts working: the least useful thing on a working
+                 screen gives up its room.
+
+                 They come back with a fresh session, which is the natural
+                 place to want them again. */
+              ai.turns.length === 0 &&
+              AI_SUGGESTIONS.map((suggestion) => (
                 <button
                   key={suggestion}
                   type="button"
@@ -711,7 +888,11 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                     void ai.send(suggestion);
                   }}
                   disabled={ai.busy}
-                  className="font-mono text-[11px] border border-border px-2.5 py-1 text-muted-foreground/70 hover:border-primary/60 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  /* py-2 -my-2 for the 24px minimum, as everywhere else on
+                     this screen. At py-1 these were 21px tall — under the
+                     floor, and they are the primary way into the feature on
+                     the device where they matter most. */
+                  className="font-mono text-[11px] border border-border px-2.5 py-2 -my-0.5 text-muted-foreground hover:border-primary/60 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {suggestion}
                 </button>

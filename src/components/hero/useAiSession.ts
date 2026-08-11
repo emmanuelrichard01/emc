@@ -35,6 +35,14 @@ export interface AiTurn {
   provider?: string;
   /** True for locally produced text (errors, keyless fallback). */
   local?: boolean;
+  /**
+   * Set on a failure that asking again could plausibly clear — a timeout, a
+   * 502, a provider having a bad minute. Deliberately *not* set on a refusal
+   * we issued ourselves: a question that is 600 characters long is still 600
+   * characters long the second time, and offering to retry it would be
+   * offering to fail again.
+   */
+  retryable?: boolean;
 }
 
 /* Kept under the endpoint's own MAX_MESSAGES (16) with room for the rounds
@@ -61,6 +69,10 @@ export interface AiSession {
   reject: (reason: string) => void;
   reset: () => void;
   cancel: () => void;
+  /** Ask the last question again. No-op when there isn't one, or while busy. */
+  retry: () => void;
+  /** True when the last thing that happened was a failure worth retrying. */
+  canRetry: boolean;
 }
 
 export function useAiSession(): AiSession {
@@ -71,6 +83,8 @@ export function useAiSession(): AiSession {
   const idRef = useRef(0);
   const historyRef = useRef<WireMessage[]>([]);
   const abortRef = useRef<AbortController | null>(null);
+  /** The last thing a human asked, kept so a failure can be re-thrown at it. */
+  const lastQuestionRef = useRef<string | null>(null);
 
   const nextId = () => ++idRef.current;
 
@@ -82,6 +96,7 @@ export function useAiSession(): AiSession {
     abortRef.current?.abort();
     abortRef.current = null;
     historyRef.current = [];
+    lastQuestionRef.current = null;
     setTurns([]);
     setBusy(false);
   }, []);
@@ -105,6 +120,7 @@ export function useAiSession(): AiSession {
       if (!trimmed || busy) return;
 
       push({ role: 'user', text: trimmed });
+      lastQuestionRef.current = trimmed;
       // Trimmed before the new question is appended, so the exchange about to
       // start always has the full round budget available to it.
       historyRef.current = [
@@ -165,6 +181,11 @@ export function useAiSession(): AiSession {
               role: 'system',
               text: data.error ?? `request failed (${response.status})`,
               local: true,
+              /* 429 excluded on purpose. A rate limit is the one failure
+                 where asking again immediately is exactly the wrong move —
+                 it is the endpoint saying "not yet", and a retry button next
+                 to it would be inviting the visitor to make it worse. */
+              retryable: response.status !== 429,
             });
             return;
           }
@@ -217,6 +238,7 @@ export function useAiSession(): AiSession {
             error instanceof Error ? error.message : String(error)
           }`,
           local: true,
+          retryable: true,
         });
       } finally {
         abortRef.current = null;
@@ -226,5 +248,32 @@ export function useAiSession(): AiSession {
     [busy, push]
   );
 
-  return { turns, busy, unconfigured, send, reject, reset, cancel };
+  /* Ask the same thing again, from a clean slate for that exchange.
+
+     The rollback is the part that matters. A failed round leaves the question
+     sitting at the end of `historyRef` with nothing after it — no answer, and
+     possibly a half-finished set of tool calls. Sending again on top of that
+     would hand the provider the same question twice in a row and whatever
+     debris the failure left between them, which is a worse prompt than the
+     one that just failed. Trimming back to before the last user message means
+     the retry is the original request, not a follow-up to a broken one. */
+  const retry = useCallback(() => {
+    const question = lastQuestionRef.current;
+    if (!question || busy) return;
+
+    const lastUserIndex = historyRef.current.map((m) => m.role).lastIndexOf('user');
+    if (lastUserIndex !== -1) historyRef.current = historyRef.current.slice(0, lastUserIndex);
+
+    void send(question);
+  }, [busy, send]);
+
+  /* Offered only on the newest turn.
+
+     Scrolling up to a failure from four questions ago and retrying it would
+     re-ask it with all the intervening conversation still in history, which
+     is not the request the button appears to be offering. */
+  const lastTurn = turns[turns.length - 1];
+  const canRetry = !busy && Boolean(lastTurn?.retryable) && lastQuestionRef.current !== null;
+
+  return { turns, busy, unconfigured, send, reject, reset, cancel, retry, canRetry };
 }
