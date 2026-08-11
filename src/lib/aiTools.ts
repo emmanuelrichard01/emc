@@ -196,7 +196,7 @@ export function extractiveAnswer(question: string): string {
     .slice(0, 3);
 
   if (!scored.length) {
-    return `nothing on the site matches that. try 'ls' for the systems, or 'ask' for prepared questions.`;
+    return `nothing on the site matches that. try 'ls' for the systems, or 'queries' for prepared questions.`;
   }
 
   const body = scored

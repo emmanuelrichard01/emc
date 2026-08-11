@@ -189,7 +189,7 @@ export function useTerminalSession({ enabled }: { enabled: boolean }): TerminalS
         // Reaching here with a statement means the query layer is locked, not
         // that the input was wrong — so point at what does work.
         if (isStatement) {
-          emit("raw SQL is locked. try 'ask' for prepared questions about this work.");
+          emit("raw SQL is locked. try 'queries' for prepared questions about this work.");
           return;
         }
 

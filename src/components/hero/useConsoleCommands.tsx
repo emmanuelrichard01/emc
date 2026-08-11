@@ -64,6 +64,13 @@ export const ALIASES: Record<string, string> = {
   clr: 'clear',
   cls: 'clear',
   man: 'man',
+  /* `queries` was called `ask` until the `ask ai` chip made the word
+     ambiguous. Kept as an alias rather than retired: it is the verb a visitor
+     reaches for, and landing on the prepared list — which names `ai` at the
+     bottom — is a better answer than "command not found". Aliases are absent
+     from help and completion, so it does not put the collision back on
+     screen. */
+  ask: 'queries',
   // The projects section is labelled "Work" in the nav and the hero chips, so
   // the word a visitor actually sees has to resolve to something.
   work: 'projects',
@@ -361,9 +368,24 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         run: () => ({ output: TECH_STACK_SHORT.join(', ') }),
       },
       {
-        name: 'ask',
-        summary: 'answer a question about this work',
-        usage: 'ask            list the questions\nask <n>        answer one',
+        /* Named `queries`, not `ask`.
+
+           It was `ask`, which put two things one word apart: this, and the
+           `ask ai` chip that enters the model. Same verb, adjacent in the
+           chip row, no way to tell from the labels which was which — and
+           they are not variants of each other. This is a fixed set of
+           prepared SQL queries: free, instant, deterministic, and available
+           when the model is not, which is the case whenever the daily budget
+           is spent or a provider is having a bad minute. `ai` is billed,
+           rate-limited and can fail.
+
+           The name says which of the two you are getting, and puts it next
+           to `sql` and `schema` where it belongs. `ask` survives as an alias
+           so the word still lands somewhere, and the listing below points at
+           `ai` for anyone who meant the other one. */
+        name: 'queries',
+        summary: 'answer a prepared question about this work',
+        usage: 'queries        list the questions\nqueries <n>    answer one',
         detail: [
           'Prepared queries against the same two tables the site renders from.',
           'Each answer shows the SQL that produced it, so the number is visibly',
@@ -371,6 +393,9 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           '',
           'No clearance needed. The raw query layer behind `schema` and `sql`',
           'lets you write your own.',
+          '',
+          'For a question that is not on this list, `ai` answers in plain',
+          'english against the same data — slower, and it can be unavailable.',
         ].join('\n'),
         run: ({ arg }) => {
           if (!arg) {
@@ -378,13 +403,13 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
               output: (
                 <div className="flex flex-col gap-0.5">
                   <div className="text-muted-foreground/40 mb-1">
-                    {CURATED_QUESTIONS.length} questions — select one, or run `ask &lt;n&gt;`
+                    {CURATED_QUESTIONS.length} questions — select one, or run `queries &lt;n&gt;`
                   </div>
                   {CURATED_QUESTIONS.map((entry, i) => (
                     <button
                       key={entry.question}
                       type="button"
-                      onClick={() => runCommand(`ask ${i + 1}`)}
+                      onClick={() => runCommand(`queries ${i + 1}`)}
                       className="text-left w-full hover:bg-primary/5 group whitespace-pre-wrap"
                     >
                       <span className="text-primary">{String(i + 1).padStart(2)} </span>
@@ -393,6 +418,17 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
                       </span>
                     </button>
                   ))}
+                  {/* The signpost between the two tiers, and the only place
+                      either of them named the other. Someone who typed `ask`
+                      meaning the model lands here; this is the line that
+                      tells them where the model actually is. */}
+                  <button
+                    type="button"
+                    onClick={() => runCommand('ai')}
+                    className="text-left w-full mt-2 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    → or run `ai` to ask in your own words
+                  </button>
                 </div>
               ),
             };
@@ -401,7 +437,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           const index = Number.parseInt(arg, 10) - 1;
           const entry = CURATED_QUESTIONS[index];
           if (!entry) {
-            return { output: `no question ${arg}. run 'ask' for the list.` };
+            return { output: `no question ${arg}. run 'queries' for the list.` };
           }
 
           const result = runQuery(entry.sql);
@@ -443,6 +479,9 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           '',
           'Answers are labelled as generated. With no provider configured the',
           'mode still works, falling back to a keyword match over the site.',
+          '',
+          'This is the billed, rate-limited tier. For counts and filters,',
+          '`queries` answers a prepared set instantly, and always works.',
         ].join('\n'),
         run: () => ({
           output: 'entering ai mode — esc to leave.',
@@ -616,7 +655,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           'Operators: =  !=  <>  >  <  >=  <=  LIKE  NOT LIKE  IN  NOT IN',
           'Conditions combine with AND. No JOIN, GROUP BY, OR or subqueries.',
           '',
-          "For prepared questions rather than raw SQL, run 'ask'.",
+          "For prepared questions rather than raw SQL, run 'queries'.",
           '',
           'Examples:',
           ...QUERY_EXAMPLES.map((q) => `  ${q}`),

@@ -38,12 +38,20 @@ import type { ToolResult } from '@/lib/aiTools';
 
    Named by what they describe, never by internal id — "the reconciliation
    engine" reads to someone who has not scrolled to the projects yet, where
-   "mmr-engine" only reads to someone who already has. */
+   "mmr-engine" only reads to someone who already has.
+
+   And weighted away from counting. The `queries` command answers a prepared
+   set instantly and for free, all of them filters and counts; anything this
+   list duplicates is a billed round trip to learn what a
+   keystroke already gives you. "which projects use python and postgres?" was
+   exactly that — `queries` covers Python and PostgreSQL separately — so it
+   is now a trade-off question instead. How and why are what the model is
+   for; how many is what SQL is for. */
 export const AI_SUGGESTIONS = [
   'what has he actually shipped?',
   'how does the reconciliation engine work?',
   'what would he bring to a data platform team?',
-  'which projects use python and postgres?',
+  'what trade-offs did he make, and what did he reject?',
   'where has he worked, and for how long?',
   "what's design-stage rather than built?",
 ] as const;

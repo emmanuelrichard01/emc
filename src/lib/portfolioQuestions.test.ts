@@ -8,7 +8,7 @@ import { QUERY_EXAMPLES } from '@/components/hero/useConsoleCommands';
 /* ==========================================================================
    CURATED QUESTIONS
 
-   These are the SQL statements the `ask` command runs on a visitor's behalf,
+   These are the SQL statements the `queries` command runs on a visitor's behalf,
    and the examples printed by `help` / `man sql` as things to try. Both are
    hand-written strings executed against live data, so a data edit — renaming
    a tier, dropping a column — can break them with nothing failing at compile

@@ -61,7 +61,7 @@ const MOTD_TONE_CLASS: Record<MotdTone, string> = {
 /* Chips double as the page's calls to action. `work`, `resume` and `contact`
    are the buttons the old hero rendered — spelled as commands, so pressing
    one runs the shell rather than bypassing it. */
-const CHIPS = ['ai', 'ask', 'work', 'resume', 'contact'] as const;
+const CHIPS = ['ai', 'queries', 'work', 'resume', 'contact'] as const;
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -249,7 +249,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
 
      Sticking to the bottom is right for a stream — `watch` and `ping` emit
      over time and the newest line is the interesting one. It is wrong for a
-     one-shot: running `ask` produces a list taller than the region, and
+     one-shot: running `queries` produces a list taller than the region, and
      bottom-anchoring scrolled straight past its heading and first entries, so
      the answer opened mid-list. Anchoring the command line to the top of the
      viewport shows a result from its beginning, which is what a reader wants
