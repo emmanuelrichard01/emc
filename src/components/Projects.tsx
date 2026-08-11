@@ -124,9 +124,8 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
          it read as jarring: the grid lurched every few rows and the
          screenshots dominated a section whose job is scanning. Same
          footprint, slimmer band, distinct by content. */
-      className={`group relative flex flex-col bg-card/25 hover:border-primary/40 transition-colors ${
-        isDesign ? "border border-dashed border-border" : "border border-border/70"
-      }`}
+      className={`group relative flex flex-col bg-card/25 hover:border-primary/40 transition-colors ${isDesign ? "border border-dashed border-border" : "border border-border/70"
+        }`}
     >
       {hasImage && (
         <div className="relative w-full aspect-[16/6] overflow-hidden bg-muted border-b border-border/70">
@@ -172,58 +171,58 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
       )}
 
       <div className="flex flex-col flex-1 p-5">
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-primary truncate">
-          {project.category}
-        </span>
-        {!hasImage && (
-          <span className={`font-mono text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
-            {STATUS_LABEL[status]}
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-primary truncate">
+            {project.category}
           </span>
-        )}
-      </div>
+          {!hasImage && (
+            <span className={`font-mono text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
+              {STATUS_LABEL[status]}
+            </span>
+          )}
+        </div>
 
-      {/* Stretched link, rather than wrapping the card in one.
+        {/* Stretched link, rather than wrapping the card in one.
 
           The repo links below are anchors, and an anchor cannot contain
           another anchor — the browser force-closes the outer one and the DOM
           comes out mangled. Pinning a pseudo-element from the title covers
           the whole card for pointer users while leaving exactly one link in
           the accessibility tree for the card itself. */}
-      <h3 className="font-mono text-[15px] leading-tight">
-        <Link
-          to={`/projects/${project.id}`}
-          className="text-foreground group-hover:text-primary transition-colors before:absolute before:inset-0 before:content-['']"
-        >
-          {project.title}
-        </Link>
-      </h3>
-      <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{project.subtitle}</p>
+        <h3 className="font-mono text-[15px] leading-tight">
+          <Link
+            to={`/projects/${project.id}`}
+            className="text-foreground group-hover:text-primary transition-colors before:absolute before:inset-0 before:content-['']"
+          >
+            {project.title}
+          </Link>
+        </h3>
+        <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{project.subtitle}</p>
 
-      {project.metrics.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-border/50">
-          {project.metrics.slice(0, 3).map((metric) => (
-            <Metric key={metric.label} metric={metric} />
+        {project.metrics.length > 0 && (
+          <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-border/50">
+            {project.metrics.slice(0, 3).map((metric) => (
+              <Metric key={metric.label} metric={metric} />
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-1 mt-4">
+          {project.stack.slice(0, 5).map((tech) => (
+            <TechTag key={tech} tech={tech} />
           ))}
         </div>
-      )}
 
-      <div className="flex flex-wrap gap-1 mt-4">
-        {project.stack.slice(0, 5).map((tech) => (
-          <TechTag key={tech} tech={tech} />
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between gap-3 mt-auto pt-4">
-        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-primary group-hover:text-primary transition-colors">
-          case study
-          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
-        </span>
-        {/* Above the stretched link, so these stay individually clickable. */}
-        <span className="relative z-10">
-          <ExternalLinks project={project} />
-        </span>
-      </div>
+        <div className="flex items-center justify-between gap-3 mt-auto pt-4">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-primary group-hover:text-primary transition-colors">
+            case study
+            <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
+          </span>
+          {/* Above the stretched link, so these stay individually clickable. */}
+          <span className="relative z-10">
+            <ExternalLinks project={project} />
+          </span>
+        </div>
       </div>
     </motion.article>
   );
@@ -309,11 +308,10 @@ const Chip = ({
     type="button"
     onClick={onClick}
     aria-pressed={active}
-    className={`inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest border px-2.5 py-1 transition-colors ${
-      active
+    className={`inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest border px-2.5 py-1 transition-colors ${active
         ? "border-primary bg-primary/10 text-primary"
         : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-    }`}
+      }`}
   >
     {label}
     {count !== undefined && <span className="text-muted-foreground tabular-nums">{count}</span>}
@@ -338,6 +336,28 @@ const TECH_RANKED: { name: string; count: number }[] = Object.entries(
   .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
 const PRIMARY_TECH_COUNT = 10;
+
+/* ── Header figures ───────────────────────────────────────────────────────
+   Experience and Contact each state, in a sentence under the heading, what
+   the section actually contains. This one went straight from a title into a
+   filter row, so the first thing a reader met was a set of controls with
+   nothing saying what was being filtered.
+
+   Counted from PROJECTS rather than written out, for the same reason the
+   metrics are: a sentence that disagrees with the index directly beneath it
+   is worse than no sentence. Retiering a project updates this line. */
+const BUILT_COUNT = PROJECTS.filter((p) => p.tier !== "design").length;
+const DESIGN_COUNT = PROJECTS.length - BUILT_COUNT;
+const CASE_STUDY_COUNT = PROJECTS.filter((p) => p.caseStudy).length;
+const SOURCE_OPEN_COUNT = PROJECTS.filter((p) => p.github).length;
+
+/* `timeline` is prose — "2026", "Jan — Feb 2026", "2025 — Present" — so the
+   span is read out of it rather than parsed as a date. The fallback matters:
+   Math.min of an empty list is Infinity, which would print a heading that
+   says "Infinity — -Infinity" if a timeline ever lost its year. */
+const PROJECT_YEARS = PROJECTS.flatMap((p) => p.timeline.match(/\d{4}/g) ?? []).map(Number);
+const FIRST_YEAR = PROJECT_YEARS.length ? Math.min(...PROJECT_YEARS) : null;
+const LAST_YEAR = PROJECT_YEARS.length ? Math.max(...PROJECT_YEARS) : null;
 
 const spotlightProject: Project | undefined = PROJECTS.find((p) => p.tier === "flagship");
 // Nullable by design: an unconditional [0].id would throw at *import* time,
@@ -382,11 +402,12 @@ const Projects: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5, ease: EASE }}
-          className="mb-12"
+          className="mb-16 border-b border-border pb-8"
         >
           {/* Matched to Experience and Contact exactly — same eyebrow size,
-              same heading scale. This section had drifted a step smaller,
-              which read as a subsection rather than a peer. */}
+              same heading scale, and now the same two lines underneath. This
+              section had drifted a step smaller, which read as a subsection
+              rather than a peer. */}
           <span className="flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
             <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
             Module 02 // Engineering
@@ -394,9 +415,24 @@ const Projects: React.FC = () => {
           {/* "Systems / 12" put a raw count where a name belongs, and the
               count is already stated precisely below the filters. "Index" is
               also what the default view now actually is. */}
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">
             Systems <span className="text-muted-foreground font-mono font-normal">Index</span>
           </h2>
+          {/* Says what distinguishes these entries, not that they exist. The
+              design/built split is stated as a count rather than spelled out
+              again in prose — the status column and the note below the
+              controls both carry the caveat in full, and a third statement of
+              it here made the opening paragraph longer than the two it is
+              matched to. */}
+          <p className="text-[15px] md:text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
+            {BUILT_COUNT} built systems and {DESIGN_COUNT} design studies. {CASE_STUDY_COUNT} carry
+            a full case study — the problem, the approach, the measured outcome, and the
+            alternative that was rejected.
+          </p>
+          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mt-4">
+            {FIRST_YEAR !== null && LAST_YEAR !== null && `${FIRST_YEAR} — ${LAST_YEAR} · `}
+            {SOURCE_OPEN_COUNT} of {PROJECTS.length} with source open
+          </p>
         </motion.div>
 
         {spotlightProject && <Spotlight project={spotlightProject} />}
@@ -424,9 +460,8 @@ const Projects: React.FC = () => {
                   onClick={() => setView(key)}
                   aria-pressed={view === key}
                   aria-label={`${label} view`}
-                  className={`flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest px-2.5 py-1 transition-colors ${
-                    view === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={`flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest px-2.5 py-1 transition-colors ${view === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
                 >
                   <Icon className="w-3 h-3" aria-hidden="true" />
                   {label}
