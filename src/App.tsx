@@ -15,11 +15,31 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Navbar from "./components/DynamicNavigation";
 import Footer from "./components/Footer";
 import CommandPalette from "./components/CommandPalette";
+import { BootProvider, RouteReadyBeacon } from "./components/hero/BootOverlay";
 
 // Lazy Load Pages for Performance
-const Index = lazy(() => import("./pages/Index"));
+const loadIndex = () => import("./pages/Index");
+
+const Index = lazy(loadIndex);
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+/* Warm the home chunk while this module is still evaluating.
+
+   Splitting the landing route out of the entry bundle buys nothing on the
+   landing route itself: React does not reach the Suspense boundary — and so
+   does not start the fetch — until the entry bundle has parsed and rendered,
+   which puts a second round trip in series on the one page every visitor
+   sees first. Kicking the import off here overlaps it with React mounting
+   instead, so the chunk is usually in flight before the boot overlay has
+   finished its first frame.
+
+   Only on "/" — a direct link to a case study should not pay for the home
+   page's 160KB it will never render. Navigating there *from* home is free
+   either way, since the chunk is cached by then. */
+if (typeof window !== "undefined" && window.location.pathname === "/") {
+  void loadIndex();
+}
 
 
 /* Route-chunk loader.
@@ -83,7 +103,15 @@ const DeferredBootLoader = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  return visible ? <BootLoader /> : null;
+  /* Before the threshold this held no space at all, which is not the same
+     thing as showing nothing. <main> is the only flexible row in the layout,
+     so an empty one collapses and pulls the footer up under the navbar —
+     measured at y=287 on a 800px viewport, i.e. the colophon sitting in the
+     middle of the screen for a quarter of a second on every cold load.
+
+     Reserving the viewport keeps the footer below the fold, so a load fast
+     enough to skip the loader shows the page background and nothing else. */
+  return visible ? <BootLoader /> : <div className="h-[100svh]" aria-hidden="true" />;
 };
 
 /* Route transitions.
@@ -111,6 +139,11 @@ const AnimatedRoutes = () => {
         transition={{ duration: prefersReduced ? 0 : 0.18, ease: "easeOut" }}
       >
         <Suspense fallback={<DeferredBootLoader />}>
+          {/* Inside the boundary on purpose — see RouteReadyBeacon. This
+              mounting *is* the signal that the route chunk has committed,
+              which is what lets the boot overlay hold the screen until there
+              is something behind it worth revealing. */}
+          <RouteReadyBeacon />
           <Routes location={location}>
             <Route path="/" element={<Index />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
@@ -156,13 +189,18 @@ const App = () => (
           <ErrorBoundary showDetails={import.meta.env.DEV}>
             <Sonner position="top-center" />
 
-            <BrowserRouter>
-              <CommandPaletteProvider>
-                <MainLayout>
-                  <AnimatedRoutes />
-                </MainLayout>
-              </CommandPaletteProvider>
-            </BrowserRouter>
+            {/* Outermost of the app's own UI, so the cold open is part of the
+                first commit rather than something a route chunk brings with
+                it several hundred milliseconds later. */}
+            <BootProvider>
+              <BrowserRouter>
+                <CommandPaletteProvider>
+                  <MainLayout>
+                    <AnimatedRoutes />
+                  </MainLayout>
+                </CommandPaletteProvider>
+              </BrowserRouter>
+            </BootProvider>
             <Analytics />
             <SpeedInsights />
           </ErrorBoundary>

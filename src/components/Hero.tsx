@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { Command } from 'lucide-react';
 
 import { MODIFIER_KEY } from '@/lib/platform';
 import { useCommandPalette } from '@/components/CommandPaletteProvider';
 import CircuitCanvas from '@/components/hero/CircuitCanvas';
-import BootOverlay, { useShouldBoot } from '@/components/hero/BootOverlay';
+import { useBooted } from '@/components/hero/BootOverlay';
 import TerminalHero from '@/components/hero/TerminalHero';
 
 /* ==========================================================================
@@ -29,24 +29,14 @@ export default function Hero() {
   const prefersReduced = useReducedMotion();
   const { open: openCommandPalette } = useCommandPalette();
 
-  // Read once, synchronously, so the shell never paints in its pre-boot
-  // state for a frame before the overlay covers it.
-  const shouldBoot = useShouldBoot();
-  const [live, setLive] = useState(!shouldBoot);
+  /* The cold open belongs to <BootProvider> in App, not here.
 
-  const handleBooted = useCallback(() => setLive(true), []);
-
-  /* The overlay is fixed and covers the document, so the page behind it must
-     not scroll while it is up — otherwise a stray wheel event lands the
-     visitor mid-page when it lifts. */
-  useEffect(() => {
-    if (live) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [live]);
+     It used to be rendered by this component — which lives in the lazily
+     loaded route chunk, so the overlay could not exist until the page it was
+     covering had already painted. All that is left of it here is the flag,
+     which gates focus and telemetry: focusing the prompt underneath a
+     full-screen overlay scrolls the page to an input nobody can see. */
+  const live = useBooted();
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -68,8 +58,6 @@ export default function Hero() {
          the site apologising for its own idea. */
       className="relative h-[100svh] min-h-[520px] flex flex-col overflow-hidden px-6 md:px-10 lg:px-16 pt-14 pb-4"
     >
-      {shouldBoot && !live && <BootOverlay onDone={handleBooted} />}
-
       {/* ── Background ──
           A flat, dim surface, the way the reference does it. The circuit
           board is kept at a whisper rather than removed: it still answers
