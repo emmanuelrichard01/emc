@@ -6,6 +6,7 @@ import { SECTIONS } from "@/data/sections";
 // Shared with the hero's message-of-the-day, so the footer and the shell can
 // never report different builds.
 import { COMMIT_SHA, IS_DEV_BUILD, formatRelativeBuildTime } from "@/lib/buildInfo";
+import { LOGO_PATHS } from "@/components/ui/LogoMark";
 
 /* ==========================================================================
    FOOTER
@@ -162,6 +163,36 @@ const Footer = () => {
       {/* Top gradient accent */}
       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
+      {/* The mark, closing the page the way the boot overlay opens it.
+
+          Set as a watermark rather than beside the name, which is where a
+          logo naturally wants to go and is exactly where it would be
+          redundant — the identity block already says "Emmanuel Moghalu" in
+          bold two lines below. Repeating it as a lockup is the same problem
+          the hero calls out, where the mark appeared four times before a
+          visitor had done anything.
+
+          Down here it is doing a different job. The footer is otherwise
+          entirely text with no visual anchor at all, and the same mark that
+          strokes itself on at the cold open bookending the scroll is worth
+          having. Bled off the right edge and held at 3% so it reads as
+          watermark rather than as a second logo, and masked so it fades out
+          before it reaches the colophon it sits behind. */}
+      <div
+        className="absolute -right-16 -bottom-20 w-[420px] max-w-[70%] pointer-events-none select-none opacity-[0.03] text-foreground"
+        aria-hidden="true"
+        style={{
+          maskImage: 'linear-gradient(to left, #000 30%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to left, #000 30%, transparent 100%)',
+        }}
+      >
+        <svg viewBox="0 0 200 120" className="w-full h-auto">
+          {LOGO_PATHS.map((d, i) => (
+            <path key={i} d={d} fill="currentColor" />
+          ))}
+        </svg>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
@@ -194,7 +225,7 @@ const Footer = () => {
             React, TypeScript and Tailwind, deployed on Vercel. The figures on this page
             are not written by hand — they are queried from the same dataset the terminal
             reads, so{" "}
-            <code className="font-mono text-foreground/80">ask</code> will reproduce any
+            <code className="font-mono text-foreground/80">queries</code> will reproduce any
             of them, and show the query it used.
           </p>
         </div>

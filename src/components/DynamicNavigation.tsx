@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Command, Palette } from 'lucide-react';
 
 import { SECTIONS } from '@/data/sections';
@@ -95,14 +95,17 @@ const Logo = () => {
 const NavLink = ({
   section,
   isActive,
+  href,
   onNavigate,
 }: {
   section: { id: string; short: string; label: string };
   isActive: boolean;
+  /** Absolute on a case study, a bare fragment on the landing page. */
+  href: string;
   onNavigate: (id: string) => void;
 }) => (
   <a
-    href={`#${section.id}`}
+    href={href}
     aria-current={isActive ? 'location' : undefined}
     onClick={(e) => {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
@@ -143,6 +146,42 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
   const { pathname } = useLocation();
 
   const isLanding = pathname === '/';
+  const navigate = useNavigate();
+
+  /* ── Going to a section ────────────────────────────────────────────────────
+     On the landing page a section is somewhere to scroll. On a case study it
+     is a different page, and treating it as a scroll target is why every
+     link in this component was dead there.
+
+     Both navs pointed at bare fragments — `#projects`, `#about` — and then
+     called preventDefault() unconditionally before handing off to
+     scrollToSection, which returns false when the element does not exist.
+     None of those sections exist on /projects/:id, so the preventDefault
+     suppressed the browser's own fragment handling and nothing replaced it:
+     clicking Work on a case study changed neither the URL nor the scroll
+     position. Six controls on desktop, five on the mobile island, all inert
+     — including the logo, which is the one thing a visitor reaches for to
+     get back out.
+
+     The href carries the real destination now, so middle-click and "copy
+     link address" give a URL that works, and the router handles the plain
+     click. Index already scrolls to an inbound hash on arrival, so landing
+     on /#projects from here behaves exactly like clicking it from home. */
+  const sectionHref = useCallback(
+    (id: string) => (isLanding ? `#${id}` : `/#${id}`),
+    [isLanding]
+  );
+
+  const goToSection = useCallback(
+    (id: string) => {
+      if (isLanding) {
+        scrollToSection(id);
+        return;
+      }
+      navigate(`/#${id}`);
+    },
+    [isLanding, navigate]
+  );
 
   /* Seeded from the live scroll position, then maintained by the same
      scroll subscription the hide-on-scroll behaviour already uses — rather
@@ -246,14 +285,21 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
             aria-hidden="true"
           />
 
+          {/* "Back to top" only where there is a top to go back to. From a
+              case study the mark is the way home, so it says so and goes
+              there — plain `/` rather than `/#home`, since the hash would
+              only name the place the page already opens at. */}
           <a
-            href="#home"
-            aria-label="Emmanuel Moghalu — back to top"
+            href={isLanding ? '#home' : '/'}
+            aria-label={
+              isLanding ? 'Emmanuel Moghalu — back to top' : 'Emmanuel Moghalu — home'
+            }
             className="flex items-center pl-1"
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
               e.preventDefault();
-              scrollToSection('home');
+              if (isLanding) scrollToSection('home');
+              else navigate('/');
             }}
           >
             <Logo />
@@ -267,7 +313,8 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                 key={section.id}
                 section={section}
                 isActive={activeSection === section.id}
-                onNavigate={scrollToSection}
+                href={sectionHref(section.id)}
+                onNavigate={goToSection}
               />
             ))}
           </div>
@@ -325,12 +372,12 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
             return (
               <a
                 key={section.id}
-                href={`#${section.id}`}
+                href={sectionHref(section.id)}
                 aria-current={isActive ? 'location' : undefined}
                 onClick={(e) => {
                   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                   e.preventDefault();
-                  scrollToSection(section.id);
+                  goToSection(section.id);
                 }}
                 className={`relative flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 min-h-[48px] px-0.5 py-1.5 transition-colors active:scale-95 ${
                   isActive ? 'text-primary' : 'text-muted-foreground'
