@@ -103,7 +103,29 @@ const experienceTable: TableSpec = {
   })),
 };
 
-export const TABLES: TableSpec[] = [projectsTable, experienceTable];
+const tradeoffsTable: TableSpec = {
+  name: 'tradeoffs',
+  columns: [
+    { name: 'project_id', type: 'string', note: 'project slug' },
+    { name: 'project', type: 'string', note: 'project title' },
+    { name: 'decision', type: 'string', note: 'architectural decision' },
+    { name: 'chose', type: 'string', note: 'selected option' },
+    { name: 'rejected', type: 'string', note: 'rejected alternative' },
+    { name: 'why', type: 'string', note: 'engineering rationale' },
+  ],
+  rows: PROJECTS.filter((p) => p.caseStudy?.tradeoffs?.length).flatMap((p) =>
+    (p.caseStudy?.tradeoffs ?? []).map((t) => ({
+      project_id: p.id,
+      project: p.title,
+      decision: t.decision,
+      chose: t.chose,
+      rejected: t.rejected,
+      why: t.why,
+    }))
+  ),
+};
+
+export const TABLES: TableSpec[] = [projectsTable, experienceTable, tradeoffsTable];
 
 /* ── Lexing helpers ─────────────────────────────────────────────────────── */
 

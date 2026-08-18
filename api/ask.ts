@@ -35,7 +35,7 @@ export const config = { runtime: 'edge' };
    these to a shared store (Upstash, Vercel KV) is the upgrade if it ever
    matters. */
 const MAX_QUESTION_CHARS = 500;
-const MAX_MESSAGES = 16;
+const MAX_MESSAGES = 20;
 const MAX_BODY_BYTES = 32_000;
 const MAX_OUTPUT_TOKENS = 500;
 
@@ -154,6 +154,20 @@ const TOOLS = [
       required: ['id'],
     },
   },
+  {
+    name: 'get_tradeoffs',
+    description:
+      'All architectural trade-offs across projects: the decision, the chosen technology/approach, the rejected alternative, and the engineering rationale. Use when asked about trade-offs, architecture choices, or what technologies were rejected.',
+    parameters: {
+      type: 'object',
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Optional project ID to filter by. Omit to retrieve all trade-offs across all projects.',
+        },
+      },
+    },
+  },
 ];
 
 /* ── Wire types ─────────────────────────────────────────────────────────── */
@@ -231,9 +245,8 @@ async function callGemini(messages: ChatMessage[], key: string, model: string, f
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: finalize ? FINALIZE_PROMPT : SYSTEM_PROMPT }] },
         contents,
-        // Withheld on the final round so the model has no way to ask for more
-        // data and must answer from what it already has.
-        ...(finalize ? {} : { tools: [{ functionDeclarations: TOOLS }] }),
+        tools: [{ functionDeclarations: TOOLS }],
+        ...(finalize ? { toolConfig: { functionCallingConfig: { mode: 'NONE' } } } : {}),
         generationConfig: { temperature: 0.3, maxOutputTokens: MAX_OUTPUT_TOKENS },
       }),
       signal: AbortSignal.timeout(20_000),
@@ -298,14 +311,11 @@ async function callGroq(messages: ChatMessage[], key: string, model: string, fin
         return { role: m.role, content: m.content };
       }),
     ],
-    ...(finalize
-      ? {}
-      : {
-          tools: TOOLS.map((t) => ({
-            type: 'function',
-            function: { name: t.name, description: t.description, parameters: t.parameters },
-          })),
-        }),
+    tools: TOOLS.map((t) => ({
+      type: 'function',
+      function: { name: t.name, description: t.description, parameters: t.parameters },
+    })),
+    tool_choice: finalize ? 'none' : 'auto',
   };
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {

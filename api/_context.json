@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T21:11:18.686Z",
+  "generatedAt": "2026-08-18T21:27:32.701Z",
   "person": {
     "name": "Emmanuel Moghalu",
     "role": "Data & Backend Engineer",
@@ -54,6 +54,26 @@
       "summary": "Every Nigerian business taking payments across multiple PSPs — Paystack, Flutterwave, M-Pesa — carries a reconciliation gap. Settlement is asynchronous, reference IDs are not shared between providers, FX rates move between initiation and settlement, and webhooks arrive out of order, duplicated, or not at all. Finance teams spend 30–40% of their time reconciling by hand, against industry error rates of 3–8% of transaction volume.",
       "hasCaseStudy": true,
       "tradeoffCount": 3,
+      "tradeoffs": [
+        {
+          "decision": "Event queue",
+          "chose": "Redpanda",
+          "rejected": "Apache Kafka",
+          "why": "Kafka-compatible API at roughly 10x lower RAM, and no ZooKeeper to operate."
+        },
+        {
+          "decision": "Matching strategy",
+          "chose": "Two-tier — exact, then probabilistic",
+          "rejected": "Exact reference matching only",
+          "why": "PSPs do not share reference IDs, so exact-only matching leaves every cross-provider pair permanently unmatched. pg_trgm similarity recovers them."
+        },
+        {
+          "decision": "PSP credential scope",
+          "chose": "Read-only",
+          "rejected": "Full API access",
+          "why": "The engine never needs write access to a PSP account. Narrowing the credential removes the worst-case blast radius rather than mitigating it."
+        }
+      ],
       "links": {
         "github": "https://github.com/emmanuelrichard01/mmr-engine"
       }
@@ -82,6 +102,32 @@
       "summary": "Cold chain logistics fail when cargo leaves its safe temperature window. Conventional monitoring relies on post-trip data dumps, so a temperature breach surfaces only after delivery — by which point the cargo is already lost. The information arrives accurate and useless.",
       "hasCaseStudy": true,
       "tradeoffCount": 4,
+      "tradeoffs": [
+        {
+          "decision": "Message broker",
+          "chose": "Redpanda",
+          "rejected": "Apache Kafka",
+          "why": "A C++ core removes JVM pauses and dropping ZooKeeper removes an operational dependency. The cost is a younger ecosystem."
+        },
+        {
+          "decision": "Stream processing",
+          "chose": "Quix Streams",
+          "rejected": "Spark / Flink",
+          "why": "Python-native and lightweight for a latency-sensitive, compute-light workload. Gives up horizontal scale this problem does not need."
+        },
+        {
+          "decision": "Frontend transport",
+          "chose": "WebSocket",
+          "rejected": "REST polling",
+          "why": "A live fleet map needs sub-second updates. Polling adds latency and server load to arrive at a worse result."
+        },
+        {
+          "decision": "Alert state",
+          "chose": "In-memory",
+          "rejected": "Persistent store",
+          "why": "Lost on restart, and named as a demo-scope choice rather than defended. Production would use Redis or Kafka Streams state stores."
+        }
+      ],
       "links": {
         "github": "https://github.com/emmanuelrichard01/logistics-watchtower"
       }
@@ -110,6 +156,14 @@
       "summary": "The Olist Brazilian e-commerce dataset arrives as nine separate files — orders, payments, reviews, sellers, geolocation and more — with no shared model between them. Most treatments load a convenient subset and stop there. Any question that crosses those files needs an actual warehouse behind it.",
       "hasCaseStudy": true,
       "tradeoffCount": 1,
+      "tradeoffs": [
+        {
+          "decision": "Storage engine",
+          "chose": "DuckDB",
+          "rejected": "PostgreSQL",
+          "why": "The workload is analytical — SUMs and GROUP BYs across full tables — not transactional. An embedded OLAP engine is far faster here and leaves no server to operate."
+        }
+      ],
       "links": {
         "github": "https://github.com/emmanuelrichard01/modern-warehouse"
       }
@@ -139,6 +193,26 @@
       "summary": "Access to sexual and maternal reproductive health products in West Africa runs into two barriers at once: discretion and distribution. People who need contraceptives, prescription medication, or a frank consultation often will not walk into a pharmacy and ask for it — and the pharmacies that do stock what they need are fragmented across independent operators with no shared inventory or fulfilment layer.",
       "hasCaseStudy": true,
       "tradeoffCount": 3,
+      "tradeoffs": [
+        {
+          "decision": "Second channel",
+          "chose": "WhatsApp assistant",
+          "rejected": "A native mobile app",
+          "why": "The audience already has WhatsApp installed and already treats it as private. An app is another install and another icon on a home screen — and for discreet health access, that icon is itself a disclosure."
+        },
+        {
+          "decision": "Assistant scope",
+          "chose": "Triage and routing only",
+          "rejected": "Letting the model answer clinical questions",
+          "why": "A model that names a medication has effectively prescribed it. The bot is kept off that path and books a consultation instead."
+        },
+        {
+          "decision": "Delivery assignment",
+          "chose": "Manual or nearest-pharmacy",
+          "rejected": "Third-party logistics integration",
+          "why": "A named MVP scope cut. Logistics integration queues behind proving the order flow itself works."
+        }
+      ],
       "links": {
         "live": "https://medvaxhealth.com"
       }
@@ -168,6 +242,44 @@
       "summary": "When something happens, fifty outlets publish about it. Every feed shows fifty headlines and leaves the reader to work out that they are one event — and, more importantly, whether anyone independently confirmed it or whether fifty outlets are all repeating a single unverified wire report. That second question is the one that matters, and no aggregator answers it.",
       "hasCaseStudy": true,
       "tradeoffCount": 6,
+      "tradeoffs": [
+        {
+          "decision": "Corroboration unit",
+          "chose": "Distinct publishers via the Public Suffix List",
+          "rejected": "Raw article or feed counts",
+          "why": "One newsroom filing five updates is one source. Counting feeds would let a publisher corroborate itself, which makes the only number the product sells meaningless."
+        },
+        {
+          "decision": "Edition model",
+          "chose": "Three orderings of the whole corpus",
+          "rejected": "Three feeds split by a static source count",
+          "why": "The split put roughly 95% of stories on one page and left the other two permanently near-empty. Ordering the same corpus means no edition can run dry, and corroboration becomes a signal on every card rather than a destination."
+        },
+        {
+          "decision": "Clustering",
+          "chose": "Semantic vectors, cosine ≥ 0.80, calibrated",
+          "rejected": "Exact title matching",
+          "why": "Three outlets write three headlines for one event. Exact matching creates permanent single-source silos — precisely the failure the product exists to fix. The threshold sits above every different-event pair in the labelled set, preferring a missed merge to an invented one."
+        },
+        {
+          "decision": "Pagination key",
+          "chose": "Cursor on (first_seen_at, id)",
+          "rejected": "Cursor on velocity or ranking score",
+          "why": "Only immutable keys can paginate. Clustering rewrites ranking scores, so paging them repeats and drops rows; the ranked editions are capped snapshots instead."
+        },
+        {
+          "decision": "Batch compute placement",
+          "chose": "GitHub Actions runners",
+          "rejected": "The web tier on a timer",
+          "why": "Embedding wants a lot of RAM for a few minutes; serving wants a little all the time. The runner has 7GB free, the API host 512MB. Running batch work on the web tier inverts that and blocks request handling while it runs."
+        },
+        {
+          "decision": "Display model",
+          "chose": "~40-word excerpt plus outbound link",
+          "rejected": "Full article rendering",
+          "why": "This is an aggregator, not a publisher. The outbound link is the obligation that comes with the content."
+        }
+      ],
       "links": {
         "github": "https://github.com/emmanuelrichard01/ULTRA-NEWS",
         "live": "https://ultra-news.vercel.app/"
@@ -199,6 +311,32 @@
       "summary": "Students juggle a scattering of single-purpose tools — one for notes, another for flashcards, a calculator for GPA, a separate search for papers — and none of them share context. Ask a question on Monday and there is no record of it on Friday. For a cohort of roughly three thousand students at Caritas University, the friction was never any individual tool; it was that none of them knew about each other.",
       "hasCaseStudy": true,
       "tradeoffCount": 4,
+      "tradeoffs": [
+        {
+          "decision": "Where model calls run",
+          "chose": "Deno edge functions",
+          "rejected": "Direct calls from the browser",
+          "why": "A browser-side call means shipping a provider key to every visitor. The edge function keeps the key server-side and gives one place to enforce auth and route by category."
+        },
+        {
+          "decision": "AI provider",
+          "chose": "Multi-provider router — Gemini, OpenRouter, OpenAI",
+          "rejected": "A single hardcoded provider",
+          "why": "Providers rate-limit, deprecate models and go down. Routing behind one edge function makes the provider a configuration detail rather than a rewrite."
+        },
+        {
+          "decision": "Role storage",
+          "chose": "A dedicated user_roles table with a SECURITY DEFINER has_role() function",
+          "rejected": "A role column on the profiles table",
+          "why": "Users can write their own profile row. A role stored there is a privilege escalation waiting to be found."
+        },
+        {
+          "decision": "Malformed model output",
+          "chose": "Repair with jsonrepair",
+          "rejected": "Reject and retry",
+          "why": "Models emit almost-valid JSON often enough that a retry is slower and more expensive than a repair. Retry stays as the fallback for when repair fails."
+        }
+      ],
       "links": {
         "github": "https://github.com/emmanuelrichard01/caritas-ai-scholar",
         "live": "https://caritas-ai-scholar.vercel.app/"
@@ -230,6 +368,38 @@
       "summary": "Outbound calls to quota-constrained third-party APIs — banking, logistics, AI providers — are metered by the provider, not by you, and exceeding the quota costs real money. The hard part is that the limit has to hold across a fleet of stateless instances: if each enforces its own local count, the cluster collectively overshoots. This is the inverse of the usual problem. Kong and Envoy protect your API from inbound callers; here the job is coordinating your own outbound calls against somebody else's budget, and a limiter that fails closed would take the whole fleet down with it.",
       "hasCaseStudy": true,
       "tradeoffCount": 5,
+      "tradeoffs": [
+        {
+          "decision": "Limiting algorithm",
+          "chose": "Token bucket",
+          "rejected": "Fixed window, sliding window log, leaky bucket",
+          "why": "A fixed window admits 200 requests across a window boundary against a 100-per-window limit — disqualifying when the job is protecting a hard third-party quota. A sliding window log is accurate but stores a timestamp per request, so memory scales with volume rather than client count. A leaky bucket shapes to a constant output rate, but the requirement is a budget with burst tolerance, not a shaping target. Token bucket is two numbers per client and matches the semantics directly."
+        },
+        {
+          "decision": "Atomicity",
+          "chose": "One Lua script via EVALSHA",
+          "rejected": "MULTI/EXEC with WATCH, or a distributed lock",
+          "why": "WATCH makes it an optimistic read-modify-write with a retry loop, so latency degrades exactly when contention is highest. Redlock's correctness is contested even inside the Redis ecosystem, and costs an extra round trip for what is a single-key operation. Lua is atomic by construction — which is why the race test can assert an exact number instead of an approximation."
+        },
+        {
+          "decision": "Behaviour during a Redis outage",
+          "chose": "Bounded fail-open — each instance enforces the real limit locally",
+          "rejected": "Fail-closed, and pure fail-open",
+          "why": "Fail-closed violates the requirement not to block traffic. Pure fail-open satisfies it but abandons the point of the system: the motivation is avoiding financial penalties from quota violations, and an outage is the worst possible moment to stop enforcing a budget. Local buckets cap the worst case at N times the intended rate across N instances — over-admitting, deliberately, but bounded rather than unlimited."
+        },
+        {
+          "decision": "Log transport",
+          "chose": "Redis Streams with consumer groups",
+          "rejected": "In-memory queue, and Kafka",
+          "why": "The first version used an in-memory queue and lost a batch on process crash — found in review and replaced, not designed correctly the first time. Streams give crash-durable at-least-once delivery, competing consumers, and XAUTOCLAIM recovery for entries a dead worker never acknowledged, without adding a broker to a 2.5-day build."
+        },
+        {
+          "decision": "Config propagation",
+          "chose": "LRU cache, pub/sub invalidation, 60-second reconciliation",
+          "rejected": "Polling the full clients table",
+          "why": "Polling every row every few seconds holds every configured client in memory regardless of activity. Pub/sub alone is not enough either — Redis pub/sub is fire-and-forget, so a momentary subscriber blip loses that message permanently, and a cache that can go silently and permanently stale is worse than one occasionally 60 seconds behind. This was a real bug: a tier changed via direct SQL never reached already-cached clients, so the reconciliation loop went back in as a backstop."
+        }
+      ],
       "links": {}
     },
     {
@@ -258,6 +428,26 @@
       "summary": "Cloud waste hides in plain sight: provisioned resources nobody uses, billing every hour. Static cost reports show the total but not which line items are zombies — and the naive detection heuristic, usage equals zero, misses everything that is merely near-idle or newly spiking.",
       "hasCaseStudy": true,
       "tradeoffCount": 3,
+      "tradeoffs": [
+        {
+          "decision": "Orchestration",
+          "chose": "Apache Airflow",
+          "rejected": "Filesystem watchdog scripts",
+          "why": "Retries, SLA monitoring and run history come with it. The watchdog approach had no answer for a run that failed halfway."
+        },
+        {
+          "decision": "Dashboard",
+          "chose": "React + Vite with Recharts",
+          "rejected": "Streamlit",
+          "why": "Streamlit stood up fast but capped both the interaction model and the visual result. The rebuild bought full control of both."
+        },
+        {
+          "decision": "Storage engine",
+          "chose": "DuckDB",
+          "rejected": "A hosted warehouse",
+          "why": "Embedded OLAP is fast enough for CUR-scale aggregation with no infrastructure to run or pay for."
+        }
+      ],
       "links": {
         "github": "https://github.com/emmanuelrichard01/cloud-bill-hunter"
       }
@@ -287,6 +477,26 @@
       "summary": "Market data is easy to fetch and hard to trust. A public API will happily return a price; it will not tell you that the last three hours are missing, that a value moved 40% because of a bad tick rather than the market, or that the dashboard is quietly rendering yesterday's numbers. A chart built straight onto an API call inherits every one of those failures silently.",
       "hasCaseStudy": true,
       "tradeoffCount": 3,
+      "tradeoffs": [
+        {
+          "decision": "Where data quality is enforced",
+          "chose": "dbt schema tests in the warehouse",
+          "rejected": "Validation inside the extraction script",
+          "why": "Script-side validation only covers the path that script took. Tests attached to the models assert the shape of the data on every run, whatever produced it."
+        },
+        {
+          "decision": "Dashboarding",
+          "chose": "Streamlit for analytics, Grafana for operations",
+          "rejected": "A single tool for both",
+          "why": "Market trends and pipeline health have different audiences and different refresh expectations. Collapsing them into one surface makes both worse."
+        },
+        {
+          "decision": "Extraction cadence",
+          "chose": "Hourly batch",
+          "rejected": "Real-time streaming",
+          "why": "The questions being asked are trend-shaped, not tick-shaped. Hourly stays well inside free-tier API limits and removes an entire class of streaming infrastructure that would earn nothing here."
+        }
+      ],
       "links": {
         "github": "https://github.com/emmanuelrichard01/crypto-data-pipeline"
       }
@@ -313,6 +523,7 @@
       "summary": "Next.js 14 event platform with Server Actions, Stripe checkout, Clerk auth, MongoDB, and Zod-validated forms. Webhook-synced user and payment state.",
       "hasCaseStudy": false,
       "tradeoffCount": 0,
+      "tradeoffs": [],
       "links": {
         "github": "https://github.com/emmanuelrichard01/Evanty",
         "live": "https://evanty.vercel.app/"
@@ -333,6 +544,7 @@
       "summary": "A reference architecture for migrating Nigerian payment transaction data into local storage ahead of the Central Bank of Nigeria's January 2027 compliance deadline, set out in Circular PSS/DIR/PUB/CIR/001/004. Scopes the migration path, residency boundary, and the data classes the circular actually covers.",
       "hasCaseStudy": false,
       "tradeoffCount": 0,
+      "tradeoffs": [],
       "links": {}
     },
     {
@@ -352,6 +564,7 @@
       "summary": "Blueprint-stage architecture for a real-time telemetry platform over distributed smart meters and inverters — Flink for stream processing, Iceberg as the table format, and TimescaleDB for time-series serving.",
       "hasCaseStudy": false,
       "tradeoffCount": 0,
+      "tradeoffs": [],
       "links": {}
     }
   ],

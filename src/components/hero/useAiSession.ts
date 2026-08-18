@@ -20,11 +20,9 @@ import { executeToolCall, extractiveAnswer, type ToolCall, type ToolResult } fro
 const ENDPOINT = '/api/ask';
 
 /* Rounds of tool use before the answer is forced.
-   Four, not three: a smaller model routinely spends one round on a query
-   that errors and one correcting it, which left nothing for the answer. The
-   last round is sent with `finalize`, which strips the tools server-side so
-   the model has to reply with prose. */
-const MAX_ROUNDS = 4;
+   Five rounds allows multi-hop retrieval and self-correction before forcing
+   the finalized answer on the final round. */
+const MAX_ROUNDS = 5;
 
 export interface AiTurn {
   id: number;

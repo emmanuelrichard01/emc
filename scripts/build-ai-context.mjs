@@ -49,6 +49,13 @@ const projects = PROJECTS.map((p) => ({
   summary: p.caseStudy?.problem ?? p.description,
   hasCaseStudy: Boolean(p.caseStudy),
   tradeoffCount: p.caseStudy?.tradeoffs?.length ?? 0,
+  tradeoffs:
+    p.caseStudy?.tradeoffs?.map((t) => ({
+      decision: t.decision,
+      chose: t.chose,
+      rejected: t.rejected,
+      why: t.why,
+    })) ?? [],
   links: {
     ...(p.github ? { github: p.github } : {}),
     ...(p.liveUrl ? { live: p.liveUrl } : {}),

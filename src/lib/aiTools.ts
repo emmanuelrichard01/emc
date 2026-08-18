@@ -140,10 +140,55 @@ function toolGetExperience(call: ToolCall): ToolResult {
   return { callId: call.id, name: call.name, content: lines.join('\n') };
 }
 
+function toolGetTradeoffs(call: ToolCall): ToolResult {
+  const projectId = str(call.args.projectId).trim().toLowerCase();
+  const projectsWithTradeoffs = projectId
+    ? PROJECTS.filter((p) => p.id === projectId && p.caseStudy?.tradeoffs?.length)
+    : PROJECTS.filter((p) => p.caseStudy?.tradeoffs?.length);
+
+  if (projectId && !projectsWithTradeoffs.length) {
+    const project = PROJECTS.find((p) => p.id === projectId);
+    if (!project) {
+      return {
+        callId: call.id,
+        name: call.name,
+        content: `error: no project "${projectId}".`,
+      };
+    }
+    return {
+      callId: call.id,
+      name: call.name,
+      content: `project "${project.title}" has no documented rejected trade-offs.`,
+    };
+  }
+
+  const allTradeoffs = projectsWithTradeoffs.flatMap((p) =>
+    (p.caseStudy?.tradeoffs ?? []).map((t) => ({
+      project: p.title,
+      id: p.id,
+      decision: t.decision,
+      chose: t.chose,
+      rejected: t.rejected,
+      why: t.why,
+    }))
+  );
+
+  const lines = allTradeoffs.map(
+    (t) => `- [${t.project}] ${t.decision}: chose "${t.chose}" over "${t.rejected}". Rationale: ${t.why}`
+  );
+
+  return {
+    callId: call.id,
+    name: call.name,
+    content: lines.join('\n'),
+  };
+}
+
 const HANDLERS: Record<string, (call: ToolCall) => ToolResult> = {
   run_sql: toolRunSql,
   get_project: toolGetProject,
   get_experience: toolGetExperience,
+  get_tradeoffs: toolGetTradeoffs,
 };
 
 export function executeToolCall(call: ToolCall): ToolResult {
@@ -185,6 +230,7 @@ export function extractiveAnswer(question: string): string {
       project.stack.join(' '),
       project.description,
       project.caseStudy?.problem ?? '',
+      ...(project.caseStudy?.tradeoffs?.map((t) => `${t.decision} ${t.chose} ${t.rejected} ${t.why}`) ?? []),
     ]
       .join(' ')
       .toLowerCase();
