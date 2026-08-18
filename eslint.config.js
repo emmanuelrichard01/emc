@@ -21,9 +21,39 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": [
         "warn",
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            "useTheme",
+            "useEasterEgg",
+            "useCommandPalette",
+            "useBooted",
+            "RouteReadyBeacon",
+            "toast",
+            "RANK_GLYPH",
+            "groupByTier",
+            "TierRule",
+            "AI_SUGGESTIONS",
+            "formatHelp",
+            "HELP_SECTIONS",
+            "Levenshtein",
+            "PUBLIC_THEMES",
+            "THEMES",
+            "useConsoleCommands",
+            "ALIASES",
+            "QUERY_EXAMPLES",
+            "UNLOCK_BANNER",
+            "ID_COMMANDS",
+          ],
+        },
       ],
       "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+  {
+    files: ["src/components/hero/useConsoleCommands.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
     },
   }
 );

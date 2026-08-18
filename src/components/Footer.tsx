@@ -175,11 +175,11 @@ const Footer = () => {
           Down here it is doing a different job. The footer is otherwise
           entirely text with no visual anchor at all, and the same mark that
           strokes itself on at the cold open bookending the scroll is worth
-          having. Bled off the right edge and held at 3% so it reads as
+          having. Bled off the right edge and held at 7% so it reads as
           watermark rather than as a second logo, and masked so it fades out
           before it reaches the colophon it sits behind. */}
       <div
-        className="absolute -right-16 -bottom-20 w-[420px] max-w-[70%] pointer-events-none select-none opacity-[0.03] text-foreground"
+        className="absolute -right-16 -bottom-20 w-[420px] max-w-[70%] pointer-events-none select-none opacity-[0.07] text-foreground"
         aria-hidden="true"
         style={{
           maskImage: 'linear-gradient(to left, #000 30%, transparent 100%)',

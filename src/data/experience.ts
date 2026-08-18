@@ -27,7 +27,7 @@ export const EXPERIENCE: ExperienceItem[] = [
     type: "Full-time",
     period: "Mar — Oct 2024",
     summary:
-      "Designed centralized reporting solutions that replaced manual Excel workflows for a construction firm — reducing reporting effort by ~40% while maintaining 99.9% data accuracy across production systems.",
+      "Designed centralized reporting solutions that replaced manual Excel workflows for a construction firm — reducing reporting effort by ~40% and standardizing tracking across site operations.",
     highlights: [
       "Built SQL-powered dashboards that improved operational visibility and accelerated management decision-making",
       "Diagnosed and resolved SQL pipeline failures and data inconsistencies, improving overall operational reliability",
