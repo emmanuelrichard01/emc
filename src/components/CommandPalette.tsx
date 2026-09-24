@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, ArrowRight, Home, User, Briefcase, Mail, FileText,
+  Search, ArrowRight,
   Github, Linkedin, Copy, ExternalLink, Sparkles, Palette, Download
 } from "lucide-react";
 import { toast } from "sonner";
@@ -55,7 +55,7 @@ const SECTION_KEYWORDS: Record<string, string[]> = {
 /* -------------------------------------------------------------------------- */
 
 const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
   const { unlock, unlocked } = useEasterEgg();
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -356,7 +356,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <kbd className="hidden sm:inline-flex px-2 py-0.5 text-[9px] font-mono text-muted-foreground border border-border uppercase tracking-widest">
+            <kbd className="hidden sm:inline-flex px-2 py-0.5 text-[11px] font-mono text-muted-foreground border border-border uppercase tracking-widest">
               ESC
             </kbd>
           </div>
@@ -370,7 +370,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
             ) : (
               Array.from(grouped.entries()).map(([category, items]) => (
                 <div key={category} className="mb-2">
-                  <div className="px-3 pt-2 pb-1 text-[9px] font-mono text-primary uppercase tracking-[0.2em]" role="presentation">
+                  <div className="px-3 pt-2 pb-1 text-[11px] font-mono text-primary uppercase tracking-[0.2em]" role="presentation">
                     // {category}
                   </div>
                   {items.map((cmd) => {
@@ -432,7 +432,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           </div>
 
           {/* Footer hints */}
-          <div className="px-5 py-3 border-t border-border bg-muted/30 flex items-center gap-6 text-[9px] text-muted-foreground font-mono uppercase tracking-widest">
+          <div className="px-5 py-3 border-t border-border bg-muted/30 flex items-center gap-6 text-[11px] text-muted-foreground font-mono uppercase tracking-widest">
             <span className="flex items-center gap-2">
               <kbd className="border border-border px-1.5 py-0.5">↑↓</kbd>
               navigate

@@ -5,6 +5,168 @@ import type { Project } from "@/types";
 
 export const PROJECTS: Project[] = [
   /* ── TIER 1: FLAGSHIP ─────────────────────────────────────────────────── */
+  // First on purpose: the Spotlight is the first flagship, and this is the
+  // only one a visitor can open, read the source of, and use.
+  {
+    id: "vega-canva",
+    tier: "flagship",
+    title: "Vega Studio",
+    subtitle: "Real-Time Collaborative Infinite Canvas",
+    category: "Realtime Collaboration",
+    timeline: "2026",
+    github: "https://github.com/emmanuelrichard01/vega-canva",
+    liveUrl: "https://vscanva.vercel.app",
+    image: "/images/vega-canva.png",
+    captureScreenshot: false,
+    metrics: [
+      { label: "Automated Tests", value: "4,076" },
+      { label: "Move @500 Objects", value: "~5.7ms" },
+      { label: "Chart Kinds", value: "30" },
+    ],
+    description:
+      "A real-time whiteboard where several people draw, write, diagram and talk on one unbounded board. Sync is a Yjs CRDT, so edits made offline merge on reconnect instead of being rejected. The canvas renders through Konva with R-tree culling; Mermaid text becomes native, editable shapes and connectors; objects carry physical materials and collide; and SVG export is serialised from document state rather than rasterised.",
+    // Left empty deliberately: `tradeoffs` below names the rejected option.
+    decisions: [],
+    stack: ["TypeScript", "React", "Konva", "Yjs", "Hocuspocus", "Node.js", "PostgreSQL", "Redis", "S3", "Docker"],
+    caseStudy: {
+      problem:
+        "The brief, from a Vega IT hackathon: a real-time collaborative infinite canvas in two days — rooms shared by link, a 2D surface that stays smooth past 100 objects, text, shapes, images, sticky notes and voice recordings, and guest identity without sign-up. The harder problem sits underneath it. On a board with no edges, collaborators are rarely looking at the same place, so the interface has to answer 'where is everyone, and what are they doing' without costing more attention than the work. And the network will drop: editing has to keep working without a server and converge afterwards without anyone losing work. After the hackathon the project was rebuilt against a stricter bar than the brief set.",
+      approach:
+        "The board is a Yjs document synced through Hocuspocus, persisted as Postgres snapshots plus an incremental update log, and mirrored to IndexedDB so it opens and edits offline. One module is the only write path — it stamps stacking order, timestamps and authorship so no tool can forget them — and every read is normalised at one boundary, with versioned migrations for documents written by older clients. Rendering is Konva: an R-tree culls to the viewport with overscan, each object subscribes only to its own node, and the camera is applied outside React so panning re-renders nothing. Resizing drives an invisible proxy and objects render at a size, never a scale, so type stays sharp and strokes keep their weight. Physics is a pure Matter.js module with single-writer ownership broadcast over awareness. Mermaid is parsed into the canvas's own shapes and connectors — dagre for flowcharts, a timeline layout for sequence diagrams, arithmetic for pies — rather than pasted in as an opaque SVG. The server adds S3 media, HMAC-signed view/comment/edit invites, Redis fan-out and quotas, and link previews fetched behind an SSRF guard.",
+      outcome:
+        "4,076 automated tests pass — 3,883 across 204 frontend files and 193 across 14 server files — with typecheck and lint clean, and CI typechecks, tests and builds both workspaces on every push. Measured in-repo on a 500-object scene: about 5.7ms to commit a single object move, and about 0.004ms for a spatial query. Beyond the brief it ships charts in 30 kinds and spreadsheet-style tables sharing one editor, code blocks, link cards, threaded comments with mentions and per-person unread state, a session timeline to scrub back through, and PNG, SVG, PDF and JSON export. It is live, and the source is public.",
+      highlights: [
+        "Mermaid 11's named-shape syntax is understood (61 aliases), and a silhouette test asserts no two Mermaid shapes may draw alike — the defect that once rendered I/O and manual-operation symbols as decision diamonds",
+        "Connectors store the ids of what they join and recompute their route on every read, so a generated diagram survives being rearranged by hand",
+        "Floating-toolbar placement is a pure function under 27 tests, which is what made its one real bug findable — see the field notes",
+        "A test fails the build if canvas code starts importing the lazily loaded export engine, which is how it once slipped onto the critical path of every page",
+        "Presence has exactly one writer and one reader loop, and positions are written straight to the DOM in the frame loop — a second writer had already produced ghost cursors",
+        "Diagram palettes are checked for WCAG contrast against the surface they sit on, in both themes, by test",
+      ],
+      tradeoffs: [
+        {
+          decision: "Sync model",
+          chose: "CRDT (Yjs), no ordering server",
+          rejected: "Server-authoritative operational transform",
+          why: "With no authoritative server, clients converge on their own — which is exactly what makes offline editing work. Edits made while disconnected merge on reconnect rather than being rejected by a server that has moved on.",
+        },
+        {
+          decision: "Diagrams as code",
+          chose: "Parse Mermaid into native canvas nodes",
+          rejected: "Render with the mermaid package",
+          why: "The package produces one SVG: an opaque picture on a surface whose whole point is that everything on it is editable, and over a megabyte of dependency to get it. Parsing into the canvas's own vocabulary means every box and arrow can be moved, restyled and re-exported.",
+        },
+        {
+          decision: "Resizing",
+          chose: "Transformer drives an invisible proxy; objects render at a size",
+          rejected: "Konva scaleX / scaleY on the objects themselves",
+          why: "Scale is the wrong verb for nearly every node here: a scaled sticky has scaled padding and blurred type, a scaled path has a scaled stroke. The gesture writes a live size to a store outside React, and each renderer draws at that size.",
+        },
+        {
+          decision: "Physics authority",
+          chose: "Single-writer ownership per moving object",
+          rejected: "Every client simulates every object",
+          why: "Two independent simulations settle the same object at slightly different resting positions and then fight over the write. One owner simulates and commits; everyone else renders the owner's broadcast flight path.",
+        },
+        {
+          decision: "Gravity",
+          chose: "Force as an aimed mode — pull, push, drop, wind, shockwave",
+          rejected: "Ambient world gravity",
+          why: "An infinite canvas has no floor. A constant field would pull content off the board forever and nothing would ever come to rest.",
+        },
+      ],
+      blocks: {
+        approach: [
+          {
+            kind: "architecture",
+            caption:
+              "Every edit enters through one write path and lands in a CRDT document that is the only owner of shared state. The browser keeps its own copy in IndexedDB, which is why the board opens and edits with no server at all; the server persists and fans out, but never orders edits.",
+            columns: [
+              {
+                label: "Browser",
+                nodes: [
+                  { id: "tools", label: "Tools & gestures", detail: "pen, shapes, text, drag, physics" },
+                  { id: "mutations", label: "mutations.ts", detail: "the only write path" },
+                  { id: "doc", label: "Y.Doc", detail: "CRDT — owns all shared state" },
+                  { id: "render", label: "Normalize → store → R-tree", detail: "culled Konva renderers" },
+                ],
+              },
+              {
+                label: "Persistence & sync",
+                nodes: [
+                  { id: "idb", label: "IndexedDB", detail: "in the browser: offline copy" },
+                  { id: "hocus", label: "Hocuspocus server", detail: "sync, signed invites, roles" },
+                  { id: "api", label: "Express API", detail: "media, link previews, history" },
+                ],
+              },
+              {
+                label: "Storage",
+                nodes: [
+                  { id: "pg", label: "PostgreSQL", detail: "snapshots + update log" },
+                  { id: "s3", label: "S3 / MinIO", detail: "images and audio" },
+                  { id: "redis", label: "Redis", detail: "fan-out, quotas (opt-in)" },
+                ],
+              },
+            ],
+            edges: [
+              { from: "tools", to: "mutations" },
+              { from: "mutations", to: "doc" },
+              { from: "doc", to: "render", label: "observe" },
+              { from: "doc", to: "idb", label: "persist" },
+              { from: "doc", to: "hocus", label: "sync" },
+              { from: "hocus", to: "pg" },
+              { from: "api", to: "s3" },
+              { from: "hocus", to: "redis" },
+            ],
+          },
+        ],
+      },
+      fieldNotes: [
+        {
+          title: "The toolbar that sat 28px too low",
+          symptom:
+            "The contextual toolbar that floats over a selection crowded the object whenever it was placed below it. Above, the spacing was fine.",
+          wrongTurns: [
+            "More clearance below — three rounds of retuning the standoff distance",
+          ],
+          rootCause:
+            "Symmetric geometry cannot produce an asymmetric error. Placement converted world coordinates to stage coordinates, then positioned a DOM element in window coordinates without adding the stage's own origin — which is inset by the 28px ruler. Exactly 28px of surplus air above, and 28px of deficit below.",
+          fix: "Three named coordinate spaces, converted once, at one boundary you can point at.",
+          guard: "Placement is a pure function of hull, size, window and last side, covered by 27 tests that run without a browser.",
+        },
+        {
+          title: "The toolbar that vanished until reload",
+          symptom:
+            "Occasionally the toolbar disappeared and never came back, whatever was selected. Only reloading the page restored it.",
+          wrongTurns: ["Find the gesture that sends a start without its end, and add the missing end"],
+          rootCause:
+            "One boolean was flipped by start and end events from six senders. Konva does not fire dragend for a node destroyed mid-drag, and every handle is conditionally rendered — so a selection change during a drag ends the gesture with no event. A missing end is not a bug you can finish finding; it is a shape. A second cause needed no missing event: a remounted toolbar had no transform yet, and a write skipped as 'unchanged' left it at the origin, off screen.",
+          fix: "The veil was made falsifiable: a pointer release with nothing being edited ends any gesture — a fact about the world rather than a promise from a sender. The DOM writer remembers which element it last wrote to, so every mount writes its first frame.",
+          guard: "12 tests on the veil's state machine.",
+        },
+        {
+          title: "Copy as PNG and Copy as SVG disagreed",
+          symptom:
+            "The same selection copied as SVG gave one sticky note; copied as PNG it gave the note, the frame behind it, and corners of the notes overlapping it.",
+          rootCause:
+            "The raster path framed the capture to the selection but captured the live stage with everything else still drawn. Underneath it, two more gaps: the canvas culls to the viewport, so a board wider than the window exported half blank; and a freshly mounted image is an empty rectangle until it loads.",
+          fix: "The capture isolates exactly the requested set; an export declares what it needs mounted and the canvas unions that in; and export waits — with a deadline — until every image the document says is drawable has drawn.",
+          guard: "Isolation, render scope and image readiness each have their own tests (6, 10 and 13).",
+        },
+        {
+          title: "A 47-line file put the whole exporter on the critical path",
+          symptom: "Every board and the dashboard downloaded the export engine — PDF writer included — before first paint.",
+          wrongTurns: ["The chunking rule was right: everything under engine/export/ goes into one lazy chunk"],
+          rootCause:
+            "chrome.ts, 47 lines holding the name Konva tags interface nodes with, lived under engine/export/ and was imported by twelve canvas components. One constant made the entire exporter a dependency of the first frame.",
+          fix: "Seven small, pure modules the canvas genuinely shares are named as exceptions; everything else under export/ stays lazy.",
+          guard: "A test fails if anything outside the exporter imports a module not on that list, and checks the list agrees with the build config.",
+        },
+      ],
+      notice:
+        "Access is by link, deliberately: a board's address is its key, and there are no accounts. Signed view and comment invites prevent a link being promoted, not a holder falling back to the bare board address — a documented product decision rather than an oversight. The board list lives in the browser, so clearing site data forgets the addresses (the boards themselves survive, and the list can be exported). The two performance figures are the repository's own measurements on a 500-object scene, not an independent benchmark.",
+    },
+  },
   {
     id: "mmr-engine",
     tier: "flagship",

@@ -18,10 +18,26 @@ import CommandPalette from "./components/CommandPalette";
 import { BootProvider, RouteReadyBeacon } from "./components/hero/BootOverlay";
 
 // Lazy Load Pages for Performance
-const loadIndex = () => import("./pages/Index");
+import { loadIndex, loadProjectDetail, loadedIndex, loadedProjectDetail } from "./lib/routeChunks";
+import { VIEW_TRANSITIONS } from "./lib/viewTransition";
 
-const Index = lazy(loadIndex);
-const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
+const LazyIndex = lazy(loadIndex);
+const LazyProjectDetail = lazy(loadProjectDetail);
+
+/* Render the page itself once its chunk is here, and lazy only until then.
+   A view transition snapshots the commit it navigates in; a lazy route would
+   suspend in that commit and hand the snapshot a loading screen. See
+   lib/routeChunks.ts. */
+const Index = () => {
+  const Page = loadedIndex();
+  // eslint-disable-next-line react-hooks/static-components -- `Page` is a module-level reference, the same object on every call once loaded; nothing is created per render.
+  return Page ? <Page /> : <LazyIndex />;
+};
+const ProjectDetail = () => {
+  const Page = loadedProjectDetail();
+  // eslint-disable-next-line react-hooks/static-components -- `Page` is a module-level reference, the same object on every call once loaded; nothing is created per render.
+  return Page ? <Page /> : <LazyProjectDetail />;
+};
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 /* Warm the home chunk while this module is still evaluating.
@@ -128,6 +144,25 @@ const DeferredBootLoader = () => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const prefersReduced = useReducedMotion();
+
+  /* Where the browser can morph between pages, it does the transition and
+     this renders the route immediately — an exit animation here would hold
+     the old page on screen and hand it to the view transition as the "new"
+     one. Decided once per session, so the tree never changes shape. */
+  if (VIEW_TRANSITIONS) {
+    return (
+      <div key={location.pathname}>
+        <Suspense fallback={<DeferredBootLoader />}>
+          <RouteReadyBeacon />
+          <Routes location={location}>
+            <Route path="/" element={<Index />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait" initial={false}>

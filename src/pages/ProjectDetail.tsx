@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  Bug,
   CheckCircle2,
   ExternalLink,
   GitBranch,
   Github,
   Info,
   Layers,
+  MessageSquare,
   Target,
 } from "lucide-react";
 
@@ -18,6 +20,10 @@ import { PROJECTS } from "@/data/projects";
 import { STATUS_CLASS, STATUS_LABEL, projectStatus } from "@/lib/project";
 import SEOHead from "@/components/SEOHead";
 import CaseStudyNav, { type CaseStudySection } from "@/components/projects/CaseStudyNav";
+import { CaseBlocks, FieldNotes } from "@/components/projects/CaseBlocks";
+import ProjectAsk from "@/components/projects/ProjectAsk";
+import TransitionLink from "@/components/ui/TransitionLink";
+import { VIEW_TRANSITIONS, transitionName } from "@/lib/viewTransition";
 import type { Project, SEOMetadata } from "@/types";
 
 const SITE_URL = "https://www.builtbyem.dev";
@@ -31,6 +37,15 @@ function truncate(text: string, max = 155): string {
   const lastSpace = clipped.lastIndexOf(" ");
   return `${clipped.slice(0, lastSpace > 0 ? lastSpace : max).trimEnd()}…`;
 }
+
+/* Reading mode for the case-study prose.
+
+   This was 15px, light weight, in the muted grey — the hardest combination to
+   read for four sections of real writing, on the page that is nothing *but*
+   reading. The instrument styling (mono, uppercase, tracked) stays on the
+   labels and figures; the sentences get a size, weight and contrast meant for
+   sentences. */
+const PROSE = "text-[16px] md:text-[17px] text-foreground/80 leading-[1.75] max-w-[68ch]";
 
 /* ── Section heading ── */
 
@@ -109,7 +124,7 @@ const MetaSidebar = ({
             <dl className="border border-border bg-card divide-y divide-border">
               {project.metrics.map((metric) => (
                 <div key={metric.label} className="flex flex-col gap-1 px-3 py-2.5">
-                  <dt className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                  <dt className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                     {metric.label}
                   </dt>
                   <dd className="font-mono text-[15px] text-primary tabular-nums">{metric.value}</dd>
@@ -279,12 +294,17 @@ const ProjectDetail = () => {
           : project.decisions.length
             ? [{ id: "decisions", num: "04", label: "Architecture Decisions" }]
             : []),
+        ...(caseStudy.fieldNotes?.length
+          ? [{ id: "field-notes", num: "05", label: "Field Notes" }]
+          : []),
+        { id: "ask", num: "→", label: "Ask About It" },
       ]
     : [
         { id: "overview", num: "01", label: "Overview" },
         ...(project.decisions.length
           ? [{ id: "decisions", num: "02", label: "Architecture Decisions" }]
           : []),
+        { id: "ask", num: "→", label: "Ask About It" },
       ];
 
   const metadata: SEOMetadata = {
@@ -335,29 +355,29 @@ const ProjectDetail = () => {
       <div className="container px-6 md:px-12 max-w-6xl mx-auto relative z-10">
         {/* Breadcrumb */}
         <motion.nav
-          initial={{ opacity: 0, y: -5 }}
+          initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="flex flex-wrap items-center gap-2 mb-12"
           aria-label="Breadcrumb"
         >
-          <Link
+          <TransitionLink
             to="/"
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-[11px] font-mono uppercase tracking-widest group"
           >
             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" aria-hidden="true" />
             Home
-          </Link>
+          </TransitionLink>
           <span className="text-muted-foreground font-mono text-[11px]" aria-hidden="true">
             /
           </span>
           {/* Now a real link — this was inert text before. */}
-          <Link
+          <TransitionLink
             to="/#projects"
             className="text-muted-foreground hover:text-foreground transition-colors font-mono text-[11px] uppercase tracking-widest"
           >
             Projects
-          </Link>
+          </TransitionLink>
           <span className="text-muted-foreground font-mono text-[11px]" aria-hidden="true">
             /
           </span>
@@ -368,7 +388,7 @@ const ProjectDetail = () => {
 
         {/* Header */}
         <motion.header
-          initial={{ opacity: 0, y: 10 }}
+          initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="mb-16"
@@ -382,7 +402,10 @@ const ProjectDetail = () => {
             </span>
           </div>
 
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4 leading-[1.1]">
+          <h1
+            className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4 leading-[1.1] w-fit"
+            style={{ viewTransitionName: transitionName("title", project.id) }}
+          >
             {project.title}
           </h1>
           {/* Mono, matching the subtitle treatment the index and cards use —
@@ -395,7 +418,7 @@ const ProjectDetail = () => {
         {/* Image */}
         {project.image && (
           <motion.figure
-            initial={{ opacity: 0, scale: 0.99 }}
+            initial={VIEW_TRANSITIONS ? false : { opacity: 0, scale: 0.99 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className="w-full border border-border bg-card p-1.5 md:p-2 relative group overflow-hidden mb-16 transition-colors duration-500 hover:border-primary/50"
@@ -412,7 +435,8 @@ const ProjectDetail = () => {
                 alt={`${project.title} interface`}
                 loading="eager"
                 decoding="async"
-                className="w-full h-full object-cover object-top grayscale-[0.6] opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-image-reveal"
+                className="w-full h-full object-cover object-top"
+                style={{ viewTransitionName: transitionName("art", project.id) }}
               />
             </div>
           </motion.figure>
@@ -421,7 +445,7 @@ const ProjectDetail = () => {
         {/* Body */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           <motion.article
-            initial={{ opacity: 0, y: 10 }}
+            initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="lg:col-span-8 flex flex-col gap-14"
@@ -446,23 +470,26 @@ const ProjectDetail = () => {
               <>
                 <section>
                   <SectionHeading id="problem" num="01" label="The Problem" icon={AlertTriangle} />
-                  <p className="text-[15px] text-muted-foreground leading-[1.75] font-light max-w-[68ch]">
+                  <p className={PROSE}>
                     {caseStudy.problem}
                   </p>
+                  <CaseBlocks blocks={caseStudy.blocks?.problem} />
                 </section>
 
                 <section>
                   <SectionHeading id="approach" num="02" label="The Approach" icon={Layers} />
-                  <p className="text-[15px] text-muted-foreground leading-[1.75] font-light max-w-[68ch]">
+                  <p className={PROSE}>
                     {caseStudy.approach}
                   </p>
+                  <CaseBlocks blocks={caseStudy.blocks?.approach} />
                 </section>
 
                 <section>
                   <SectionHeading id="outcome" num="03" label="The Outcome" icon={Target} />
-                  <p className="text-[15px] text-muted-foreground leading-[1.75] font-light max-w-[68ch]">
+                  <p className={PROSE}>
                     {caseStudy.outcome}
                   </p>
+                  <CaseBlocks blocks={caseStudy.blocks?.outcome} />
 
                   {caseStudy.highlights && caseStudy.highlights.length > 0 && (
                     <ul className="mt-8 flex flex-col gap-3">
@@ -472,7 +499,7 @@ const ProjectDetail = () => {
                             className="w-3.5 h-3.5 text-primary shrink-0 mt-1"
                             aria-hidden="true"
                           />
-                          <span className="text-[13px] text-foreground leading-relaxed font-light">
+                          <span className="text-[14px] text-foreground/85 leading-relaxed">
                             {item}
                           </span>
                         </li>
@@ -511,14 +538,14 @@ const ProjectDetail = () => {
                               comparison rather than a run-on line that wraps
                               unpredictably once a name gets long. */}
                           <div className="grid grid-cols-[3.5rem_1fr] gap-x-3 gap-y-2 mb-4">
-                            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground pt-1">
+                            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground pt-1">
                               chose
                             </span>
                             <span className="font-mono text-[13px] text-emerald-400 leading-snug">
                               {tradeoff.chose}
                             </span>
 
-                            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground pt-1">
+                            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground pt-1">
                               over
                             </span>
                             <span className="font-mono text-[13px] text-muted-foreground leading-snug line-through decoration-muted-foreground/50">
@@ -526,12 +553,23 @@ const ProjectDetail = () => {
                             </span>
                           </div>
 
-                          <p className="text-[13px] text-muted-foreground leading-[1.75] font-light max-w-[68ch] border-l border-primary/30 pl-4">
+                          <p className="text-[14px] text-foreground/75 leading-[1.75] max-w-[68ch] border-l border-primary/30 pl-4">
                             {tradeoff.why}
                           </p>
                         </li>
                       ))}
                     </ol>
+                  </section>
+                )}
+
+                {caseStudy.fieldNotes && caseStudy.fieldNotes.length > 0 && (
+                  <section>
+                    <SectionHeading id="field-notes" num="05" label="Field Notes" icon={Bug} />
+                    <p className="font-mono text-[12px] text-muted-foreground mb-5 max-w-[68ch]">
+                      Bugs worth telling: what was seen, the explanations that did not hold, and what now stops each one
+                      coming back.
+                    </p>
+                    <FieldNotes notes={caseStudy.fieldNotes} />
                   </section>
                 )}
               </>
@@ -540,7 +578,7 @@ const ProjectDetail = () => {
                  short form rather than padding the template with invention. */
               <section>
                 <SectionHeading id="overview" num="01" label="Overview" icon={Layers} />
-                <p className="text-[15px] text-muted-foreground leading-[1.75] font-light max-w-[68ch]">
+                <p className={PROSE}>
                   {project.description}
                 </p>
               </section>
@@ -579,10 +617,17 @@ const ProjectDetail = () => {
                 </div>
               </section>
             )}
+
+            {/* Last, because it is where a question occurs to someone: after
+                they have read the write-up, not before. */}
+            <section>
+              <SectionHeading id="ask" num="→" label="Ask About It" icon={MessageSquare} />
+              <ProjectAsk key={project.id} project={project} />
+            </section>
           </motion.article>
 
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             className="lg:col-span-4 lg:order-first"
@@ -598,7 +643,7 @@ const ProjectDetail = () => {
             aria-label="Adjacent projects"
           >
             {previousProject && (
-              <Link
+              <TransitionLink
                 to={`/projects/${previousProject.id}`}
                 className="group flex items-center gap-4 p-6 border border-border bg-card/30 hover:border-primary/40 transition-colors"
               >
@@ -614,10 +659,10 @@ const ProjectDetail = () => {
                     {previousProject.title}
                   </span>
                 </span>
-              </Link>
+              </TransitionLink>
             )}
             {nextProject && (
-              <Link
+              <TransitionLink
                 to={`/projects/${nextProject.id}`}
                 className="group flex items-center justify-between gap-4 p-6 border border-border bg-card/30 hover:border-primary/40 transition-colors sm:col-start-2"
               >
@@ -633,7 +678,7 @@ const ProjectDetail = () => {
                   className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0"
                   aria-hidden="true"
                 />
-              </Link>
+              </TransitionLink>
             )}
           </nav>
         )}

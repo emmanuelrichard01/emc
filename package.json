@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "eval:ai": "vitest run src/lib/ai.eval.test.ts",
     "preview": "vite preview",
     "update-screenshots": "node scripts/fetch-screenshots.mjs",
     "update-fonts": "node scripts/fetch-fonts.mjs",

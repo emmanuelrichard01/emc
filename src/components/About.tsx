@@ -183,7 +183,16 @@ const RevealText = ({ text, className = "" }: { text: string; className?: string
      blur is exactly the kind of movement the preference is asking us to drop,
      and a softened version of it would still be motion tied to scrolling. */
   if (prefersReduced) {
-    return <p className={`text-foreground ${className}`}>{text}</p>;
+    /* The ref still has to land on something. useScroll above was given it
+       as its target, and framer throws "Target ref is defined but not
+       hydrated" when that ref is empty after mount — which took the whole
+       home page down to the error screen for every visitor whose OS asks for
+       reduced motion, the people this branch exists for. */
+    return (
+      <div ref={container}>
+        <p className={`text-foreground ${className}`}>{text}</p>
+      </div>
+    );
   }
 
   return (
@@ -215,7 +224,7 @@ const TechGroups = () => {
     <div ref={ref} className="flex flex-col gap-3 border-t border-b border-border py-4 my-3">
       {TECH_GROUPS.map((group, groupIndex) => (
         <div key={group.label} className="flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-4">
-          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:w-28 sm:shrink-0 sm:pt-1">
+          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:w-28 sm:shrink-0 sm:pt-1">
             {group.label}
           </span>
           <ul className="flex flex-wrap gap-1.5">
@@ -278,7 +287,7 @@ const MetricsModule = () => (
           <div className="text-2xl md:text-3xl font-mono text-foreground mb-1">
             <AnimatedCounter target={m.value} suffix={m.suffix} />
           </div>
-          <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
             {m.label}
           </span>
           {/* Attribution, not decoration. A number a reader can trace is worth
@@ -286,7 +295,7 @@ const MetricsModule = () => (
               line cannot be the faintest thing in the module. It measured
               1.79:1 against a 4.5:1 requirement, so the source of every figure
               here was the one part a reader could not actually read. */}
-          <span className="text-[9px] font-mono text-muted-foreground mt-1.5 leading-tight">
+          <span className="text-[11px] font-mono text-muted-foreground mt-1.5 leading-tight">
             {m.source}
           </span>
         </div>
@@ -351,7 +360,7 @@ const About: React.FC = () => {
                   <h3 className="text-xl font-bold text-foreground mb-2">Emmanuel Moghalu</h3>
                   <div className="flex flex-wrap gap-2">
                     {ROLES.map((role) => (
-                      <span key={role} className="text-[9px] font-mono uppercase tracking-widest text-primary border border-border px-2 py-0.5">
+                      <span key={role} className="text-[11px] font-mono uppercase tracking-widest text-primary border border-border px-2 py-0.5">
                         {role}
                       </span>
                     ))}

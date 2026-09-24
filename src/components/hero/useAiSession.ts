@@ -1,60 +1,65 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { trimHistory, type WireMessage } from '@/lib/aiHistory';
-import { executeToolCall, extractiveAnswer, type ToolCall, type ToolResult } from '@/lib/aiTools';
+import { dropUnanswered, trimHistory, type WireMessage } from '@/lib/aiHistory';
+import type { AiSource } from '@/lib/aiSources';
+import { readEvents, type AiEvent } from '@/lib/aiStream';
+import { extractiveAnswer, type ToolResult } from '@/lib/aiTools';
 
 /* ==========================================================================
    AI SESSION
 
-   The agent loop, client-side.
+   One question, one request, one stream.
 
-     ask → endpoint → tool calls → run them here → endpoint → answer
+     ask → /api/ask ⇢ step · step · delta delta delta · done
 
-   Bounded at MAX_ROUNDS. A model that keeps requesting tools instead of
-   answering is a bug or a loop, and on an endpoint that spends money per
-   call the failure mode has to be "gives up and says so", never "keeps
-   going". Two rounds is enough for the real pattern here — query, then
-   answer — with one spare for a self-correction after a bad query.
+   The endpoint runs the tool loop itself and streams what it is doing, so
+   this hook no longer executes tools or shuttles results back and forth; it
+   renders progress as it arrives. The first visible thing after asking is
+   the SQL the answer is being built from, and the answer starts appearing
+   the moment the model starts writing it, rather than after every round has
+   finished.
    ========================================================================== */
 
 const ENDPOINT = '/api/ask';
 
-/* Rounds of tool use before the answer is forced.
-   Five rounds allows multi-hop retrieval and self-correction before forcing
-   the finalized answer on the final round. */
-const MAX_ROUNDS = 5;
+/* Messages of history kept, i.e. five exchanges. Kept under the endpoint's
+   MAX_MESSAGES with room for the new question — aiHistory.test.ts asserts it. */
+export const MAX_HISTORY = 10;
 
 export interface AiTurn {
   id: number;
   role: 'user' | 'assistant' | 'system';
   text: string;
-  /** Tool calls resolved while producing this turn, shown as provenance. */
+  /** Tool results behind this answer, shown as provenance. Grows live while streaming. */
   evidence?: ToolResult[];
+  /** Pages the answer relies on, linked beneath it. */
+  sources?: AiSource[];
   provider?: string;
+  /** Figures in the answer the grounding check could not find in the site's data. */
+  unverified?: string[];
+  /** Replayed from the per-deploy answer cache rather than generated for this visitor. */
+  cached?: boolean;
+  /** No model could answer; this is the site's own search, standing in. */
+  degraded?: boolean;
   /** True for locally produced text (errors, keyless fallback). */
   local?: boolean;
+  /** Still being written. */
+  streaming?: boolean;
+  /** Cut short by the visitor. */
+  stopped?: boolean;
   /**
    * Set on a failure that asking again could plausibly clear — a timeout, a
    * 502, a provider having a bad minute. Deliberately *not* set on a refusal
    * we issued ourselves: a question that is 600 characters long is still 600
-   * characters long the second time, and offering to retry it would be
-   * offering to fail again.
+   * characters long the second time.
    */
   retryable?: boolean;
 }
 
-/* Kept under the endpoint's own MAX_MESSAGES (16) with room for the rounds
-   this question will add, so a long session drops its oldest exchanges
-   instead of hitting "conversation too long" and refusing to continue. */
-const MAX_HISTORY = 10;
-
-/** What /api/ask replies with, on any of its paths. */
-interface WireResponse {
-  type?: 'answer' | 'tool_calls' | 'error' | 'unconfigured';
-  text?: string;
+/** What /api/ask replies with when it refuses before streaming. */
+interface JsonReply {
+  type?: 'error' | 'unconfigured';
   error?: string;
-  provider?: string;
-  calls?: ToolCall[];
 }
 
 export interface AiSession {
@@ -73,7 +78,13 @@ export interface AiSession {
   canRetry: boolean;
 }
 
-export function useAiSession(): AiSession {
+export interface AiSessionOptions {
+  /** The case study being read, so "this project" means something to the model. */
+  projectId?: string;
+}
+
+export function useAiSession(options: AiSessionOptions = {}): AiSession {
+  const { projectId } = options;
   const [turns, setTurns] = useState<AiTurn[]>([]);
   const [busy, setBusy] = useState(false);
   const [unconfigured, setUnconfigured] = useState(false);
@@ -84,10 +95,25 @@ export function useAiSession(): AiSession {
   /** The last thing a human asked, kept so a failure can be re-thrown at it. */
   const lastQuestionRef = useRef<string | null>(null);
 
-  const nextId = () => ++idRef.current;
+  const push = useCallback((turn: Omit<AiTurn, 'id'>): number => {
+    const id = ++idRef.current;
+    setTurns((prev) => [...prev, { ...turn, id }]);
+    return id;
+  }, []);
 
-  const push = useCallback((turn: Omit<AiTurn, 'id'>) => {
-    setTurns((prev) => [...prev, { ...turn, id: ++idRef.current }]);
+  const patch = useCallback((id: number, update: (turn: AiTurn) => AiTurn) => {
+    setTurns((prev) => prev.map((turn) => (turn.id === id ? update(turn) : turn)));
+  }, []);
+
+  /** Ends whatever turn is still streaming, keeping what it said so far. */
+  const settleStreaming = useCallback((stopped: boolean) => {
+    setTurns((prev) =>
+      prev
+        .map((turn) => (turn.streaming ? { ...turn, streaming: false, stopped } : turn))
+        // A turn that was stopped before it said anything and found nothing
+        // is noise; the question above it already shows it was asked.
+        .filter((turn) => !(turn.stopped && !turn.text && !turn.evidence?.length))
+    );
   }, []);
 
   const reset = useCallback(() => {
@@ -109,8 +135,9 @@ export function useAiSession(): AiSession {
   const cancel = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
+    settleStreaming(true);
     setBusy(false);
-  }, []);
+  }, [settleStreaming]);
 
   const send = useCallback(
     async (question: string) => {
@@ -119,10 +146,8 @@ export function useAiSession(): AiSession {
 
       push({ role: 'user', text: trimmed });
       lastQuestionRef.current = trimmed;
-      // Trimmed before the new question is appended, so the exchange about to
-      // start always has the full round budget available to it.
       historyRef.current = [
-        ...trimHistory(historyRef.current, MAX_HISTORY),
+        ...trimHistory(dropUnanswered(historyRef.current), MAX_HISTORY),
         { role: 'user', content: trimmed },
       ];
       setBusy(true);
@@ -130,146 +155,122 @@ export function useAiSession(): AiSession {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const fail = (text: string, retryable: boolean) => {
+        settleStreaming(false);
+        push({ role: 'system', text, local: true, retryable });
+      };
+
       try {
-        let evidence: ToolResult[] = [];
+        const response = await fetch(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: historyRef.current, ...(projectId ? { context: { projectId } } : {}) }),
+          signal: controller.signal,
+        });
 
-        for (let round = 0; round < MAX_ROUNDS; round++) {
-          const response = await fetch(ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: historyRef.current,
-              // Last round: ask the server to withhold tools so the model
-              // must answer rather than requesting more data it cannot use.
-              finalize: round === MAX_ROUNDS - 1,
-            }),
-            signal: controller.signal,
-          });
+        const type = response.headers.get('content-type') ?? '';
 
-          /* A non-JSON body is a transport failure, not a model failure, and
-             collapsing it to "bad response" cost real debugging time: the
-             endpoint was 404ing with an empty body under `vite dev` — where
-             the Edge Function does not exist — and the message said nothing
-             about status, body, or which of the two it was. Report the status
-             and a slice of whatever did come back instead. */
+        /* Refusals arrive as JSON before any work starts; answers stream. A
+           body that is neither is a transport failure — under `vite dev`
+           without the API middleware the SPA fallback answers 404 with HTML
+           — and the status is the diagnosis, so it is reported. */
+        if (!type.includes('ndjson') || !response.body) {
           const raw = await response.text();
-          let data: WireResponse;
+          let data: JsonReply | null = null;
           try {
             data = JSON.parse(raw);
           } catch {
-            data = {
-              type: 'error',
-              error:
-                response.status === 404
-                  ? 'no /api/ask endpoint — the answering function is not running. locally, `npm run dev` now serves it; check the dev server restarted.'
-                  : `endpoint returned ${response.status} with a non-JSON body${
-                      raw.trim() ? `: ${raw.slice(0, 120)}` : ' (empty)'
-                    }`,
-            };
+            /* not JSON — handled below */
           }
 
-          if (data.type === 'unconfigured') {
+          if (data?.type === 'unconfigured') {
             setUnconfigured(true);
             push({ role: 'assistant', text: extractiveAnswer(trimmed), local: true });
             return;
           }
 
-          if (data.type === 'error' || !response.ok) {
-            push({
-              role: 'system',
-              text: data.error ?? `request failed (${response.status})`,
-              local: true,
-              /* 429 excluded on purpose. A rate limit is the one failure
-                 where asking again immediately is exactly the wrong move —
-                 it is the endpoint saying "not yet", and a retry button next
-                 to it would be inviting the visitor to make it worse. */
-              retryable: response.status !== 429,
-            });
-            return;
-          }
-
-          if (data.type === 'tool_calls' && Array.isArray(data.calls) && data.calls.length) {
-            const results = (data.calls as ToolCall[]).map(executeToolCall);
-            evidence = [...evidence, ...results];
-
-            // The assistant's own turn has to be recorded before its tool
-            // results, or the next request reads as results with nothing that
-            // asked for them.
-            historyRef.current = [
-              ...historyRef.current,
-              { role: 'assistant', content: '', toolCalls: data.calls as ToolCall[] },
-              ...results.map((result) => ({
-                role: 'tool' as const,
-                content: result.content.slice(0, 3_800),
-                toolName: result.name,
-                toolCallId: result.callId,
-              })),
-            ];
-            continue;
-          }
-
-          if (data.type === 'answer' && typeof data.text === 'string') {
-            historyRef.current = [...historyRef.current, { role: 'assistant', content: data.text }];
-            push({
-              role: 'assistant',
-              text: data.text,
-              evidence: evidence.length ? evidence : undefined,
-              provider: data.provider,
-            });
-            return;
-          }
-
-          push({ role: 'system', text: 'no answer returned.', local: true });
+          fail(
+            data?.error ??
+              (response.status === 404
+                ? 'no /api/ask endpoint — the answering function is not running. locally, restart `npm run dev`.'
+                : `endpoint returned ${response.status}${raw.trim() ? `: ${raw.slice(0, 120)}` : ''}`),
+            /* 429 excluded on purpose: a rate limit is the endpoint saying
+               "not yet", and a retry button beside it invites making it worse. */
+            response.status !== 429 && response.status !== 400
+          );
           return;
         }
 
-        push({
-          role: 'system',
-          text: 'gave up after too many tool calls without an answer. try rephrasing.',
-          local: true,
+        const answerId = push({ role: 'assistant', text: '', streaming: true });
+        let answer = '';
+        let finished = false;
+
+        await readEvents(response.body, (event: AiEvent) => {
+          switch (event.type) {
+            case 'step':
+              patch(answerId, (turn) => ({ ...turn, evidence: [...(turn.evidence ?? []), event.result] }));
+              break;
+            case 'delta':
+              answer += event.text;
+              patch(answerId, (turn) => ({ ...turn, text: answer }));
+              break;
+            case 'reset':
+              answer = '';
+              patch(answerId, (turn) => ({ ...turn, text: '' }));
+              break;
+            case 'done':
+              finished = true;
+              historyRef.current = [...historyRef.current, { role: 'assistant', content: answer.trim() }];
+              patch(answerId, (turn) => ({
+                ...turn,
+                text: answer.trim(),
+                streaming: false,
+                provider: event.provider,
+                sources: event.sources?.length ? event.sources : undefined,
+                unverified: event.unverified?.length ? event.unverified : undefined,
+                cached: event.cached || undefined,
+                degraded: event.degraded || undefined,
+                // A stand-in answer is worth asking again for once a model is back.
+                retryable: event.degraded || undefined,
+              }));
+              break;
+            case 'error':
+              finished = true;
+              // The half-built turn goes; the failure takes its place.
+              setTurns((prev) => prev.filter((turn) => turn.id !== answerId || turn.text));
+              fail(event.error, event.retryable ?? true);
+              break;
+          }
         });
+
+        if (!finished && !controller.signal.aborted) {
+          fail('the answer was cut off before it finished.', true);
+        }
       } catch (error) {
         if (controller.signal.aborted) return;
-        push({
-          role: 'system',
-          text: `could not reach the answering endpoint: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-          local: true,
-          retryable: true,
-        });
+        fail(
+          `could not reach the answering endpoint: ${error instanceof Error ? error.message : String(error)}`,
+          true
+        );
       } finally {
-        abortRef.current = null;
+        if (abortRef.current === controller) abortRef.current = null;
         setBusy(false);
       }
     },
-    [busy, push]
+    [busy, patch, projectId, push, settleStreaming]
   );
 
-  /* Ask the same thing again, from a clean slate for that exchange.
-
-     The rollback is the part that matters. A failed round leaves the question
-     sitting at the end of `historyRef` with nothing after it — no answer, and
-     possibly a half-finished set of tool calls. Sending again on top of that
-     would hand the provider the same question twice in a row and whatever
-     debris the failure left between them, which is a worse prompt than the
-     one that just failed. Trimming back to before the last user message means
-     the retry is the original request, not a follow-up to a broken one. */
+  /* Ask the same thing again. `send` drops the unanswered question from the
+     history first, so the retry is the original request, not a follow-up to
+     a broken one. */
   const retry = useCallback(() => {
     const question = lastQuestionRef.current;
     if (!question || busy) return;
-
-    const lastUserIndex = historyRef.current.map((m) => m.role).lastIndexOf('user');
-    if (lastUserIndex !== -1) historyRef.current = historyRef.current.slice(0, lastUserIndex);
-
     void send(question);
   }, [busy, send]);
 
-  /* Offered only on the newest turn.
-
-     Scrolling up to a failure from four questions ago and retrying it would
-     re-ask it with all the intervening conversation still in history, which
-     is not the request the button appears to be offering. */
+  /* Offered only on the newest turn. Retrying a failure from four questions
+     ago would re-ask it after the conversation that followed. */
   const lastTurn = turns[turns.length - 1];
   const canRetry = !busy && Boolean(lastTurn?.retryable) && lastQuestionRef.current !== null;
 

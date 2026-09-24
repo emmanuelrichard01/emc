@@ -74,7 +74,11 @@ export const AnimatedCounter = ({ target, suffix = "" }: AnimatedCounterProps) =
 
   return (
     <span ref={ref}>
-      {count.toFixed(decimals)}
+      {/* Grouped from four digits up, so a count that animates to 4,076 is
+          written the way the metric beside it was authored. */}
+      {target >= 1000
+        ? count.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+        : count.toFixed(decimals)}
       {suffix}
     </span>
   );

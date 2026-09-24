@@ -310,7 +310,7 @@ function BootPanel({ waiting }: BootPanelProps) {
           wait is on the network, and offering a skip that cannot skip is
           worse than offering nothing. */}
       {!waiting && (
-        <span className="absolute bottom-8 font-mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground/40">
+        <span className="absolute bottom-8 font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground/40">
           press any key to skip
         </span>
       )}

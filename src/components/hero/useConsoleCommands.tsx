@@ -7,6 +7,7 @@ import { CURATED_QUESTIONS } from '@/lib/portfolioQuestions';
 import type { ColorTheme } from '@/components/ThemeProvider';
 import { CV_FILE_NAME, downloadCV } from '@/lib/cv';
 import { scrollToSection } from '@/lib/scrollToSection';
+import { navigateWithTransition } from '@/lib/viewTransition';
 import { measureFps, readDomNodes, readHeapMB } from './useSystemTelemetry';
 
 /* ==========================================================================
@@ -301,7 +302,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         name: 'ls',
         summary: 'list deployed systems',
         detail: 'Status is derived from the links each project actually has, so it always matches the cards.',
-        run: () => ({ output: <ProjectListing onOpen={(id) => navigate(`/projects/${id}`)} /> }),
+        run: () => ({ output: <ProjectListing onOpen={(id) => navigateWithTransition(navigate, `/projects/${id}`)} /> }),
       },
       {
         name: 'cat',
@@ -333,7 +334,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
                 <Pre>{lines.join('\n')}</Pre>
                 <button
                   type="button"
-                  onClick={() => navigate(`/projects/${project.id}`)}
+                  onClick={() => navigateWithTransition(navigate, `/projects/${project.id}`)}
                   className="mt-1 text-primary hover:underline"
                 >
                   → open /projects/{project.id}
@@ -354,7 +355,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           if (!project) return { output: `no such system: ${id}. run 'ls' for ids.` };
           return {
             output: `opening ${project.title}...`,
-            sideEffect: () => navigate(`/projects/${project.id}`),
+            sideEffect: () => navigateWithTransition(navigate, `/projects/${project.id}`),
           };
         },
       },

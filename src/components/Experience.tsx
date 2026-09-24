@@ -162,7 +162,7 @@ const RoleRow = ({
               {/* Labelled once, at the first bar a reader meets, so the rest
                   of the column inherits the scale without repeating it. */}
               {index === 0 && (
-                <div className="flex justify-between text-[9px] font-mono text-muted-foreground tabular-nums mt-1.5">
+                <div className="flex justify-between text-[11px] font-mono text-muted-foreground tabular-nums mt-1.5">
                   <span>{Math.floor(axis.from / 12)}</span>
                   <span>{Math.floor(axis.to / 12)}</span>
                 </div>

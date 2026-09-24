@@ -1,54 +1,37 @@
-import type { ToolCall } from './aiTools';
-
 /* ==========================================================================
    AI HISTORY
 
    Conversation state sent to /api/ask, and the rule for keeping it bounded.
 
-   The endpoint rejects anything over MAX_MESSAGES (16) with "conversation too
-   long — run `ai` again to reset". A single question costs between two and
-   six messages once tool rounds are counted — the question, an assistant turn
-   per tool call, a result per call, then the answer — so an ordinary session
-   hit that wall on the third or fourth question and simply stopped working
-   until the user knew to reset it. Silently dropping the oldest exchanges is
-   what a chat session should do; erroring out is not.
+   Only what was said travels: the visitor's questions and the answers they
+   got. Tool calls and their results live and die inside the endpoint, which
+   runs the loop itself — a client that could send a `tool` message could
+   write the site's data for it. See the header of api/ask.ts.
+
+   The endpoint rejects anything over MAX_MESSAGES with "conversation too
+   long". Silently dropping the oldest exchanges is what a chat session
+   should do; erroring out is not.
    ========================================================================== */
 
 /**
  * Longest question the endpoint will accept.
  *
- * Mirrors MAX_QUESTION_CHARS in api/ask.ts, which cannot be imported here —
- * it is an Edge Function outside the app's tsconfig, and pulling this module
- * into it would drag the client tool layer along. aiHistory.test.ts reads the
+ * Mirrors MAX_QUESTION_CHARS in api/ask.ts. aiHistory.test.ts reads the
  * server file and asserts the two agree, so the copy cannot drift unnoticed.
  */
 export const MAX_QUESTION_CHARS = 500;
 
 export interface WireMessage {
-  role: 'user' | 'assistant' | 'tool';
+  role: 'user' | 'assistant';
   content: string;
-  /* Echoed back structurally, not narrated. Both providers need to see their
-     own tool call as an action they took; describing it in prose left the
-     model reading its own call as something a user had typed. Gemini's
-     thoughtSignature rides along untouched. */
-  toolCalls?: ToolCall[];
-  toolName?: string;
-  toolCallId?: string;
 }
 
 /**
  * Drops whole exchanges from the front until the history fits.
  *
- * Trimming has to respect exchange boundaries. An assistant turn carrying
- * tool calls and the tool results answering it are a unit: slice between them
- * and the next request contains either results nothing asked for or a call
- * nothing answered, which both providers reject outright. So the cut is only
- * ever made immediately before a user turn.
- *
- * If even the newest exchange is over budget it is kept whole and returned
- * oversized — the server's own cap is the backstop, and sending a coherent
- * request that might be refused beats sending an incoherent one that
- * certainly will be.
+ * The cut is only ever made immediately before a user turn, so the model
+ * never reads an answer to a question it cannot see. If even the newest
+ * exchange is over budget it is kept whole — the server's cap is the backstop.
  */
 export function trimHistory(messages: WireMessage[], max: number): WireMessage[] {
   if (messages.length <= max) return messages;
@@ -65,4 +48,15 @@ export function trimHistory(messages: WireMessage[], max: number): WireMessage[]
   }
 
   return messages.slice(starts[starts.length - 1]);
+}
+
+/**
+ * Removes a trailing question that never got an answer.
+ *
+ * A cancelled or failed question leaves a user turn with nothing after it.
+ * Asking again on top of that sends two questions in a row, the first of
+ * which the model will try to answer too.
+ */
+export function dropUnanswered(messages: WireMessage[]): WireMessage[] {
+  return messages.length && messages[messages.length - 1].role === 'user' ? messages.slice(0, -1) : messages;
 }

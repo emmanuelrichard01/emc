@@ -1,27 +1,30 @@
-import { PROJECTS } from '@/data/projects';
-import { EXPERIENCE } from '@/data/experience';
-import { STATUS_LABEL, projectStatus } from '@/lib/project';
-import { isQueryError, runQuery } from '@/lib/portfolioQuery';
+// Relative, not `@/`: api/ask.ts imports this module, and the Edge Function
+// bundler does not know the app's path alias. Everything reachable from here
+// must stay alias-free (type-only `@/types` imports are erased, so they are fine).
+import { PROJECTS } from '../data/projects';
+import { EXPERIENCE } from '../data/experience';
+import { STATUS_LABEL, projectStatus } from './project';
+import { isQueryError, runQuery } from './portfolioQuery';
 
 /* ==========================================================================
    AI TOOLS
 
    The model asks; this answers. Every tool reads the same arrays the page
-   renders from, in the browser, so a figure in an AI answer and a figure on
-   a card are the same value from the same source — not two recollections of
-   it.
+   renders from, so a figure in an AI answer and a figure on a card are the
+   same value from the same source — not two recollections of it.
 
-   Running tools client-side rather than in the endpoint is what makes that
-   true. Duplicating the corpus server-side would have created a second copy
-   to drift, and shipping the query engine into an edge function would have
-   meant maintaining it twice. The endpoint stays a thin proxy that holds a
-   key; the data never leaves the place it already lives.
+   The tools run inside the endpoint, importing this very module. That is
+   still one copy of the data: the Edge Function bundles the same
+   PROJECTS/EXPERIENCE modules the page does. What moved is only *where* the
+   loop runs — see the header of api/ask.ts for why it left the browser.
    ========================================================================== */
 
 export interface ToolCall {
   id: string;
   name: string;
   args: Record<string, unknown>;
+  /** Gemini's opaque reasoning signature, echoed back on the next round. */
+  thoughtSignature?: string;
 }
 
 export interface ToolResult {
@@ -105,6 +108,13 @@ function toolGetProject(call: ToolCall): ToolResult {
     // demo figure without the scope note attached is the exact overstatement
     // the notice field exists to prevent.
     study?.notice ? `scope notice: ${study.notice}` : null,
+    // Debugging stories carry the most specific engineering detail on the
+    // site; "what went wrong building it?" has no other source.
+    study?.fieldNotes?.length
+      ? `field notes (debugging stories):\n${study.fieldNotes
+          .map((n) => `- ${n.title}. symptom: ${n.symptom} actually: ${n.rootCause} fix: ${n.fix}${n.guard ? ` guarded by: ${n.guard}` : ''}`)
+          .join('\n')}`
+      : null,
     project.decisions.length
       ? `decisions:\n${project.decisions.map((d) => `- ${d.title}: ${d.detail}`).join('\n')}`
       : null,
@@ -184,11 +194,189 @@ function toolGetTradeoffs(call: ToolCall): ToolResult {
   };
 }
 
+/* ── search_site ──────────────────────────────────────────────────────────
+   Ranked full-text search over every sentence the site says.
+
+   The SQL tool answers questions about *fields* — tier, status, stack. It
+   cannot answer "has he worked with websockets?" when the word only appears
+   inside an approach paragraph, or "any bugs about coordinates?" when the
+   answer is a field note. This indexes the prose: summaries, case studies,
+   highlights, trade-offs, field notes, roles. Each hit comes back as a
+   snippet around the match, labelled with where it came from and the id to
+   fetch for more, so the model can cite a passage rather than paraphrase a
+   memory of one. */
+
+export interface Passage {
+  kind: 'project' | 'role';
+  id: string;
+  title: string;
+  where: string;
+  text: string;
+}
+
+const PASSAGES: Passage[] = [
+  ...PROJECTS.flatMap((p): Passage[] => {
+    const at = (where: string, text: string): Passage => ({ kind: 'project', id: p.id, title: p.title, where, text });
+    const study = p.caseStudy;
+    return [
+      at('summary', `${p.title}. ${p.subtitle}. ${p.category}. ${p.description}`),
+      at('stack', p.stack.join(', ')),
+      ...(study
+        ? [
+            at('problem', study.problem),
+            at('approach', study.approach),
+            at('outcome', study.outcome),
+            ...(study.highlights ?? []).map((h) => at('highlight', h)),
+            ...(study.tradeoffs ?? []).map((t) => at('trade-off', `${t.decision}: chose ${t.chose} over ${t.rejected}. ${t.why}`)),
+            ...(study.fieldNotes ?? []).map((n) =>
+              at('field note', `${n.title}. ${n.symptom} ${n.rootCause} ${n.fix} ${n.guard ?? ''}`)
+            ),
+            ...(study.notice ? [at('scope notice', study.notice)] : []),
+          ]
+        : []),
+      ...p.decisions.map((d) => at('decision', `${d.title}: ${d.detail}`)),
+    ];
+  }),
+  ...EXPERIENCE.flatMap((e): Passage[] => {
+    const at = (where: string, text: string): Passage => ({ kind: 'role', id: e.id, title: e.company, where, text });
+    return [
+      at('role', `${e.company} — ${e.role} (${e.type}, ${e.period}). ${e.summary}`),
+      ...e.highlights.map((h) => at('role highlight', h)),
+      at('stack', e.stack.join(', ')),
+    ];
+  }),
+];
+
+const STOPWORDS = new Set(
+  // Question words, and the verbs every portfolio passage contains — "built",
+  // "used", "work" match almost everything and so rank nothing.
+  [
+    'a an and any are as at be by did does do for from has have he his how in is it its of on or that the this to was what when where which who why with',
+    'about all also anything been build built can could ever him into me much many some something than them then there they use used using will work worked would you your',
+  ]
+    .join(' ')
+    .split(' ')
+);
+
+/* Plurals folded to their stem, because matching is word-*start*: "websocket"
+   finds "websockets" but not the other way round, and the site says
+   "WebSocket". Crude on purpose — "ss" words are left alone ("process"). */
+const stem = (term: string) => (term.length > 4 && term.endsWith('s') && !term.endsWith('ss') ? term.slice(0, -1) : term);
+
+function terms(query: string): string[] {
+  return [
+    ...new Set(
+      query
+        .toLowerCase()
+        .split(/[^a-z0-9+#.]+/)
+        .filter((t) => t.length > 1 && !STOPWORDS.has(t))
+        .map(stem)
+    ),
+  ];
+}
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** A window of text around the first matching term, so the hit reads in context. */
+function snippet(text: string, words: string[], width = 240): string {
+  const lower = text.toLowerCase();
+  const positions = words.map((w) => lower.indexOf(w)).filter((i) => i >= 0);
+  if (!positions.length || text.length <= width) return text.slice(0, width);
+  const start = Math.max(0, Math.min(...positions) - 60);
+  return `${start > 0 ? '…' : ''}${text.slice(start, start + width).trim()}${start + width < text.length ? '…' : ''}`;
+}
+
+export function searchSite(query: string, limit = 6): { passage: Passage; score: number; snippet: string }[] {
+  const words = terms(query);
+  if (!words.length) return [];
+  const patterns = words.map((word) => new RegExp(`(^|[^a-z0-9])${escapeRegExp(word)}`, 'g'));
+
+  return PASSAGES.map((passage) => {
+    const lower = passage.text.toLowerCase();
+    let score = 0;
+    let matched = 0;
+    for (const pattern of patterns) {
+      // Word-start matches only: "rust" must not hit "trust".
+      const hits = lower.match(pattern)?.length ?? 0;
+      if (hits) matched += 1;
+      score += Math.min(hits, 3);
+    }
+    // Every term present beats one term repeated, and a hit in a short
+    // passage says more than the same hit in a long one.
+    const coverage = matched / words.length;
+    return { passage, score: score * (0.5 + coverage) * (1 + 60 / (passage.text.length + 60)), snippet: '' };
+  })
+    .filter((hit) => hit.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((hit) => ({ ...hit, snippet: snippet(hit.passage.text, words) }));
+}
+
+function toolSearchSite(call: ToolCall): ToolResult {
+  const query = str(call.args.query).trim();
+  if (!query) return { callId: call.id, name: call.name, content: 'error: no query supplied' };
+
+  const hits = searchSite(query);
+  if (!hits.length) {
+    return { callId: call.id, name: call.name, content: `no passages match "${query}". the site does not mention it.` };
+  }
+
+  return {
+    callId: call.id,
+    name: call.name,
+    content: hits
+      .map((h) => `[${h.passage.kind}:${h.passage.id} · ${h.passage.title} · ${h.passage.where}] ${h.snippet}`)
+      .join('\n'),
+    table: {
+      columns: ['source', 'where', 'passage'],
+      rows: hits.map((h) => [h.passage.title, h.passage.where, h.snippet]),
+    },
+  };
+}
+
+/* ── compare_projects ─────────────────────────────────────────────────────
+   The same facts for several projects, side by side. "How do the two
+   streaming systems differ?" otherwise costs one get_project per system and
+   a model lining the answers up from memory; this returns one table, which
+   the transcript shows exactly as the model saw it. */
+
+function toolCompareProjects(call: ToolCall): ToolResult {
+  const raw = Array.isArray(call.args.ids) ? call.args.ids : [];
+  const ids = [...new Set(raw.map((id) => str(id).trim().toLowerCase()).filter(Boolean))].slice(0, 5);
+  const found = ids.map((id) => PROJECTS.find((p) => p.id === id));
+  const missing = ids.filter((_id, i) => !found[i]);
+
+  if (ids.length < 2 || missing.length) {
+    const why = ids.length < 2 ? 'give at least two project ids' : `no project ${missing.map((m) => `"${m}"`).join(', ')}`;
+    return {
+      callId: call.id,
+      name: call.name,
+      content: `error: ${why}. available ids: ${PROJECTS.map((p) => p.id).join(', ')}`,
+    };
+  }
+
+  const columns = ['project', 'tier', 'status', 'year', 'stack', 'metrics', 'trade-offs', 'field notes'];
+  const rows = found.map((p) => [
+    p!.title,
+    p!.tier,
+    STATUS_LABEL[projectStatus(p!)],
+    p!.timeline,
+    p!.stack.join(', ') || '—',
+    p!.metrics.map((m) => `${m.label}: ${m.value}`).join('; ') || '—',
+    String(p!.caseStudy?.tradeoffs?.length ?? 0),
+    String(p!.caseStudy?.fieldNotes?.length ?? 0),
+  ]);
+
+  return { callId: call.id, name: call.name, content: renderRows(columns, rows), table: { columns, rows } };
+}
+
 const HANDLERS: Record<string, (call: ToolCall) => ToolResult> = {
   run_sql: toolRunSql,
   get_project: toolGetProject,
   get_experience: toolGetExperience,
   get_tradeoffs: toolGetTradeoffs,
+  search_site: toolSearchSite,
+  compare_projects: toolCompareProjects,
 };
 
 export function executeToolCall(call: ToolCall): ToolResult {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Loader2, CheckCircle2, FileText, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
@@ -203,7 +203,7 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
               >
                 {statusLabel[status]}
               </span>
-              <span id="cv-file-info" className="text-[9px] font-mono text-muted-foreground mt-0.5">
+              <span id="cv-file-info" className="text-[11px] font-mono text-muted-foreground mt-0.5">
                 {FILE_NAME} · {FILE_SIZE}
               </span>
             </div>
@@ -211,9 +211,9 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
 
           <div className="flex items-center gap-2 relative z-10">
             {status === 'downloading' && !indeterminate && (
-              <span className="text-[9px] font-mono text-primary">{Math.round(progress)}%</span>
+              <span className="text-[11px] font-mono text-primary">{Math.round(progress)}%</span>
             )}
-            <span className="text-[9px] font-mono text-muted-foreground">[PDF]</span>
+            <span className="text-[11px] font-mono text-muted-foreground">[PDF]</span>
           </div>
         </button>
       </div>

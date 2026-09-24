@@ -20,7 +20,7 @@ const TIMEOUT_MS = 45_000;
 
 /** Projects that have both a live site to capture and a slot to put it in. */
 export function screenshotTargets() {
-  return PROJECTS.filter((project) => project.image && project.liveUrl).map((project) => ({
+  return PROJECTS.filter((project) => project.image && project.liveUrl && project.captureScreenshot !== false).map((project) => ({
     id: project.id,
     url: project.liveUrl,
     // `image` is a site-absolute path like /images/ultra-news.png; the file

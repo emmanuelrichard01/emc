@@ -592,7 +592,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   clearSession();
                   focusInput();
                 }}
-                className="mt-2 font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30 hover:text-primary transition-colors"
+                className="mt-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/30 hover:text-primary transition-colors"
               >
                 clear ⌃L
               </button>
@@ -618,6 +618,10 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                 onCancel={ai.cancel}
                 onRetry={ai.retry}
                 canRetry={ai.canRetry}
+                onAsk={(question) => {
+                  setInput('');
+                  void ai.send(question);
+                }}
               />
             </div>
           )}

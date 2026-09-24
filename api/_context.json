@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T21:27:32.701Z",
+  "generatedAt": "2026-09-24T15:43:42.455Z",
   "person": {
     "name": "Emmanuel Moghalu",
     "role": "Data & Backend Engineer",
@@ -22,12 +22,77 @@
     ]
   },
   "counts": {
-    "builtSystems": 10,
+    "builtSystems": 11,
     "designStudies": 2,
-    "caseStudies": 9,
+    "caseStudies": 10,
     "roles": 5
   },
   "projects": [
+    {
+      "id": "vega-canva",
+      "title": "Vega Studio",
+      "subtitle": "Real-Time Collaborative Infinite Canvas",
+      "tier": "flagship",
+      "category": "Realtime Collaboration",
+      "timeline": "2026",
+      "status": "live",
+      "stack": [
+        "TypeScript",
+        "React",
+        "Konva",
+        "Yjs",
+        "Hocuspocus",
+        "Node.js",
+        "PostgreSQL",
+        "Redis",
+        "S3",
+        "Docker"
+      ],
+      "metrics": [
+        "Automated Tests: 4,076",
+        "Move @500 Objects: ~5.7ms",
+        "Chart Kinds: 30"
+      ],
+      "summary": "The brief, from a Vega IT hackathon: a real-time collaborative infinite canvas in two days — rooms shared by link, a 2D surface that stays smooth past 100 objects, text, shapes, images, sticky notes and voice recordings, and guest identity without sign-up. The harder problem sits underneath it. On a board with no edges, collaborators are rarely looking at the same place, so the interface has to answer 'where is everyone, and what are they doing' without costing more attention than the work. And the network will drop: editing has to keep working without a server and converge afterwards without anyone losing work. After the hackathon the project was rebuilt against a stricter bar than the brief set.",
+      "hasCaseStudy": true,
+      "tradeoffCount": 5,
+      "tradeoffs": [
+        {
+          "decision": "Sync model",
+          "chose": "CRDT (Yjs), no ordering server",
+          "rejected": "Server-authoritative operational transform",
+          "why": "With no authoritative server, clients converge on their own — which is exactly what makes offline editing work. Edits made while disconnected merge on reconnect rather than being rejected by a server that has moved on."
+        },
+        {
+          "decision": "Diagrams as code",
+          "chose": "Parse Mermaid into native canvas nodes",
+          "rejected": "Render with the mermaid package",
+          "why": "The package produces one SVG: an opaque picture on a surface whose whole point is that everything on it is editable, and over a megabyte of dependency to get it. Parsing into the canvas's own vocabulary means every box and arrow can be moved, restyled and re-exported."
+        },
+        {
+          "decision": "Resizing",
+          "chose": "Transformer drives an invisible proxy; objects render at a size",
+          "rejected": "Konva scaleX / scaleY on the objects themselves",
+          "why": "Scale is the wrong verb for nearly every node here: a scaled sticky has scaled padding and blurred type, a scaled path has a scaled stroke. The gesture writes a live size to a store outside React, and each renderer draws at that size."
+        },
+        {
+          "decision": "Physics authority",
+          "chose": "Single-writer ownership per moving object",
+          "rejected": "Every client simulates every object",
+          "why": "Two independent simulations settle the same object at slightly different resting positions and then fight over the write. One owner simulates and commits; everyone else renders the owner's broadcast flight path."
+        },
+        {
+          "decision": "Gravity",
+          "chose": "Force as an aimed mode — pull, push, drop, wind, shockwave",
+          "rejected": "Ambient world gravity",
+          "why": "An infinite canvas has no floor. A constant field would pull content off the board forever and nothing would ever come to rest."
+        }
+      ],
+      "links": {
+        "github": "https://github.com/emmanuelrichard01/vega-canva",
+        "live": "https://vscanva.vercel.app"
+      }
+    },
     {
       "id": "mmr-engine",
       "title": "MMR Engine",

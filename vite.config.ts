@@ -32,7 +32,18 @@ function devApiPlugin(mode: string): Plugin {
     apply: "serve",
     configureServer(server) {
       const env = loadEnv(mode, process.cwd(), "");
-      for (const key of ["GEMINI_API_KEY", "GROQ_API_KEY"]) {
+      for (const key of [
+        "GEMINI_API_KEY",
+        "GROQ_API_KEY",
+        "GEMINI_MODEL",
+        "GEMINI_FALLBACK_MODEL",
+        "GROQ_MODEL",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "KV_REST_API_URL",
+        "KV_REST_API_TOKEN",
+        "ASK_ANSWER_CACHE",
+      ]) {
         if (!process.env[key] && env[key]) process.env[key] = env[key];
       }
 
@@ -53,7 +64,22 @@ function devApiPlugin(mode: string): Plugin {
 
           res.statusCode = response.status;
           response.headers.forEach((value, key) => res.setHeader(key, value));
-          res.end(Buffer.from(await response.arrayBuffer()));
+
+          // Piped, not buffered: answers stream, and a dev server that
+          // collected the whole body first would hide exactly the behaviour
+          // being developed.
+          if (!response.body) {
+            res.end();
+            return;
+          }
+          const reader = response.body.getReader();
+          req.on("close", () => void reader.cancel());
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(Buffer.from(value));
+          }
+          res.end();
         } catch (error) {
           // Answer in the shape the client parses, so a dev-server fault
           // surfaces as a readable message instead of another empty 404.
@@ -79,6 +105,88 @@ function devApiPlugin(mode: string): Plugin {
  * missing, so three real pages were invisible to crawlers. Generating it from
  * the data source means adding a project is the only step required.
  */
+/**
+ * Writes dist/projects/<id>/index.html with that project's own head tags.
+ *
+ * Every route was served the same index.html, and LinkedIn, X, Slack and
+ * WhatsApp read only that file — none of them runs the bundle that would
+ * have swapped the tags in. So a case study shared anywhere unfurled as the
+ * homepage card, which is the one place a project page most needs to be
+ * itself. The app is unchanged: the same shell, the same bundle, and
+ * SEOHead still owns the tags once it renders. Vercel serves a real file
+ * before applying the SPA rewrite, so these win for exactly these paths.
+ */
+function projectPagesPlugin(): Plugin {
+  const escape = (value: string) =>
+    value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  /* Mirrors ProjectDetail's truncate(): search and unfurl snippets cut near
+     155 characters, and a cut on a word boundary does not end mid-word. */
+  const truncate = (text: string, max = 155) => {
+    if (text.length <= max) return text;
+    const clipped = text.slice(0, max);
+    const lastSpace = clipped.lastIndexOf(" ");
+    return `${clipped.slice(0, lastSpace > 0 ? lastSpace : max).trimEnd()}…`;
+  };
+
+  const setMeta = (html: string, attr: "name" | "property", key: string, value: string) =>
+    html.replace(
+      // `\\s+`, not a space: index.html wraps the description tag onto a
+      // second line, and a literal space silently left it unreplaced.
+      new RegExp(`(<meta data-rh="true" ${attr}="${key}"\\s+content=")[^"]*(")`),
+      (_m, open: string, close: string) => `${open}${escape(value)}${close}`,
+    );
+
+  const dropMeta = (html: string, key: string) =>
+    html.replace(new RegExp(`\\s*<meta data-rh="true" property="${key}" content="[^"]*" />`), "");
+
+  return {
+    name: "project-pages",
+    apply: "build",
+    writeBundle(options) {
+      const outDir = options.dir ?? path.resolve(__dirname, "dist");
+      const shell = fs.readFileSync(path.join(outDir, "index.html"), "utf8");
+
+      for (const project of PROJECTS) {
+        const url = `${SITE_URL}/projects/${project.id}`;
+        const headline = `${project.title} — ${project.subtitle}`;
+        const title = `${headline} | Emmanuel Moghalu`;
+        const description = truncate(project.caseStudy?.problem ?? project.description);
+        const image = `${SITE_URL}${project.image ?? "/og-image.jpg"}`;
+
+        let html = shell.replace(/<title>[^<]*<\/title>/, `<title>${escape(title)}</title>`);
+        html = setMeta(html, "name", "description", description);
+        html = setMeta(html, "property", "og:type", "article");
+        html = setMeta(html, "property", "og:url", url);
+        html = setMeta(html, "property", "og:title", headline);
+        html = setMeta(html, "property", "og:description", description);
+        html = setMeta(html, "property", "og:image", image);
+        html = setMeta(html, "property", "og:image:secure_url", image);
+        html = setMeta(html, "property", "og:image:alt", headline);
+        html = setMeta(html, "name", "twitter:url", url);
+        html = setMeta(html, "name", "twitter:title", headline);
+        html = setMeta(html, "name", "twitter:description", description);
+        html = setMeta(html, "name", "twitter:image", image);
+        html = html.replace(
+          /(<link data-rh="true" rel="canonical" href=")[^"]*(")/,
+          (_m, open: string, close: string) => `${open}${url}${close}`,
+        );
+        // The shell describes the site card: a 1200×630 JPEG. A project image
+        // is neither, and a wrong declared size makes some unfurlers crop it.
+        if (project.image) {
+          html = setMeta(html, "property", "og:image:type", project.image.endsWith(".png") ? "image/png" : "image/jpeg");
+          html = dropMeta(html, "og:image:width");
+          html = dropMeta(html, "og:image:height");
+        }
+
+        const dir = path.join(outDir, "projects", project.id);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "index.html"), html, "utf8");
+      }
+    },
+  };
+}
+
 function sitemapPlugin(): Plugin {
   return {
     name: "generate-sitemap",
@@ -167,7 +275,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  plugins: [react(), devApiPlugin(mode), sitemapPlugin(), screenshotPlugin()],
+  plugins: [react(), devApiPlugin(mode), sitemapPlugin(), projectPagesPlugin(), screenshotPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /* ==========================================================================
    CASE STUDY CONTENTS
@@ -99,7 +99,7 @@ export default function CaseStudyNav({ sections }: { sections: CaseStudySection[
                     : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground'
                 }`}
               >
-                <span className="font-mono text-[9px] tabular-nums text-muted-foreground">{section.num}</span>
+                <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{section.num}</span>
                 <span className="font-mono text-[11px] leading-tight">{section.label}</span>
               </a>
             </li>

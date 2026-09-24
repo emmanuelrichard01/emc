@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { Command } from 'lucide-react';
 
@@ -7,6 +7,7 @@ import { useCommandPalette } from '@/components/CommandPaletteProvider';
 import CircuitCanvas from '@/components/hero/CircuitCanvas';
 import { useBooted } from '@/components/hero/BootOverlay';
 import TerminalHero from '@/components/hero/TerminalHero';
+import FastLane from '@/components/hero/FastLane';
 
 /* ==========================================================================
    HERO
@@ -125,6 +126,8 @@ export default function Hero() {
       <div className="relative z-10 flex-1 flex flex-col min-h-0">
         <TerminalHero live={live} />
       </div>
+
+      <FastLane live={live} />
 
       {/* Palette hint, floated clear of the shell's own status rail. */}
       <motion.button

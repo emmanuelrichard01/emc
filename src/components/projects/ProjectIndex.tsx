@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import TransitionLink from '@/components/ui/TransitionLink';
+import { transitionName } from '@/lib/viewTransition';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, ExternalLink, Github } from 'lucide-react';
 
@@ -70,7 +71,7 @@ const IndexRow = ({ project, index }: { project: Project; index: number }) => {
       transition={{ duration: 0.35, delay: Math.min(index * 0.025, 0.2), ease: EASE }}
       className="border-b border-border/60 last:border-b-0"
     >
-      <Link
+      <TransitionLink
         to={`/projects/${project.id}`}
         className={`${COLUMNS} group relative px-4 py-3.5 hover:bg-primary/[0.05] focus-visible:bg-primary/[0.07] transition-colors`}
       >
@@ -81,7 +82,10 @@ const IndexRow = ({ project, index }: { project: Project; index: number }) => {
         />
 
         <span className="min-w-0">
-          <span className="block font-mono text-[13px] text-foreground group-hover:text-primary transition-colors truncate">
+          <span
+            className="block w-fit max-w-full font-mono text-[13px] text-foreground group-hover:text-primary transition-colors truncate"
+            style={{ viewTransitionName: transitionName('title', project.id) }}
+          >
             {project.title}
           </span>
           <span className="block text-[11px] text-muted-foreground truncate mt-0.5">
@@ -107,7 +111,7 @@ const IndexRow = ({ project, index }: { project: Project; index: number }) => {
           className="hidden md:block w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all"
           aria-hidden="true"
         />
-      </Link>
+      </TransitionLink>
     </motion.li>
   );
 };

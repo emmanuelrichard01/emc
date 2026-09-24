@@ -1,5 +1,6 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import TransitionLink from "@/components/ui/TransitionLink";
+import { transitionName } from "@/lib/viewTransition";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ExternalLink, Github, LayoutGrid, List, Sparkles, Terminal } from "lucide-react";
 
@@ -53,7 +54,7 @@ const EASE = [0.16, 1, 0.3, 1] as const;
    stacked on prototypes. Label above, figure below, mono and tabular. */
 const Metric = ({ metric }: { metric: ProjectMetric }) => (
   <div className="flex flex-col gap-0.5 min-w-0">
-    <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-muted-foreground truncate">
+    <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground truncate">
       {metric.label}
     </span>
     <span className="font-mono text-[12px] text-primary tabular-nums truncate">{metric.value}</span>
@@ -61,7 +62,7 @@ const Metric = ({ metric }: { metric: ProjectMetric }) => (
 );
 
 const TechTag = ({ tech }: { tech: string }) => (
-  <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider border border-border/70 px-1.5 py-0.5">
+  <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-wider border border-border/70 px-1.5 py-0.5">
     {tech}
   </span>
 );
@@ -134,7 +135,12 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
             alt=""
             loading="lazy"
             decoding="async"
-            className="w-full h-full object-cover object-top grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-image-reveal"
+            className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.02]"
+            /* Full colour at rest. It was greyscale at 60% opacity until
+               hovered, so on a phone — which cannot hover — the work was
+               never seen in colour at all. The hover still says "this is
+               live" with a slight lift instead of by withholding the image. */
+            style={{ viewTransitionName: transitionName('art', project.id) }}
           />
 
           {/* Scanline wash, so a screenshot reads as something on a screen
@@ -163,7 +169,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
             )
           )}
 
-          <span className="absolute bottom-2 left-3 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest">
+          <span className="absolute bottom-2 left-3 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest">
             <span className="w-1.5 h-1.5 bg-emerald-500 status-live" aria-hidden="true" />
             <span className={STATUS_CLASS[status]}>{STATUS_LABEL[status]}</span>
           </span>
@@ -172,11 +178,11 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
 
       <div className="flex flex-col flex-1 p-5">
         <div className="flex items-center justify-between gap-3 mb-3">
-          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-primary truncate">
+          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary truncate">
             {project.category}
           </span>
           {!hasImage && (
-            <span className={`font-mono text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
+            <span className={`font-mono text-[11px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
               {STATUS_LABEL[status]}
             </span>
           )}
@@ -190,12 +196,14 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
           the whole card for pointer users while leaving exactly one link in
           the accessibility tree for the card itself. */}
         <h3 className="font-mono text-[15px] leading-tight">
-          <Link
+          <TransitionLink
             to={`/projects/${project.id}`}
             className="text-foreground group-hover:text-primary transition-colors before:absolute before:inset-0 before:content-['']"
           >
-            {project.title}
-          </Link>
+            <span className="inline-block" style={{ viewTransitionName: transitionName('title', project.id) }}>
+              {project.title}
+            </span>
+          </TransitionLink>
         </h3>
         <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{project.subtitle}</p>
 
@@ -234,9 +242,11 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
 
 /** Parses "99.5%" or "1.5M+" into a target plus suffix; null for "<10s". */
 function parseMetricForCounter(value: string): { target: number; suffix: string } | null {
-  const match = value.match(/^(\d+(?:\.\d+)?)(.*)$/);
+  // Thousands separators are part of the number, not the suffix: "4,076"
+  // otherwise parses as 4 followed by the text ",076" and counts to four.
+  const match = value.match(/^(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(.*)$/);
   if (!match) return null;
-  return { target: parseFloat(match[1]), suffix: match[2] };
+  return { target: parseFloat(match[1].replace(/,/g, '')), suffix: match[2] };
 }
 
 const Spotlight = ({ project }: { project: Project }) => {
@@ -256,22 +266,27 @@ const Spotlight = ({ project }: { project: Project }) => {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="min-w-0">
           <span className="flex flex-wrap items-center gap-3 mb-4">
-            <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em] text-primary border border-primary/30 bg-primary/5 px-2 py-1">
+            <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-primary border border-primary/30 bg-primary/5 px-2 py-1">
               <Sparkles className="w-3 h-3" aria-hidden="true" />
               featured
             </span>
-            <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               {project.category} · {project.timeline}
             </span>
           </span>
 
-          <h3 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">{project.title}</h3>
+          <h3
+            className="text-2xl md:text-3xl font-bold text-foreground leading-tight w-fit"
+            style={{ viewTransitionName: transitionName('title', project.id) }}
+          >
+            {project.title}
+          </h3>
           <p className="font-mono text-[12px] text-muted-foreground mt-2">{project.subtitle}</p>
 
-          <Link to={`/projects/${project.id}`} className="btn-structural inline-flex items-center gap-3 w-fit mt-6">
+          <TransitionLink to={`/projects/${project.id}`} className="btn-structural inline-flex items-center gap-3 w-fit mt-6">
             View Case Study
             <ArrowRight className="w-4 h-4" aria-hidden="true" />
-          </Link>
+          </TransitionLink>
         </div>
 
         {heroMetric && (
@@ -279,7 +294,7 @@ const Spotlight = ({ project }: { project: Project }) => {
             <span className="font-mono text-4xl md:text-5xl font-bold text-primary tabular-nums leading-none">
               {parsed ? <AnimatedCounter target={parsed.target} suffix={parsed.suffix} /> : heroMetric.value}
             </span>
-            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground mt-2">
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mt-2">
               {heroMetric.label}
             </span>
           </div>
@@ -308,7 +323,7 @@ const Chip = ({
     type="button"
     onClick={onClick}
     aria-pressed={active}
-    className={`inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest border px-2.5 py-1 transition-colors ${active
+    className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest border px-2.5 py-1 transition-colors ${active
         ? "border-primary bg-primary/10 text-primary"
         : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
       }`}
@@ -460,7 +475,7 @@ const Projects: React.FC = () => {
                   onClick={() => setView(key)}
                   aria-pressed={view === key}
                   aria-label={`${label} view`}
-                  className={`flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest px-2.5 py-1 transition-colors ${view === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                  className={`flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest px-2.5 py-1 transition-colors ${view === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   <Icon className="w-3 h-3" aria-hidden="true" />
@@ -503,7 +518,7 @@ const Projects: React.FC = () => {
                 type="button"
                 onClick={() => setShowAllTech((v) => !v)}
                 aria-expanded={showAllTech}
-                className="font-mono text-[9px] uppercase tracking-widest text-primary hover:text-primary px-2 py-1 transition-colors"
+                className="font-mono text-[11px] uppercase tracking-widest text-primary hover:text-primary px-2 py-1 transition-colors"
               >
                 {showAllTech ? "− less" : `+ ${hiddenCount} more`}
               </button>
@@ -515,7 +530,7 @@ const Projects: React.FC = () => {
                   setSelectedTech([]);
                   setTier(null);
                 }}
-                className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
+                className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
               >
                 reset
               </button>
@@ -523,7 +538,7 @@ const Projects: React.FC = () => {
           </div>
 
           <span
-            className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground"
+            className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
             aria-live="polite"
           >
             showing {visible.length} of {pool.length}

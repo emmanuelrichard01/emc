@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal, Copy, Check } from 'lucide-react';
 
 interface Props {
@@ -123,7 +123,7 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Footer */}
-            <div className="mt-8 pt-4 border-t border-border text-[9px] text-muted-foreground/60 flex justify-between items-center tracking-widest uppercase">
+            <div className="mt-8 pt-4 border-t border-border text-[11px] text-muted-foreground/60 flex justify-between items-center tracking-widest uppercase">
               <span>ERR_CODE: 0xDEADBEEF</span>
               <span className="flex items-center gap-2">
                 <Terminal className="w-3 h-3" /> sys_log_v2.0

@@ -1,6 +1,6 @@
-import { PROJECTS } from '@/data/projects';
-import { EXPERIENCE } from '@/data/experience';
-import { STATUS_LABEL, projectStatus } from '@/lib/project';
+import { PROJECTS } from '../data/projects';
+import { EXPERIENCE } from '../data/experience';
+import { STATUS_LABEL, projectStatus } from './project';
 
 /* ==========================================================================
    PORTFOLIO QUERY ENGINE

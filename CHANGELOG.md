@@ -5,6 +5,87 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — Answers that audit themselves; case studies that show
+
+### Added
+- **Grounding check on every answer** (`lib/aiGrounding.ts`). Each figure in a
+  finished answer must appear in the evidence the model was given; any that
+  does not is returned as `unverified`, marked in place in the transcript and
+  explained under it. Unverified answers are never cached.
+- **Two tools.** `search_site` — ranked full-text search over every summary,
+  write-up, highlight, trade-off, field note and role, with word-start matching
+  and plural folding. `compare_projects` — the same facts for 2–5 projects as
+  one table. `get_project` now carries field notes; tool results reach the
+  model at up to 10k characters (was 3.8k, which cut the trade-offs off the
+  largest case studies).
+- **Ask AI on every case study**, told which project is on screen: its full
+  detail is in the prompt from round one, and the starters are about it.
+- **Degraded answers.** When no model answers, the site's own search answers
+  instead — labelled, with the reason (quota spent, overloaded, unreachable)
+  and a retry — rather than "the answering service is unavailable".
+- **Model health.** A model that fails with 429/5xx or times out goes to the
+  back of the chain for 60s, so an outage is paid for once, not per question.
+- **Shared limits and answer cache** when `UPSTASH_REDIS_REST_*` or
+  `KV_REST_API_*` is set; per-instance memory otherwise. IPs are hashed.
+  Opening questions are cached per deploy (keyed on the data version).
+- **`npm run eval:ai`** — opt-in live evals against the real model: grounded
+  counts, prose-only facts, page context, injection refusal, off-topic refusal.
+- **Case-study blocks and field notes.** Architecture diagrams with measured
+  connectors, code excerpts linked to source, figures, callouts; and a Field
+  Notes section of debugging stories (symptom, wrong turns, root cause, fix,
+  guard). Vega Studio carries a diagram and four.
+- **Card → case study view transitions**, a fast lane of flagships under the
+  terminal, and full-colour project images at rest.
+
+### Changed
+- `api/ask.ts` split into `api/_lib/` (providers, limits, health, cache, store).
+- TypeScript `strict` on, with unused-code checks; cost fifteen unused imports.
+- Case-study prose set for reading (16–17px, regular weight, higher contrast);
+  no text below 11px outside the status rail and mobile nav (10px there).
+
+### Fixed
+- **Reduced motion crashed the home page.** `RevealText` returned an element
+  without the ref `useScroll` was targeting; framer threw, and every visitor
+  whose OS asks for reduced motion got the error screen.
+
+## [Unreleased] — Ask AI runs server-side and streams; Vega Studio added
+
+### Changed
+- **The agent loop moved into `/api/ask`, and answers stream.** The browser
+  used to run the loop — receive tool calls, execute them, post results back
+  — which cost a full round trip per tool round, counted each round against
+  the rate limit, and let any client post a fabricated `tool` message for the
+  model to repeat. The endpoint now accepts only user/assistant text, runs the
+  tools itself (importing the same data modules the page renders), and
+  streams NDJSON: each query as it runs, then the answer token by token.
+- **Groq default is `openai/gpt-oss-120b`.** `llama-3.3-70b-versatile` reached
+  end of life on 2026-08-16. gpt-oss is a reasoning model, so it is sent
+  `reasoning_effort: low`, `include_reasoning: false` and a larger completion
+  ceiling (its hidden reasoning is billed against it).
+- **Gemini is two models deep before Groq.** The `-latest` aliases were seen
+  answering 503 for minutes while a pinned model on the same key answered;
+  `GEMINI_FALLBACK_MODEL` (default `gemini-3.5-flash`) is tried next, and a
+  503 gets one short retry. Versioned Gemini 3 models get
+  `thinkingLevel: low`, since thought tokens count against the output cap.
+
+### Added
+- **Live step trace, sources and follow-ups in the transcript.** Queries appear
+  as they run with their row counts; answers cite the case studies they rely
+  on as links; the next question is offered from what was cited; answers copy
+  with their links.
+- **Vega Studio** (vega-canva) as the lead flagship, with its share card as
+  artwork (`captureScreenshot: false` keeps the build from replacing it with
+  a screenshot of the sign-in screen).
+- **Per-project HTML heads at build time.** `dist/projects/<id>/index.html`
+  carries that project's title, description and image, so a case study shared
+  on LinkedIn, X or Slack unfurls as itself instead of as the homepage.
+- Endpoint tests with providers faked at the fetch boundary: tool loop, final
+  round without tools, Gemini → Gemini → Groq fallback, fragmented Groq tool
+  calls, mid-stream failure, 503 retry, and the refusal of client tool turns.
+
+### Fixed
+- Spotlight counters parse thousands separators ("4,076" counted to 4).
+
 ## [Unreleased] — Correctness pass: fonts, head tags, and the first tests
 
 A follow-up pass driven by an end-to-end review. Two production bugs, both

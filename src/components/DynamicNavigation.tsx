@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Command, Palette } from 'lucide-react';
@@ -338,7 +338,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
           >
             <Command className="h-3 w-3" aria-hidden="true" />
             {/* Reflects the actual platform rather than always claiming ⌘. */}
-            <kbd className="font-mono text-[9px] uppercase tracking-widest">{shortcutLabel}</kbd>
+            <kbd className="font-mono text-[10px] uppercase tracking-widest">{shortcutLabel}</kbd>
           </button>
         </div>
       </motion.nav>
@@ -393,7 +393,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                 <section.icon className="h-[17px] w-[17px] relative z-10" aria-hidden="true" />
                 {/* Icon-only navigation asks every visitor to decode a
                     pictogram. The label costs 9px and removes the guess. */}
-                <span className="relative z-10 max-w-full truncate font-mono text-[8px] uppercase tracking-wider leading-none">
+                <span className="relative z-10 max-w-full truncate font-mono text-[10px] uppercase tracking-wider leading-none">
                   {section.short}
                 </span>
               </a>
