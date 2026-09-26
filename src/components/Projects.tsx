@@ -100,6 +100,18 @@ const Projects: React.FC = () => {
     [deferredQuery, state]
   );
 
+  /* Other sections can point the catalogue at a technology — About's stack
+     does, on click — without reaching into this section's state: they
+     dispatch an event, and the filter becomes that one technology. */
+  React.useEffect(() => {
+    const onFilter = (e: Event) => {
+      const tech = (e as CustomEvent<{ stack?: string }>).detail?.stack;
+      if (tech && STACK.some((t) => t.name === tech)) update({ query: "", tier: null, stack: [tech] });
+    };
+    window.addEventListener("emc:work-filter", onFilter);
+    return () => window.removeEventListener("emc:work-filter", onFilter);
+  }, [update]);
+
   const toggleCompare = React.useCallback((id: string) => {
     setCompare((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= COMPARE_MAX ? prev : [...prev, id]
@@ -158,8 +170,11 @@ const Projects: React.FC = () => {
 
         <FlagshipStage projects={FLAGSHIPS} />
 
-        {/* ── Catalogue ── */}
-        <div className="flex items-baseline justify-between gap-4 mb-4">
+        {/* ── Catalogue ──
+            The anchor other sections send people to when they mean "the
+            results" rather than "the section" (About's stack does). The
+            scroll margin clears the fixed navbar. */}
+        <div id="work-catalogue" className="flex items-baseline justify-between gap-4 mb-4 scroll-mt-24">
           <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-foreground">
             <span className="text-primary mr-2">//</span>catalogue
           </h3>
