@@ -239,8 +239,10 @@ void main() {
   // ── Tone: continuous, accent-tinted, soft-shouldered ──
   float l = 1.0 - exp(-light * 0.95);
   float w = clamp(warmth / max(light, 1e-3), -0.5, 0.5);
-  vec3 shadowTint = mix(uBg, vec3(0.04, 0.045, 0.13), 0.55);
-  vec3 base = captured ? shadowTint : uBg;
+  // The shadow is where no light escapes: black, and a shade darker than the
+  // surface around it so it reads as a void rather than as the page. (It was
+  // tinted navy after the reference video, which read as a blue cast.)
+  vec3 base = captured ? uBg * 0.3 : uBg;
   vec3 warm = uAccent * 0.6;
   // The approaching side runs whiter, the receding side deeper — beaming,
   // made visible as colour as well as brightness.
