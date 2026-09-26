@@ -5,6 +5,127 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The Work section as a catalogue; case studies for skimmers and readers
+
+### Added — Work
+- **Flagship stage.** All four flagships in a keyboard-navigable tablist
+  (roving focus, arrow keys, hover-intent on desktop — chosen, never
+  auto-rotated) beside a wide stage: art, figures, how much the write-up
+  documents (trade-offs, field notes, highlights), stack, and two ways in —
+  read it or ask about it.
+- **Spec sheets** (`projects/ProjectArt.tsx`). The eight projects with no
+  front end to screenshot get their own measured figures over the drafting
+  grid instead of a blank. Nothing on one is not in the data.
+- **One-line toolbar** replacing ~25 chips: search, a stack popover (with
+  usage bars), tier / sort / view as segmented controls with sliding
+  indicators, and removable filter tokens.
+- **Search into the case studies** (`projects/workModel.ts`): every word
+  must match somewhere; a row found by its prose shows the field and a
+  snippet with the words marked ("trade-offs: …Redpanda over Kafka…").
+- **Sort by depth** — trade-offs, field notes and highlights documented.
+- **Stack matrix view**: projects × technologies as a real `<table>`,
+  crosshair hover, click a column to filter.
+- **Compare**: tick up to three anywhere; a tray gathers them; a sheet sets
+  them side by side with shared stack lit, and hands the comparison to the
+  assistant (`compare_projects`).
+- **Filter state in the URL** (`?q=&tier=&stack=&sort=&view=`), written with
+  replaceState so filtering adds no history entries; unknown values dropped.
+- Cursor-following preview on index rows (desktop), pointer light on cards,
+  a depth column, and a totals ledger in the header.
+
+### Added — case studies
+- **Hero** with an at-a-glance ledger (status, tier, year, every figure,
+  reading time) and art for every project; actions in one row: live,
+  source, ask, copy link.
+- **In 30 seconds** — problem, approach and outcome cut to their leads
+  (`case/caseModel.leadOf`: extracted, never rewritten; a scene-setting
+  first sentence takes the next one with it).
+- **Reading progress**, a contents rail whose entries fill as each section
+  is read with an estimate of the time left, and a sticky contents bar on
+  phones.
+- Section headings that copy a link to themselves; arriving on
+  `/projects/x#tradeoffs` scrolls there.
+- **Ask why** on every trade-off; highlights as a numbered two-column
+  ledger; field notes folded to their symptoms (first one open).
+- **Footer:** related projects by shared stack — weighted to rare
+  technologies, never linking built work to design studies, saying what is
+  shared — and previous / next with art; `[` and `]` step between them.
+
+### Changed — screenshots
+- **Captured by a scheduled workflow, reviewed as a pull request**
+  (`.github/workflows/screenshots.yml`, weekly and on demand). Build-time
+  capture refreshed images only when the portfolio itself deployed, shipped
+  whatever the live site showed at that moment unreviewed, never updated
+  `public/images/`, and spent quota on every preview. The build capture is now
+  a production-only fallback (`SCREENSHOT_AT_BUILD=off` disables it).
+- `fetch-screenshots.mjs` writes a run summary, tolerates a partial failure in
+  CI (`SCREENSHOTS_ALLOW_PARTIAL=1`), and sets `exitCode` rather than calling
+  `exit()`, which tripped a libuv assertion on Windows.
+
+### Removed
+- The module rail (left-edge section trace) — at the owner's request.
+- `CaseStudyNav` and the old `FieldNotes`, superseded above.
+
+## [Unreleased] — One assistant, many doors; modules that hand off
+
+### Added
+- **The assistant everywhere** (`components/ai/`). The session moved above the
+  routes (`AskProvider`), and everything that can ask is a door onto the same
+  conversation: a dock (⌘J / Ctrl+J, `/`, the nav, the mobile island), the
+  hero terminal, the case-study panel, the palette, the footer, a text
+  selection, and a link. A question asked in the terminal is still there on a
+  case study three pages later, and survives a reload (sessionStorage).
+- **The dock.** Non-modal side panel on desktop, so the page stays readable
+  and clickable beside it; a bottom sheet on phones, dragged down by its
+  handle to dismiss. It says what it is reading ("reading · Vega Studio").
+  Lazy-loaded on first open.
+- **Audience lens** — general / hiring / engineer. Sent as `context.audience`
+  and appended to the system prompt as one line; the grounding rules and the
+  audit are identical under every lens, and each lens is cached separately.
+  An unknown lens is no lens, not a refusal.
+- **Ask about a selection.** Highlight a passage in the page and a chip offers
+  to ask about it; the quote travels inside the question, trimmed under the cap.
+- **Question permalinks** — `/?ask=…` opens the dock and asks, then removes
+  the parameter. The dock copies one for the last question.
+- **Voice input** through the browser's own speech recognition, hidden where
+  unsupported. `Permissions-Policy` now allows `microphone=(self)`; with
+  `microphone=()` it fails instantly as "not-allowed" (Ultra News found this
+  first). Recognition errors are explained.
+- **Suggestion marquee.** Starter questions in the terminal, the footer and the
+  case-study panel run as one slow, edge-faded ticker instead of a wall of
+  chips: transform-only CSS, paused on hover and focus, the duplicate copy
+  hidden from assistive tech, and a static wrapped row under reduced motion.
+- **Command palette:** every case study by name, stack or category, with its
+  status; fuzzy ranking (`lib/fuzzy.ts`); and "Ask: …" for anything typed —
+  leading when it reads as a question, trailing when it reads as a place.
+- **Section seams** — the join between modules drawn as a trace, scroll-linked
+  with a lit head, labelled with the module it enters.
+- **Nav:** an Ask control; the active-section underline is now a meter of
+  progress through that section, driven by a motion value, not state.
+- **Footer:** a last prompt ("still have a question?") and a shortcut legend.
+- Tests: `fuzzy`, `aiStarters` (lenses, starters, selection quoting,
+  permalinks), and three endpoint tests for the lens.
+
+### Changed
+- **Ultra News updated to the current repo:** 180 tests; the Briefing and Ask
+  the Wire Room in the write-up; topics decided by one vote per publisher (the
+  old 98% coverage claim removed — the repo now records 28% of live stories
+  untagged under semantic similarity alone); an architecture diagram; and three
+  field notes from the commits and the incident report — the Neon storage
+  outage, the stream that arrived all at once, and the 400 health check that
+  passed.
+- The shell reads the project list through `data/useProjects.ts` (one
+  dynamic import), and the keyless extractive answerer is loaded only on that
+  path. A static import had put the dataset and the SQL engine on the critical
+  path: +34 KB gzipped, measured. Net cost of everything above: +6 KB.
+
+### Fixed
+- **Palette navigation was dead on case studies.** It called scrollToSection
+  unconditionally, which returns false when the section is not on the page —
+  every Navigate entry did nothing and the palette stayed open.
+- **Footer sitemap links were dead on case studies** — the same bare-fragment
+  preventDefault the navbar was fixed for, left behind in the footer.
+
 ## [Unreleased] — Answers that audit themselves; case studies that show
 
 ### Added

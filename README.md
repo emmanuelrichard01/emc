@@ -123,7 +123,13 @@ Project status is **derived** from the links each project actually has — `LIVE
 Case studies carry an optional `problem` / `approach` / `outcome` narrative with explicit trade-offs (what was chosen, what was rejected, and why) and, where relevant, a scope notice stating limits up front — synthetic demo data, single points of failure, deliberate scope cuts.
 
 ### Command Palette
-`⌘K` / `Ctrl+K` opens keyboard-first navigation to any section, action (copy email, download CV), external link, or theme — plus the hidden easter-egg entry, surfaced only when searched for.
+`⌘K` / `Ctrl+K` opens keyboard-first navigation to any section, any case study (by name, stack or category), action (copy email, download CV), external link, or theme — plus the hidden easter-egg entry, surfaced only when searched for. Results are fuzzy-ranked, and anything typed can be handed to the assistant as "Ask: …", which leads when the query reads as a question.
+
+### The assistant — one session, many doors
+`AskProvider` holds a single conversation above the routes. The hero terminal's `ai` mode, the dock (`⌘J` / `Ctrl+J` or `/`), the case-study panel, the palette, the footer's last prompt, a text selection ("ask about this") and a link (`/?ask=…`) all open onto it, so a question asked on the home page is still there on a case study, and a reload keeps it. On a case study the page is sent as context, so "this" means that project. An audience lens (general / hiring / engineer) changes how answers are pitched — never what they may claim: grounding and the per-figure audit are identical under every lens. Voice input uses the browser's own speech recognition where it exists.
+
+### Section transitions
+Modules hand off along a trace: a scroll-linked seam draws between sections with a lit head riding its edge. The nav's active underline doubles as a meter of progress through the current section. All of it is transform-only and static under reduced motion.
 
 ## Security
 
