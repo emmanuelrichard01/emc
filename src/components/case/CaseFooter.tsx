@@ -54,7 +54,7 @@ export function CaseFooter({ project, all }: { project: Project; all: Project[] 
             <span className="text-primary">//</span> built with the same tools
             <span className="flex-1 h-px bg-border" aria-hidden="true" />
           </h2>
-          <ul className="grid sm:grid-cols-3 gap-4">
+          <ul className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {related.map(({ project: p, shared }) => {
               const status = projectStatus(p);
               return (
@@ -70,7 +70,7 @@ export function CaseFooter({ project, all }: { project: Project; all: Project[] 
                         <span className="font-mono text-[13px] text-foreground group-hover:text-primary transition-colors truncate">
                           {p.title}
                         </span>
-                        <span className={`font-mono text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
+                        <span className={`font-mono text-[10px] sm:text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
                           {STATUS_LABEL[status]}
                         </span>
                       </span>
@@ -107,7 +107,7 @@ export function CaseFooter({ project, all }: { project: Project; all: Project[] 
               <span className={`flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5 ${dir === 'next' ? 'sm:justify-end' : ''}`}>
                 {dir === 'previous' && <ArrowLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" aria-hidden="true" />}
                 {dir}
-                <kbd className="hidden md:inline border border-border px-1 text-[9px]">{key}</kbd>
+                <kbd className="hidden md:inline border border-border px-1 text-[10px] sm:text-[9px]">{key}</kbd>
                 {dir === 'next' && <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />}
               </span>
               <span className="block text-[17px] font-bold text-foreground group-hover:text-primary transition-colors truncate">{p.title}</span>

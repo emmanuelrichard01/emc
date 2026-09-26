@@ -135,7 +135,7 @@ const Projects: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5, ease: EASE }}
-          className="mb-12 border-b border-border pb-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
+          className="mb-12 border-b border-border pb-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
         >
           <div>
             <span className="flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
@@ -153,16 +153,21 @@ const Projects: React.FC = () => {
 
           {/* The catalogue's totals as a ledger — what a reader can go and
               check, not adjectives about it. */}
-          <dl className="grid grid-cols-4 border border-border divide-x divide-border bg-card/30 self-start lg:self-end">
+          {/* 2×2 on a phone, one row from sm up. Four nowrap labels in one row
+              needed ~400px, so at 390 "source open" ran into "trade-offs".
+              Hairlines come from the 1px gap over a border-coloured ground,
+              which draws correctly in either arrangement (divide-x cannot
+              draw the row between two rows). */}
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border self-start lg:self-end">
             {[
               { label: "live", value: LIVE_COUNT },
               { label: "source open", value: SOURCE_OPEN_COUNT },
               { label: "trade-offs", value: TRADEOFF_COUNT },
               { label: "field notes", value: FIELD_NOTE_COUNT },
             ].map((item) => (
-              <div key={item.label} className="px-4 py-3 min-w-[84px]">
+              <div key={item.label} className="bg-[#070707] px-4 py-3 sm:min-w-[84px]">
                 <dd className="font-mono text-xl text-foreground tabular-nums leading-none">{item.value}</dd>
-                <dt className="mt-2 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground whitespace-nowrap">{item.label}</dt>
+                <dt className="mt-2 font-mono text-[10px] sm:text-[9px] uppercase tracking-[0.2em] text-muted-foreground whitespace-nowrap">{item.label}</dt>
               </div>
             ))}
           </dl>
@@ -187,7 +192,7 @@ const Projects: React.FC = () => {
                   : "which of his systems is the strongest, and why?",
               })
             }
-            className="group inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            className="group inline-flex items-center gap-1.5 py-2.5 -my-2.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
           >
             <Sparkles className="w-3 h-3 text-primary/70 group-hover:text-primary transition-colors" aria-hidden="true" />
             {isFiltered(state) ? "ask about these" : "ask which to read first"}

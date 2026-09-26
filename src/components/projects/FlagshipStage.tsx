@@ -89,7 +89,12 @@ export default function FlagshipStage({ projects }: { projects: Project[] }) {
     >
       <span className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-primary/70 via-primary/20 to-transparent" aria-hidden="true" />
 
-      <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
+      {/* An explicit minmax(0,1fr) column below lg. Without one the grid's
+          implicit column is sized to its content — and the tab strip, four
+          tabs side by side made to scroll, is ~1,000px of content — so on a
+          phone the whole stage stretched to that width inside a 330px box,
+          cropping the art and the copy. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
         {/* ── The list ── */}
         <div className="flex flex-col border-b lg:border-b-0 lg:border-r border-border">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
@@ -158,7 +163,7 @@ export default function FlagshipStage({ projects }: { projects: Project[] }) {
                       </span>
                       <span className="block text-[11px] text-muted-foreground truncate mt-0.5">{p.subtitle}</span>
                     </span>
-                    <span className={`hidden sm:block font-mono text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[s]}`}>
+                    <span className={`hidden sm:block font-mono text-[10px] sm:text-[9px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[s]}`}>
                       {STATUS_LABEL[s]}
                     </span>
                   </span>
@@ -214,7 +219,7 @@ export default function FlagshipStage({ projects }: { projects: Project[] }) {
               </TransitionLink>
 
               {/* Copy — what it is on the left, what's inside on the right. */}
-              <div className="flex-1 grid md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-x-8 gap-y-5 p-5 md:p-7 min-w-0">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-x-8 gap-y-5 p-5 md:p-7 min-w-0">
                 <div className="min-w-0">
                 <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
                   {project.category} · {project.timeline}
@@ -244,7 +249,7 @@ export default function FlagshipStage({ projects }: { projects: Project[] }) {
                       <dd className={`font-mono text-lg tabular-nums leading-none ${item.value ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {item.value}
                       </dd>
-                      <dt className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                      <dt className="mt-1.5 font-mono text-[10px] sm:text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
                         {item.label}
                       </dt>
                     </div>
@@ -276,18 +281,21 @@ export default function FlagshipStage({ projects }: { projects: Project[] }) {
                   <button
                     type="button"
                     onClick={() => openAsk({ question: `how does ${project.title} work, end to end?` })}
-                    className="group/ask inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+                    /* Hit areas grown with padding and cancelled with margin:
+                       these were 17px (the link) and 16px (the icons) tall,
+                       and on a phone they are the stage's only other doors. */
+                    className="group/ask inline-flex items-center gap-1.5 py-2.5 -my-2.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-primary/70 group-hover/ask:text-primary transition-colors" aria-hidden="true" />
                     ask about it
                   </button>
-                  <span className="flex items-center gap-3 ml-auto">
+                  <span className="flex items-center gap-5 ml-auto">
                     {project.github && (
                       <a
                         href={project.github}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        className="p-2.5 -m-2.5 text-muted-foreground hover:text-foreground transition-colors"
                         aria-label={`${project.title} source code (opens in new tab)`}
                       >
                         <Github className="w-4 h-4" aria-hidden="true" />
@@ -298,7 +306,7 @@ export default function FlagshipStage({ projects }: { projects: Project[] }) {
                         href={project.liveUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        className="p-2.5 -m-2.5 text-muted-foreground hover:text-foreground transition-colors"
                         aria-label={`${project.title} live site (opens in new tab)`}
                       >
                         <ExternalLink className="w-4 h-4" aria-hidden="true" />

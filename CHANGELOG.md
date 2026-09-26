@@ -5,6 +5,41 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — Phones, audited
+
+Measured, not eyeballed: the site loaded in frames 390, 360 and 320px wide
+and every element checked for horizontal overflow, boxes wider than the
+screen, tap targets under 28px, and type under 10.5px.
+
+### Fixed
+- **Grids that blew out on phones.** Eleven grids declared columns only at a
+  breakpoint, so below it their one implicit column took its content's
+  min-content width. The flagship stage stretched to 1,077px inside a 330px
+  box (its tab strip is ~1,000px of sideways-scrolling content), cropping
+  the art and copy; the principles overflowed at 320; related-project cards
+  on case studies scrolled the page 15px sideways. All are now `grid-cols-1`
+  (`minmax(0,1fr)`) below their breakpoint. After: zero horizontal scroll on
+  the home page and four case studies at 360 and 320.
+- **Ledgers that collided.** Work's four figures ("source open" ran into
+  "trade-offs") are a 2×2 on phones; About's labels and the case-study
+  ledger's values wrap instead of colliding or truncating.
+- **Scroll-to-top sat on the bottom island**, over its Ask button — hidden on
+  phones, where the island's Home does the same job. The island's
+  "CONTACT" no longer truncates.
+- **Tap targets.** Work toolbar controls, stage and card links, footer links
+  and prompt, the hero's mark and Ask, copy-email: grown to a thumb with
+  padding and a cancelling margin, so nothing moves.
+- **Type.** 9px labels are 10px below `sm`.
+- The tier filter says it scrolls (edge fade, end padding); sort and view
+  share a full-width row; the stack matrix's pinned name column is 140px on
+  a phone, not 260; About's stack heading has a short form.
+
+### Changed
+- **The black hole's shadow is black.** It was tinted navy after the
+  reference video, which read as a blue cast in the core; physically the
+  shadow is where no light escapes. It is now a shade darker than the
+  surface around it, and the dive fills the screen with black, not navy.
+
 ## [Unreleased] — The black hole, ray-traced
 
 ### Changed

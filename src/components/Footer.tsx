@@ -71,7 +71,10 @@ const ScrollToTop = () => {
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.2 }}
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 group flex items-center justify-center w-10 h-10 bg-card border border-border hover:border-primary transition-all cursor-pointer"
+          /* Desktop only. On a phone this sat on the bottom island, over its
+             Ask button, and the island's own Home tab already goes to the
+             top — two controls for one job, one of them in the other's way. */
+          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 group hidden md:flex items-center justify-center w-10 h-10 bg-card border border-border hover:border-primary transition-all cursor-pointer"
           style={{ boxShadow: 'var(--shadow-md)' }}
           aria-label="Scroll to top"
         >
@@ -149,7 +152,10 @@ const LastPrompt = () => {
         />
         <button
           type="submit"
-          className="shrink-0 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground group-focus-within:text-primary hover:text-primary transition-colors"
+          aria-label="Ask"
+          // Icon-only on a phone (the word shows from sm), so it needs its own
+          // hit area: 14×14 was the whole target.
+          className="shrink-0 flex items-center gap-1.5 p-2.5 -m-2.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground group-focus-within:text-primary hover:text-primary transition-colors"
         >
           <CornerDownLeft className="w-3.5 h-3.5" aria-hidden="true" />
           <span className="hidden sm:inline">ask</span>
@@ -171,8 +177,10 @@ const FooterColumnLabel = ({ children }: { children: React.ReactNode }) => (
 );
 
 /** Shared styling for the two flat link lists. */
+/* py-2 -my-2 below md: the links were 17px tall, too small for a thumb;
+   the negative margin keeps the lists' spacing exactly as it was. */
 const footerLink =
-  "relative text-[11px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors";
+  "relative py-2 -my-2 px-1.5 -mx-1.5 min-w-[32px] text-center md:min-w-0 md:text-left md:p-0 md:m-0 text-[11px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors";
 
 const Footer = () => {
   const year = new Date().getFullYear();
@@ -264,7 +272,7 @@ const Footer = () => {
         {/* Both lists lie flat. As columns they were two stacks of five short
             mono strings, which is most of what made the footer feel like a
             second contact section. */}
-        <div className="mt-10 grid gap-8 sm:grid-cols-2">
+        <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2">
           <div>
             <FooterColumnLabel>// Sitemap</FooterColumnLabel>
             {/* Real anchors, sharing the nav's section list — the footer used

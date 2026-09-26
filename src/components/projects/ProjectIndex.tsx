@@ -134,7 +134,7 @@ const IndexRow = ({ result, index, query, compared, compareFull, onCompare, onHo
           </span>
           {hit?.snippet ? (
             <span className="block text-[11px] text-muted-foreground mt-1 leading-snug line-clamp-2">
-              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-primary/80 mr-1.5">{hit.field}</span>
+              <span className="font-mono text-[10px] sm:text-[9px] uppercase tracking-[0.18em] text-primary/80 mr-1.5">{hit.field}</span>
               <Highlighted text={hit.snippet} query={query} />
             </span>
           ) : (

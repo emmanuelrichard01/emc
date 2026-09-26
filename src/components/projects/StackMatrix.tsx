@@ -66,7 +66,7 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
           <caption className="sr-only">Technologies used by each project</caption>
           <thead>
             <tr>
-              <th scope="col" className="sticky left-0 z-10 bg-card text-left align-bottom w-[260px] px-4 pb-3 pt-4 font-mono text-[10px] font-normal uppercase tracking-[0.18em] text-muted-foreground">
+              <th scope="col" className="sticky left-0 z-10 bg-card text-left align-bottom w-[140px] sm:w-[260px] px-3 sm:px-4 pb-3 pt-4 font-mono text-[10px] font-normal uppercase tracking-[0.18em] text-muted-foreground">
                 system
               </th>
               {columns.map((tech) => {
@@ -114,10 +114,12 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
                       onFocus={() => setRow(project.id)}
                       className="group flex items-center gap-2.5 min-w-0"
                     >
-                      <span className="font-mono text-[9px] text-primary/80 w-6 shrink-0 tracking-[0.1em]" aria-hidden="true">
+                      <span className="hidden sm:inline font-mono text-[10px] sm:text-[9px] text-primary/80 w-6 shrink-0 tracking-[0.1em]" aria-hidden="true">
                         {TIER_RANK[project.tier]}
                       </span>
-                      <span className={`font-mono text-[12px] truncate max-w-[210px] transition-colors ${active ? 'text-primary' : 'text-foreground group-hover:text-primary'}`}>
+                      {/* 140px on a phone, not 260: the pinned name column was eating the
+                          screen, leaving room for two technology columns. */}
+                      <span className={`font-mono text-[12px] truncate max-w-[112px] sm:max-w-[210px] transition-colors ${active ? 'text-primary' : 'text-foreground group-hover:text-primary'}`}>
                         {project.title}
                       </span>
                     </TransitionLink>

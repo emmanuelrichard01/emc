@@ -343,7 +343,7 @@ export default function CompareDock({ projects, onRemove, onClear }: CompareDock
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="border-t border-border/60 pt-3">
-      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground mb-2">{label}</p>
+      <p className="font-mono text-[10px] sm:text-[9px] uppercase tracking-[0.22em] text-muted-foreground mb-2">{label}</p>
       {children}
     </div>
   );

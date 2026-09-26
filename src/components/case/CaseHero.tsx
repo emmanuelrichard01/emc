@@ -70,7 +70,7 @@ export function CaseHero({ project, minutes }: { project: Project; minutes: numb
         <span className="text-primary truncate max-w-[50vw]" aria-current="page">{project.title}</span>
       </motion.nav>
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:items-end">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:items-end">
         <motion.div {...enter(0.05)} className="min-w-0">
           <p className="flex items-center gap-2.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-5">
             <span className="text-primary tracking-[0.12em]" aria-hidden="true">{TIER_RANK[project.tier]}</span>
@@ -104,8 +104,10 @@ export function CaseHero({ project, minutes }: { project: Project; minutes: numb
               { label: 'when', value: project.timeline },
             ].map((item) => (
               <div key={item.label} className="px-3 py-2.5 min-w-0">
-                <dt className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{item.label}</dt>
-                <dd className="mt-1 font-mono text-[10px] uppercase tracking-wider text-foreground truncate">{item.value}</dd>
+                <dt className="font-mono text-[10px] sm:text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{item.label}</dt>
+                {/* Wraps on a phone rather than truncating — "2025 — Present" was
+                    cut to "2025 — PRESE…" in a third of 350px. */}
+                <dd className="mt-1 font-mono text-[10px] uppercase tracking-wider text-foreground leading-snug sm:truncate">{item.value}</dd>
               </div>
             ))}
           </div>
@@ -217,7 +219,7 @@ export function CaseSummary({ project }: { project: Project }) {
         <span className="text-primary">//</span> in 30 seconds
         <span className="flex-1 h-px bg-border" aria-hidden="true" />
       </h2>
-      <ol className="grid md:grid-cols-3 border border-border divide-y md:divide-y-0 md:divide-x divide-border bg-card/30">
+      <ol className="grid grid-cols-1 md:grid-cols-3 border border-border divide-y md:divide-y-0 md:divide-x divide-border bg-card/30">
         {parts.map((part, i) => (
           <motion.li
             key={part.id}

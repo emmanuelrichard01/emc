@@ -91,7 +91,7 @@ export function CaseSection({
    screens, so eight of them read as a ledger rather than a wall. */
 export function Highlights({ items }: { items: string[] }) {
   return (
-    <ol className="mt-10 grid md:grid-cols-2 gap-px bg-border border border-border">
+    <ol className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-px bg-border border border-border">
       {items.map((item, i) => (
         <li key={item} className="bg-background p-4 md:p-5 flex gap-3.5">
           <span className="font-mono text-[10px] tabular-nums text-primary pt-1">{String(i + 1).padStart(2, '0')}</span>
@@ -212,7 +212,7 @@ export function FieldNotesList({ notes }: { notes: FieldNote[] }) {
                     aria-hidden="true"
                   />
                 </span>
-                <span className="mt-3 grid sm:grid-cols-[7.5rem_1fr] gap-x-5 text-[14px] leading-[1.7]">
+                <span className="mt-3 grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-x-5 text-[14px] leading-[1.7]">
                   <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground sm:pt-1">symptom</span>
                   <span className="text-foreground/85">{note.symptom}</span>
                 </span>

@@ -473,7 +473,10 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                 <section.icon className="h-[17px] w-[17px] relative z-10" aria-hidden="true" />
                 {/* Icon-only navigation asks every visitor to decode a
                     pictogram. The label costs 9px and removes the guess. */}
-                <span className="relative z-10 max-w-full truncate font-mono text-[10px] uppercase tracking-wider leading-none">
+                {/* tracking-normal, not wider: at 390px the extra spacing
+                    cut "CONTACT" to "CONTA…", the one label that has to be
+                    read to be useful. */}
+                <span className="relative z-10 max-w-full truncate font-mono text-[10px] uppercase tracking-normal leading-none">
                   {section.short}
                 </span>
               </a>

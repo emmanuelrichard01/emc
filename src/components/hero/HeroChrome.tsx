@@ -45,7 +45,7 @@ export function HeroTopBar() {
       transition={{ duration: 0.6, delay: 0.5, ease: EASE }}
       className="relative z-20 flex items-center justify-between shrink-0"
     >
-      <a href="#home" aria-label="Emmanuel Moghalu" className="group flex items-center gap-3">
+      <a href="#home" aria-label="Emmanuel Moghalu" className="group flex items-center gap-3 py-2.5 -my-2.5">
         <svg
           viewBox="0 0 200 120"
           className="w-8 h-5 text-primary transition-[filter] duration-500 group-hover:drop-shadow-[0_0_10px_hsl(var(--primary)/0.6)]"
@@ -65,16 +65,16 @@ export function HeroTopBar() {
           aria-label={`Open the command palette (${MODIFIER_KEY}+K)`}
           className="hidden md:flex items-center gap-2 px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          go <kbd className="border border-border px-1.5 py-0.5 text-[9px]">{MODIFIER_KEY}K</kbd>
+          go <kbd className="border border-border px-1.5 py-0.5 text-[10px] sm:text-[9px]">{MODIFIER_KEY}K</kbd>
         </button>
         <button
           type="button"
           onClick={toggleAsk}
           aria-label={`Open the assistant (${MODIFIER_KEY}+J)`}
-          className="flex items-center gap-2 px-2.5 py-1.5 text-muted-foreground hover:text-primary transition-colors"
+          className="flex items-center gap-2 px-2.5 py-2.5 md:py-1.5 text-muted-foreground hover:text-primary transition-colors"
         >
           <Sparkles className="w-3 h-3 text-primary/80" aria-hidden="true" />
-          ask <kbd className="hidden md:inline border border-border px-1.5 py-0.5 text-[9px]">{MODIFIER_KEY}J</kbd>
+          ask <kbd className="hidden md:inline border border-border px-1.5 py-0.5 text-[10px] sm:text-[9px]">{MODIFIER_KEY}J</kbd>
         </button>
       </div>
     </motion.div>

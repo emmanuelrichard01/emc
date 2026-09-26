@@ -358,7 +358,8 @@ const Contact: React.FC = () => {
                   <span className="text-[13px] sm:text-sm font-mono text-foreground truncate">{EMAIL}</span>
                   <button
                     onClick={handleCopy}
-                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    // A 16px icon, given a 36px target without moving it.
+                    className="text-muted-foreground hover:text-primary transition-colors shrink-0 p-2.5 -m-2.5"
                     aria-label="Copy email address"
                   >
                     <AnimatePresence mode="wait">

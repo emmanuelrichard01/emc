@@ -62,7 +62,7 @@ function Segmented<T extends string>({
             aria-checked={selected}
             title={option.title}
             onClick={() => onSelect(option.value)}
-            className={`relative flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-widest whitespace-nowrap transition-colors ${
+            className={`relative flex items-center gap-1.5 px-2.5 py-2.5 sm:py-1.5 font-mono text-[10px] uppercase tracking-widest whitespace-nowrap transition-colors ${
               selected ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -140,7 +140,7 @@ function StackPicker({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className={`flex items-center gap-1.5 border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+        className={`flex items-center gap-1.5 border px-2.5 py-2.5 sm:py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors ${
           selected.length || open
             ? 'border-primary/60 text-primary bg-primary/5'
             : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
@@ -289,7 +289,9 @@ export default function WorkToolbar({ state, onChange, tierCounts, stack, total,
           onClear={() => onChange({ stack: [] })}
         />
 
-        <div className="flex items-center gap-2 ml-auto">
+        {/* On a phone this wraps to its own row; spread across it rather
+            than bunched against the right edge. */}
+        <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto sm:ml-auto">
           <Segmented<SortKey>
             id="sort"
             label="Sort"
@@ -320,7 +322,11 @@ export default function WorkToolbar({ state, onChange, tierCounts, stack, total,
       </div>
 
       {/* Tier — horizontally scrollable on a phone rather than wrapping. */}
-      <div className="flex items-center gap-3 overflow-x-auto [scrollbar-width:none] -mx-1 px-1">
+      {/* Scrolls sideways on a phone, and now says so: the right edge fades,
+          and the end padding lets the last item scroll clear of the fade.
+          Without it, "prototype 4" was simply cut off at the edge with the
+          count beyond it, and nothing suggested there was more. */}
+      <div className="flex items-center gap-3 overflow-x-auto [scrollbar-width:none] -mx-1 px-1 pr-10 sm:pr-1 [mask-image:linear-gradient(to_right,#000_82%,transparent)] sm:[mask-image:none]">
         <Segmented<Tier | 'all'>
           id="tier"
           label="Tier"

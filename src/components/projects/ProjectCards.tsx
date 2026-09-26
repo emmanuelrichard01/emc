@@ -73,7 +73,7 @@ function ProjectCard({ project, index, compared, compareFull, onCompare }: CardP
           aria-label={`Compare ${project.title}`}
           disabled={!compared && compareFull}
           onClick={() => onCompare(project.id)}
-          className={`absolute z-10 top-2 right-2 flex items-center gap-1.5 px-1.5 py-1 border font-mono text-[9px] uppercase tracking-widest backdrop-blur-sm transition-all disabled:hidden ${
+          className={`absolute z-10 top-2 right-2 flex items-center gap-1.5 px-1.5 py-1 border font-mono text-[10px] sm:text-[9px] uppercase tracking-widest backdrop-blur-sm transition-all disabled:hidden ${
             compared
               ? 'bg-primary border-primary text-primary-foreground'
               : 'bg-background/80 border-border text-muted-foreground md:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground'

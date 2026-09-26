@@ -165,9 +165,11 @@ const Figures = () => (
           <dd className="font-mono text-xl md:text-2xl text-foreground tabular-nums leading-none">
             <AnimatedCounter target={m.value} suffix={m.suffix} />
           </dd>
-          <dt className="mt-2 font-mono text-[9px] uppercase tracking-[0.2em] text-foreground/80 whitespace-nowrap">{m.label}</dt>
+          {/* Wraps on a phone: three nowrap labels in a row needed more than
+              390px, and "records processed" ran into "automated tests". */}
+          <dt className="mt-2 font-mono text-[10px] sm:text-[9px] uppercase tracking-[0.16em] sm:tracking-[0.2em] leading-snug text-foreground/80 sm:whitespace-nowrap">{m.label}</dt>
           {/* Attribution, not decoration — and legible. */}
-          <p className="mt-1 font-mono text-[9px] text-muted-foreground leading-snug">
+          <p className="mt-1 font-mono text-[10px] sm:text-[9px] text-muted-foreground leading-snug">
             {m.source}
             {m.href && <ArrowUpRight className="inline w-2.5 h-2.5 ml-0.5 -mt-0.5 text-primary/80" aria-hidden="true" />}
           </p>
@@ -249,8 +251,11 @@ const Principles = () => {
   const inView = useInView(ref, { once: true, amount: 0.25 });
   const prefersReduced = useReducedMotion();
 
+  /* An explicit minmax(0,1fr) column on a phone — without it the grid's
+     implicit column took the cards' min-content width, 324px on a 310px
+     screen at 320. The same class of bug the flagship stage had. */
   return (
-    <ol ref={ref} className="grid md:grid-cols-2 xl:grid-cols-4 gap-px bg-border border border-border">
+    <ol ref={ref} className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 xl:grid-cols-4 gap-px bg-border border border-border">
       {PRINCIPLES.map((principle, i) => {
         const project = PROJECTS.find((p) => p.id === principle.projectId);
         return (
@@ -322,7 +327,7 @@ const Stack = () => {
   return (
     <div ref={ref} className="border-t border-border">
       {STACK_GROUPS.map((group, g) => (
-        <div key={group.label} className="grid sm:grid-cols-[10rem_1fr] gap-x-6 gap-y-3 py-4 border-b border-border">
+        <div key={group.label} className="grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-x-6 gap-y-3 py-4 border-b border-border">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:pt-2">{group.label}</span>
           <ul className="flex flex-wrap gap-2">
             {group.items.map((item, i) => {
@@ -408,7 +413,7 @@ const About: React.FC = () => {
             the same system rather than a page of its own. It is also the
             first thing to grow out of the black hole (Hero.tsx), so it is
             composed to be seen whole on one screen. */}
-        <div className="mb-12 border-b border-border pb-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="mb-12 border-b border-border pb-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
             <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
               <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
@@ -432,7 +437,7 @@ const About: React.FC = () => {
         </div>
 
         {/* ── Bio + profile ── */}
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
           <div className="lg:col-span-7">
             <Label>in his words</Label>
             <RevealText
@@ -453,7 +458,16 @@ const About: React.FC = () => {
 
         {/* ── With what ── */}
         <div className="mt-20">
-          <Label aside={`${techCount} technologies · weighted by where they shipped`}>stack</Label>
+          <Label
+            aside={
+              <>
+                <span className="sm:hidden">{techCount} · by use</span>
+                <span className="hidden sm:inline">{techCount} technologies · weighted by where they shipped</span>
+              </>
+            }
+          >
+            stack
+          </Label>
           <Stack />
         </div>
       </div>
