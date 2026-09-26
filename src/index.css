@@ -483,6 +483,118 @@
   }
 
 
+  /* Pointer light (components/projects/ProjectArt.tsx → trackPointer).
+
+     A radial light under the pointer, on the border and faintly on the
+     surface. Only opacity transitions; the position comes from two custom
+     properties written on pointermove, so nothing re-renders to move it.
+     Touch never sets them, and the light never shows there. */
+  .pointer-glow {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .pointer-glow::before,
+  .pointer-glow::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+
+  /* Surface wash. */
+  .pointer-glow::before {
+    z-index: -1;
+    background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 50%), hsl(var(--primary) / 0.07), transparent 60%);
+  }
+
+  /* Border light, masked to the 1px ring. */
+  .pointer-glow::after {
+    z-index: 2;
+    padding: 1px;
+    background: radial-gradient(260px circle at var(--gx, 50%) var(--gy, 50%), hsl(var(--primary) / 0.65), transparent 65%);
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pointer-glow:hover::before,
+    .pointer-glow:hover::after {
+      opacity: 1;
+    }
+  }
+
+  /* Suggestion marquee (components/ai/SuggestionMarquee.tsx).
+
+     The track holds the list twice and slides left by exactly half its own
+     width, so the second copy lands where the first began and the loop has
+     no seam. Transform only — nothing here triggers layout. */
+  @keyframes marquee-slide {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(-50%, 0, 0); }
+  }
+
+  .marquee {
+    position: relative;
+    overflow: hidden;
+    /* Items fade in and out at the edges rather than being cut. */
+    mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+  }
+
+  .marquee__track {
+    display: flex;
+    width: max-content;
+    animation: marquee-slide var(--marquee-duration, 40s) linear infinite;
+    will-change: transform;
+  }
+
+  .marquee--reverse .marquee__track {
+    animation-direction: reverse;
+  }
+
+  /* Never chase the thing you are trying to click. */
+  .marquee:hover .marquee__track,
+  .marquee:focus-within .marquee__track {
+    animation-play-state: paused;
+  }
+
+  .marquee__item {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .marquee__sep {
+    padding: 0 0.5rem;
+    font-size: 11px;
+  }
+
+  /* Reduced motion: not a marquee. The same questions, wrapped and still,
+     with the duplicate copy removed and the edge fade dropped. */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee {
+      mask-image: none;
+      -webkit-mask-image: none;
+    }
+    .marquee__track {
+      animation: none !important;
+      width: auto;
+      flex-wrap: wrap;
+      row-gap: 0.25rem;
+    }
+    .marquee__item[aria-hidden="true"] {
+      display: none;
+    }
+    .marquee__sep {
+      display: none;
+    }
+  }
+
   /* Metric counter shimmer */
   @keyframes shimmer-slide {
     0% { transform: translateX(-100%); }

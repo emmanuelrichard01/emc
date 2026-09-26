@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { dropUnanswered, trimHistory, type WireMessage } from '@/lib/aiHistory';
 import type { AiSource } from '@/lib/aiSources';
+import type { Audience } from '@/lib/aiStarters';
 import { readEvents, type AiEvent } from '@/lib/aiStream';
-import { extractiveAnswer, type ToolResult } from '@/lib/aiTools';
+import type { ToolResult } from '@/lib/aiTools';
 
 /* ==========================================================================
    AI SESSION
@@ -81,19 +82,71 @@ export interface AiSession {
 export interface AiSessionOptions {
   /** The case study being read, so "this project" means something to the model. */
   projectId?: string;
+  /** Who the answer is pitched for. `general` sends nothing. */
+  audience?: Audience;
+  /**
+   * sessionStorage key to keep the conversation under, so a reload or a
+   * navigation that remounts the owner does not wipe what was asked. Omit
+   * for a throwaway session.
+   */
+  persistKey?: string;
+}
+
+/* Kept, not everything: a long session's evidence tables add up, and a
+   quota error on write must never be what breaks the assistant. */
+const PERSIST_TURNS = 24;
+
+interface Persisted {
+  turns: AiTurn[];
+  history: WireMessage[];
+}
+
+function loadPersisted(key: string | undefined): Persisted | null {
+  if (!key) return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Persisted;
+    if (!Array.isArray(data.turns) || !Array.isArray(data.history)) return null;
+    // Anything that was mid-stream when the page went away did not finish,
+    // and cannot resume: say so rather than showing a caret that never moves.
+    const turns = data.turns.map((turn) => (turn.streaming ? { ...turn, streaming: false, stopped: true } : turn));
+    return { turns, history: data.history };
+  } catch {
+    return null;
+  }
 }
 
 export function useAiSession(options: AiSessionOptions = {}): AiSession {
-  const { projectId } = options;
-  const [turns, setTurns] = useState<AiTurn[]>([]);
+  const { projectId, audience, persistKey } = options;
+  // Read once, on the first render; the refs below are seeded from it.
+  const [restored] = useState(() => loadPersisted(persistKey));
+  const [turns, setTurns] = useState<AiTurn[]>(() => restored?.turns ?? []);
   const [busy, setBusy] = useState(false);
   const [unconfigured, setUnconfigured] = useState(false);
 
-  const idRef = useRef(0);
-  const historyRef = useRef<WireMessage[]>([]);
+  const idRef = useRef(restored?.turns.reduce((max, turn) => Math.max(max, turn.id), 0) ?? 0);
+  const historyRef = useRef<WireMessage[]>(restored?.history ?? []);
   const abortRef = useRef<AbortController | null>(null);
   /** The last thing a human asked, kept so a failure can be re-thrown at it. */
   const lastQuestionRef = useRef<string | null>(null);
+
+  /* Written when the conversation settles, not per streamed token — a
+     JSON.stringify of every evidence table sixty times a second is the
+     sort of cost that makes typing feel heavy. */
+  useEffect(() => {
+    if (!persistKey || busy) return;
+    try {
+      if (!turns.length) sessionStorage.removeItem(persistKey);
+      else
+        sessionStorage.setItem(
+          persistKey,
+          JSON.stringify({ turns: turns.slice(-PERSIST_TURNS), history: historyRef.current } satisfies Persisted)
+        );
+    } catch {
+      /* storage full or unavailable — the session still works, it just won't survive a reload */
+    }
+  }, [busy, persistKey, turns]);
 
   const push = useCallback((turn: Omit<AiTurn, 'id'>): number => {
     const id = ++idRef.current;
@@ -164,7 +217,7 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
         const response = await fetch(ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: historyRef.current, ...(projectId ? { context: { projectId } } : {}) }),
+          body: JSON.stringify({ messages: historyRef.current, ...requestContext(projectId, audience) }),
           signal: controller.signal,
         });
 
@@ -185,6 +238,11 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
 
           if (data?.type === 'unconfigured') {
             setUnconfigured(true);
+            /* Loaded only on this path. The extractive answerer brings the
+               SQL engine and the whole dataset with it, and this hook lives
+               in the app shell now — a static import put both on every
+               visitor's critical path for a mode production never runs in. */
+            const { extractiveAnswer } = await import('@/lib/aiTools');
             push({ role: 'assistant', text: extractiveAnswer(trimmed), local: true });
             return;
           }
@@ -257,7 +315,7 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
         setBusy(false);
       }
     },
-    [busy, patch, projectId, push, settleStreaming]
+    [audience, busy, patch, projectId, push, settleStreaming]
   );
 
   /* Ask the same thing again. `send` drops the unanswered question from the
@@ -275,4 +333,12 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
   const canRetry = !busy && Boolean(lastTurn?.retryable) && lastQuestionRef.current !== null;
 
   return { turns, busy, unconfigured, send, reject, reset, cancel, retry, canRetry };
+}
+
+/** The optional `context` field: omitted entirely when there is nothing to say. */
+function requestContext(projectId: string | undefined, audience: Audience | undefined) {
+  const context: { projectId?: string; audience?: Audience } = {};
+  if (projectId) context.projectId = projectId;
+  if (audience && audience !== 'general') context.audience = audience;
+  return Object.keys(context).length ? { context } : {};
 }

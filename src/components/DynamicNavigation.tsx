@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring } from 'framer-motion';
+import { motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, type MotionValue } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Command, Palette } from 'lucide-react';
+import { Command, Palette, Sparkles } from 'lucide-react';
 
 import { SECTIONS } from '@/data/sections';
 import { MODIFIER_KEY } from '@/lib/platform';
@@ -9,6 +9,7 @@ import { scrollToSection } from '@/lib/scrollToSection';
 import { useSectionObserver } from '../hooks/useSectionObserver';
 import { PUBLIC_THEMES, useTheme } from './ThemeProvider';
 import { LOGO_PATHS } from './ui/LogoMark';
+import { useAsk } from './ai/AskProvider';
 
 /* Scroll distance in one direction before the bar reacts.
 
@@ -97,12 +98,15 @@ const NavLink = ({
   isActive,
   href,
   onNavigate,
+  progress,
 }: {
   section: { id: string; short: string; label: string };
   isActive: boolean;
   /** Absolute on a case study, a bare fragment on the landing page. */
   href: string;
   onNavigate: (id: string) => void;
+  /** How far through the active section the reader is, 0–1. */
+  progress: MotionValue<number>;
 }) => (
   <a
     href={href}
@@ -117,13 +121,22 @@ const NavLink = ({
     }`}
   >
     <span className="relative z-10">{section.short}</span>
+    {/* The indicator is a meter as well as a marker: its dim track slides
+        to the current section, and the bright fill inside it is how far
+        through that section the reader is. The document-wide bar along the
+        pill's edge says "how much page is left"; this says "how much of
+        this part". */}
     {isActive && (
       <motion.span
         layoutId="nav-indicator-desktop"
-        className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary z-0"
-        style={{ boxShadow: '0 1px 6px hsl(var(--primary) / 0.4)' }}
+        className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary/30 z-0 overflow-hidden"
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      />
+      >
+        <motion.span
+          className="absolute inset-0 bg-primary origin-left"
+          style={{ scaleX: progress, boxShadow: '0 1px 6px hsl(var(--primary) / 0.4)' }}
+        />
+      </motion.span>
     )}
   </a>
 );
@@ -134,6 +147,7 @@ const NavLink = ({
 
 const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => void }) => {
   const { theme, setTheme } = useTheme();
+  const { toggleAsk, open: askOpen } = useAsk();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
 
@@ -197,7 +211,23 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
   // snapping on every wheel tick.
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, restDelta: 0.001 });
 
+  /* Progress through the current section, written straight to a motion
+     value from the scroll subscription below — it changes every frame of a
+     scroll, and routing it through React state would re-render the whole
+     bar sixty times a second to move one 2px line. */
+  const rawSectionProgress = useMotionValue(0);
+  const sectionProgress = useSpring(rawSectionProgress, { stiffness: 200, damping: 34, restDelta: 0.001 });
+  const activeRef = useRef<string | null>(null);
+
   useMotionValueEvent(scrollY, 'change', (latest) => {
+    const current = activeRef.current && document.getElementById(activeRef.current);
+    if (current) {
+      // Measured against the same reading line the section observer uses.
+      const rect = current.getBoundingClientRect();
+      const line = window.innerHeight * 0.3;
+      rawSectionProgress.set(Math.min(1, Math.max(0, (line - rect.top) / rect.height)));
+    }
+
     const delta = latest - lastScrollY.current;
     lastScrollY.current = latest;
 
@@ -236,6 +266,9 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
   // page keeps whatever section was last current and renders Home as active,
   // which reads as "you are on the home page" when you demonstrably are not.
   const activeSection = pathname === '/' ? observedSection : null;
+  useEffect(() => {
+    activeRef.current = activeSection;
+  }, [activeSection]);
 
   const handleFocus = useCallback(() => {
     focusWithin.current = true;
@@ -315,6 +348,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                 isActive={activeSection === section.id}
                 href={sectionHref(section.id)}
                 onNavigate={goToSection}
+                progress={sectionProgress}
               />
             ))}
           </div>
@@ -328,6 +362,28 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
             className="flex items-center justify-center w-7 h-7 border border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
           >
             <Palette className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+
+          {/* The assistant, from anywhere on the page. Styled as the one
+              control in the bar that is not navigation — it answers rather
+              than goes somewhere. */}
+          <button
+            type="button"
+            onClick={toggleAsk}
+            aria-label={`${askOpen ? 'Close' : 'Open'} the assistant (${MODIFIER_KEY}+J)`}
+            aria-expanded={askOpen}
+            className={`group relative flex items-center gap-1.5 px-2.5 py-1 border overflow-hidden transition-colors ${
+              askOpen
+                ? 'border-primary bg-primary/15 text-primary'
+                : 'border-primary/40 bg-primary/5 text-foreground hover:border-primary hover:text-primary'
+            }`}
+          >
+            <span
+              className="absolute inset-y-0 -left-full w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent group-hover:left-full transition-[left] duration-700 ease-out"
+              aria-hidden="true"
+            />
+            <Sparkles className="h-3 w-3 text-primary relative" aria-hidden="true" />
+            <span className="relative font-mono text-[10px] uppercase tracking-widest">Ask</span>
           </button>
 
           <button
@@ -402,13 +458,19 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
 
           <div className="w-px shrink-0 self-stretch bg-border mx-0.5" aria-hidden="true" />
 
+          {/* Ask takes the slot the accent toggle had. On a phone the island
+              is the only persistent control, and a question is worth more
+              than a colour — which is still one tap away in the palette. */}
           <button
             type="button"
-            onClick={cycleTheme}
-            aria-label={`Accent colour: ${theme}. Switch to next.`}
-            className="shrink-0 w-9 flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
+            onClick={toggleAsk}
+            aria-label={askOpen ? 'Close the assistant' : 'Ask the assistant'}
+            aria-expanded={askOpen}
+            className={`shrink-0 w-9 flex items-center justify-center active:scale-95 transition-transform ${
+              askOpen ? 'text-primary' : 'text-primary/80'
+            }`}
           >
-            <Palette className="h-4 w-4" aria-hidden="true" />
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
           </button>
 
           <button

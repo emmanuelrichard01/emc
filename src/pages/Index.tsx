@@ -11,6 +11,7 @@ import Experience from '../components/Experience';
 import Contact from '../components/Contact';
 import SEOHead from '../components/SEOHead';
 import StructuredData from '../components/StructuredData';
+import SectionSeam from '../components/transitions/SectionSeam';
 
 // Types
 import { SEOMetadata } from '../types';
@@ -96,8 +97,13 @@ const Index = () => {
 
         <Hero />
         <About />
+        {/* Each module is entered along a trace drawn by the scroll — see
+            SectionSeam. Numbered to match the modules' own eyebrows. */}
+        <SectionSeam index="02" label="engineering" />
         <Projects />
+        <SectionSeam index="03" label="career ledger" />
         <Experience />
+        <SectionSeam index="04" label="connect" />
         <Contact />
       </div>
     </div>

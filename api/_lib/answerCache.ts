@@ -38,8 +38,17 @@ export function normaliseQuestion(question: string): string {
   return question.toLowerCase().replace(/\s+/g, ' ').replace(/[?!.\s]+$/, '').trim();
 }
 
-export async function cacheKey(dataVersion: string, question: string, projectId: string | null): Promise<string> {
-  return `ask:answer:${await digest(`${dataVersion}|${projectId ?? ''}|${normaliseQuestion(question)}`)}`;
+/* The audience lens is part of the key: a hiring answer and an engineering
+   answer to the same words are different answers. `general` keys exactly as
+   before lenses existed, so the cache already warmed for it stays warm. */
+export async function cacheKey(
+  dataVersion: string,
+  question: string,
+  projectId: string | null,
+  audience: string = 'general'
+): Promise<string> {
+  const lens = audience === 'general' ? '' : `|${audience}`;
+  return `ask:answer:${await digest(`${dataVersion}|${projectId ?? ''}|${normaliseQuestion(question)}${lens}`)}`;
 }
 
 export async function readAnswer(key: string): Promise<CachedAnswer | null> {

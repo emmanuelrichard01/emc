@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence, useScroll, useSpring, useInView } from "framer-motion";
-import { ArrowUp } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowUp, CornerDownLeft, Sparkles } from "lucide-react";
 import { scrollToSection } from "@/lib/scrollToSection";
 import { SECTIONS } from "@/data/sections";
 // Shared with the hero's message-of-the-day, so the footer and the shell can
 // never report different builds.
 import { COMMIT_SHA, IS_DEV_BUILD, formatRelativeBuildTime } from "@/lib/buildInfo";
 import { LOGO_PATHS } from "@/components/ui/LogoMark";
+import { useAsk } from "@/components/ai/AskProvider";
+import { MODIFIER_KEY } from "@/lib/platform";
+import SuggestionMarquee from "@/components/ai/SuggestionMarquee";
 
 /* ==========================================================================
    FOOTER
@@ -135,6 +139,64 @@ const ScrollToTop = () => {
 };
 
 /* -------------------------------------------------------------------------- */
+/*  LAST PROMPT                                                                */
+/*                                                                             */
+/*  The page opens on a prompt and now closes on one. Whoever reaches the     */
+/*  footer has read everything and still has a question — which is the one    */
+/*  moment a "contact me" link is the wrong answer, because the question may  */
+/*  well be answerable right now. It opens the same assistant as ⌘J.          */
+/* -------------------------------------------------------------------------- */
+
+const LastPrompt = () => {
+  const { openAsk, starters } = useAsk();
+  const [value, setValue] = useState("");
+
+  const submit = (question: string) => {
+    const q = question.trim();
+    openAsk(q ? { question: q } : undefined);
+    setValue("");
+  };
+
+  return (
+    <div className="mt-10 pt-8 border-t border-border">
+      <FooterColumnLabel>// Still have a question?</FooterColumnLabel>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit(value);
+        }}
+        className="group flex items-center gap-3 border border-border bg-background/40 px-3 md:px-4 py-2.5 focus-within:border-primary/60 transition-colors max-w-2xl"
+      >
+        <span className="hidden sm:inline font-mono text-[13px] text-primary/60 shrink-0 select-none" aria-hidden="true">
+          em@builtbyem:~/$ ask
+        </span>
+        <Sparkles className="sm:hidden w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
+        <label htmlFor="footer-ask" className="sr-only">
+          Ask the assistant a question about Emmanuel&rsquo;s work
+        </label>
+        <input
+          id="footer-ask"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="anything the page didn't answer…"
+          autoComplete="off"
+          // 16px below md: iOS zooms the page on focus for anything smaller.
+          className="flex-1 min-w-0 bg-transparent font-mono text-base md:text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+        />
+        <button
+          type="submit"
+          className="shrink-0 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground group-focus-within:text-primary hover:text-primary transition-colors"
+        >
+          <CornerDownLeft className="w-3.5 h-3.5" aria-hidden="true" />
+          <span className="hidden sm:inline">ask</span>
+        </button>
+      </form>
+      <SuggestionMarquee items={starters} onPick={submit} className="mt-3 max-w-2xl" secondsPerItem={8} />
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
 /*  FOOTER                                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -154,6 +216,9 @@ const Footer = () => {
   const footerRef = useRef<HTMLElement>(null);
   const isInView = useInView(footerRef, { once: true, amount: 0.3 });
   const lagosTime = useLagosClock();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const isLanding = pathname === "/";
 
   return (
     <footer
@@ -217,6 +282,8 @@ const Footer = () => {
           </div>
         </div>
 
+        <LastPrompt />
+
         {/* Colophon — the one thing a footer can say that the sections above
             cannot, and the place to state the site's own claim about itself. */}
         <div className="mt-10 pt-8 border-t border-border">
@@ -238,16 +305,23 @@ const Footer = () => {
             <FooterColumnLabel>// Sitemap</FooterColumnLabel>
             {/* Real anchors, sharing the nav's section list — the footer used
                 to keep its own copy, which is how "Work" and "Experience"
-                drift apart from the pill above. */}
+                drift apart from the pill above.
+
+                And real destinations off the landing page. These were bare
+                fragments with an unconditional preventDefault, so on a case
+                study they pointed at sections that do not exist there and
+                nothing replaced the browser's own handling — the same dead
+                links the navbar was fixed for, left behind in the footer. */}
             <nav className="flex flex-wrap gap-x-5 gap-y-2.5" aria-label="Footer section links">
               {SECTIONS.map((section) => (
                 <a
                   key={section.id}
-                  href={`#${section.id}`}
+                  href={isLanding ? `#${section.id}` : `/#${section.id}`}
                   onClick={(e) => {
                     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                     e.preventDefault();
-                    scrollToSection(section.id);
+                    if (isLanding) scrollToSection(section.id);
+                    else navigate(`/#${section.id}`);
                   }}
                   className={footerLink}
                 >
@@ -287,8 +361,15 @@ const Footer = () => {
             asks to be taken at its word about its numbers, so it should be
             checkable about its own build too. */}
         <div className="mt-12 pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-            © {year} Emmanuel Moghalu
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            <span>© {year} Emmanuel Moghalu</span>
+            {/* The shortcuts, stated once where someone looking for them
+                would look. Desktop only: a phone has none of these keys. */}
+            <span className="hidden md:flex items-center gap-3 text-muted-foreground/80" aria-label="Keyboard shortcuts">
+              <span><kbd className="border border-border px-1 py-px">{MODIFIER_KEY}+K</kbd> go</span>
+              <span><kbd className="border border-border px-1 py-px">{MODIFIER_KEY}+J</kbd> ask</span>
+              <span><kbd className="border border-border px-1 py-px">/</kbd> ask</span>
+            </span>
           </span>
 
           <span className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground tracking-widest">

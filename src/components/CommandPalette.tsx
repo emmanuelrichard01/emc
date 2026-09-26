@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Search, ArrowRight,
+  Search, ArrowRight, Boxes, CornerDownLeft,
   Github, Linkedin, Copy, ExternalLink, Sparkles, Palette, Download
 } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +12,12 @@ import { useEasterEgg } from "./EasterEggProvider";
 import { scrollToSection as scrollToSectionBase } from "@/lib/scrollToSection";
 import { SECTIONS } from "@/data/sections";
 import { CV_FILE_NAME, CV_FILE_SIZE, downloadCV } from "@/lib/cv";
+import { useProjects } from "@/data/useProjects";
+import { STATUS_LABEL, projectStatus } from "@/lib/project";
+import { navigateWithTransition } from "@/lib/viewTransition";
+import { looksLikeQuestion, rankItem } from "@/lib/fuzzy";
+import { MODIFIER_KEY } from "@/lib/platform";
+import { useAsk } from "@/components/ai/AskProvider";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES & DATA                                                               */
@@ -24,7 +31,13 @@ interface CommandItem {
   action: () => void;
   category: string;
   keywords: string[];
+  /** Right-hand detail — a status, a shortcut. */
+  meta?: string;
 }
+
+/* Section order for an empty query. With a query, groups follow their best
+   match instead, so the thing the visitor meant is first wherever it lives. */
+const CATEGORY_ORDER = ["Ask", "Navigate", "Case studies", "Actions", "Links", "Preferences", "Hidden"];
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -57,16 +70,44 @@ const SECTION_KEYWORDS: Record<string, string[]> = {
 const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const { setTheme } = useTheme();
   const { unlock, unlocked } = useEasterEgg();
+  const { openAsk } = useAsk();
+  // Loaded beside the shell rather than inside it — see data/useProjects.ts.
+  const projects = useProjects();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  /* On the landing page a section is somewhere to scroll; anywhere else it
+     is a different page. This called scrollToSection unconditionally, which
+     returns false when the element is missing — so on a case study every
+     Navigate entry did nothing and the palette stayed open, the same dead
+     link the navbar had before it learned the difference. */
   const scrollToSection = useCallback(
     (id: string) => {
-      if (scrollToSectionBase(id)) onClose();
+      onClose();
+      if (pathname === "/" && scrollToSectionBase(id)) return;
+      navigate(`/#${id}`);
     },
-    [onClose]
+    [navigate, onClose, pathname]
+  );
+
+  const openProject = useCallback(
+    (id: string) => {
+      onClose();
+      navigateWithTransition(navigate, `/projects/${id}`);
+    },
+    [navigate, onClose]
+  );
+
+  const askAbout = useCallback(
+    (question?: string) => {
+      onClose();
+      openAsk(question ? { question } : undefined);
+    },
+    [onClose, openAsk]
   );
 
   const copyEmail = useCallback(() => {
@@ -98,6 +139,30 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         action: () => scrollToSection(section.id),
         category: "Navigate",
         keywords: [section.id, section.label.toLowerCase(), ...(SECTION_KEYWORDS[section.id] ?? [])],
+      })),
+      // The assistant — the palette's answer to anything that is not a place.
+      {
+        id: "ask-open",
+        title: "Ask AI",
+        subtitle: "Grounded answers about the work, with the queries behind them",
+        icon: Sparkles,
+        action: () => askAbout(),
+        category: "Ask",
+        keywords: ["ai", "ask", "assistant", "question", "chat", "help"],
+        meta: `${MODIFIER_KEY}+J`,
+      },
+      /* Every case study, reachable by name, stack or category. The palette
+         could previously go to "Work" and no further — a visitor who knew
+         they wanted the rate limiter still had to scroll a list to find it. */
+      ...(projects ?? []).map((project) => ({
+        id: `project-${project.id}`,
+        title: project.title,
+        subtitle: `${project.subtitle} · ${project.category}`,
+        icon: Boxes,
+        action: () => openProject(project.id),
+        category: "Case studies",
+        keywords: [project.id, project.category.toLowerCase(), ...project.stack.map((t) => t.toLowerCase())],
+        meta: STATUS_LABEL[projectStatus(project)],
       })),
       // Actions
       {
@@ -196,20 +261,41 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         keywords: ["secret", "konami", "easter", "hidden", "cheat"],
       },
     ],
-    [scrollToSection, copyEmail, triggerCVDownload, onClose, setTheme, unlock, unlocked]
+    [projects, scrollToSection, openProject, askAbout, copyEmail, triggerCVDownload, onClose, setTheme, unlock, unlocked]
   );
 
-  // Filter — hidden items only appear when their keywords match
+  /* Ranked rather than filtered. With a query, results are ordered by how
+     well they match, and one more entry is always offered: ask the assistant
+     exactly what was typed. It leads when the query reads as a question and
+     trails otherwise — "mmr" is a destination, "how does mmr reconcile?" is
+     not, and the palette should not make the visitor choose which box to
+     type into. Hidden items still appear only when searched for. */
   const filtered = useMemo(() => {
-    if (!search) return commands.filter((c) => c.category !== "Hidden");
-    const q = search.toLowerCase();
-    return commands.filter(
-      (c) =>
-        c.title.toLowerCase().includes(q) ||
-        c.subtitle.toLowerCase().includes(q) ||
-        c.keywords.some((k) => k.includes(q))
-    );
-  }, [search, commands]);
+    const byCategory = (a: CommandItem, b: CommandItem) =>
+      CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
+    const query = search.trim();
+    if (!query) return commands.filter((c) => c.category !== "Hidden").sort(byCategory);
+
+    const ranked = commands
+      .map((c) => ({ c, score: rankItem(query, c.title, [c.subtitle, ...c.keywords]) }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.c);
+
+    const askItem: CommandItem = {
+      id: "ask-query",
+      title: `Ask: ${query}`,
+      subtitle: "Send this to the assistant",
+      icon: CornerDownLeft,
+      action: () => askAbout(query),
+      category: "Ask",
+      keywords: [],
+    };
+    const leadWithAsk = looksLikeQuestion(query) || ranked.length === 0;
+    // The generic "Ask AI" entry is redundant beside a specific ask.
+    const rest = ranked.filter((c) => c.id !== "ask-open");
+    return leadWithAsk ? [askItem, ...rest] : [...rest, askItem];
+  }, [search, commands, askAbout]);
 
   // Group by category
   const grouped = useMemo(() => {
@@ -349,7 +435,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search commands..."
+              placeholder="Jump to a section or project — or ask a question…"
               // 16px below `md` so focusing it does not make iOS Safari zoom
               // the page out from under a search that is already open.
               className="flex-1 bg-transparent border-none outline-none text-base md:text-[13px] font-mono text-foreground placeholder:text-muted-foreground"
@@ -389,7 +475,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                           selected ? "bg-muted/50 border-primary" : "border-transparent hover:bg-muted/30"
                         }`}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
                           <div
                             className={`p-1.5 border transition-colors ${
                               selected
@@ -399,22 +485,32 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                           >
                             <cmd.icon className="w-3.5 h-3.5" />
                           </div>
-                          <div className="text-left">
+                          <div className="text-left min-w-0">
                             <div
-                              className={`text-[13px] font-mono tracking-wide uppercase transition-colors ${
+                              className={`text-[13px] font-mono tracking-wide uppercase truncate transition-colors ${
                                 selected ? "text-foreground" : "text-muted-foreground"
                               }`}
                             >
                               {cmd.title}
                             </div>
-                            <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                            <div className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">
                               {cmd.subtitle}
                             </div>
                           </div>
                         </div>
+                        {cmd.meta && !selected && (
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 pr-2 shrink-0">
+                            {cmd.meta}
+                          </span>
+                        )}
                         {selected && (
-                          <div className="text-primary pr-2">
-                            {cmd.category === "Links" ? (
+                          <div className="text-primary pr-2 flex items-center gap-2 shrink-0">
+                            {cmd.meta && (
+                              <span className="font-mono text-[10px] uppercase tracking-widest text-primary/80">{cmd.meta}</span>
+                            )}
+                            {cmd.category === "Ask" ? (
+                              <Sparkles className="w-3.5 h-3.5" />
+                            ) : cmd.category === "Links" ? (
                               <ExternalLink className="w-3.5 h-3.5" />
                             ) : cmd.id === "download-cv" ? (
                               <Download className="w-3.5 h-3.5" />
@@ -440,6 +536,10 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
             <span className="flex items-center gap-2">
               <kbd className="border border-border px-1.5 py-0.5">↵</kbd>
               select
+            </span>
+            <span className="hidden sm:flex items-center gap-2 ml-auto">
+              <kbd className="border border-border px-1.5 py-0.5">{MODIFIER_KEY}+J</kbd>
+              ask
             </span>
           </div>
         </motion.div>

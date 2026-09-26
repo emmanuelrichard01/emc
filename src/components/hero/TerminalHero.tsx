@@ -7,8 +7,9 @@ import { MAX_QUESTION_CHARS as AI_MAX_QUESTION_CHARS } from '@/lib/aiHistory';
 import { buildMotd, type MotdTone } from '@/lib/motd';
 import { useTerminalSession } from './useTerminalSession';
 import StatusRail from './StatusRail';
-import { useAiSession } from './useAiSession';
+import { useAsk } from '@/components/ai/AskProvider';
 import AiTranscript, { AI_SUGGESTIONS } from './AiTranscript';
+import SuggestionMarquee from '@/components/ai/SuggestionMarquee';
 
 /* ==========================================================================
    TERMINAL HERO
@@ -107,7 +108,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
      scrollback effect below reads `ai.turns` in its dependency array — and a
      dependency array is evaluated during render, so a `const ai` further down
      the body would still be in the temporal dead zone and throw. */
-  const ai = useAiSession();
+  /* The shared session (AskProvider): a question asked here is still there
+     when the dock opens further down the page, or on a case study. */
+  const ai = useAsk().session;
   const [aiMode, setAiMode] = useState(false);
 
   /* Where the visitor is standing in their own question history. */
@@ -867,41 +870,23 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         {/* ── Chips ──
             In AI mode these become starter questions instead of commands, so
             the empty prompt is never a blank stare. */}
-        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center gap-x-2 md:gap-x-1 gap-y-2 shrink-0 ${compact ? 'mt-4' : 'mt-8'}`}>
-          {aiMode
-            ? /* Only while the transcript is empty.
-
-                 These exist to answer "what do I even ask it", and once a
-                 question has been asked that is answered — by the visitor,
-                 demonstrably. Six of them are four rows of chips on a phone,
-                 which is most of what is left of a 375px viewport after the
-                 keyboard takes its share, and every row of that is space the
-                 answer is not getting. Same trade the wordmark makes when the
-                 shell starts working: the least useful thing on a working
-                 screen gives up its room.
-
-                 They come back with a fresh session, which is the natural
-                 place to want them again. */
-              ai.turns.length === 0 &&
-              AI_SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => {
-                    setInput('');
-                    void ai.send(suggestion);
-                  }}
-                  disabled={ai.busy}
-                  /* py-2 -my-2 for the 24px minimum, as everywhere else on
-                     this screen. At py-1 these were 21px tall — under the
-                     floor, and they are the primary way into the feature on
-                     the device where they matter most. */
-                  className="font-mono text-[11px] border border-border px-2.5 py-2 -my-0.5 text-muted-foreground hover:border-primary/60 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {suggestion}
-                </button>
-              ))
-            : CHIPS.map((chip, i) => (
+        {/* In AI mode the starters run as one slow ticker instead of a wall of
+            chips — one row at any width, paused under the pointer. */}
+        {aiMode && ai.turns.length === 0 && (
+          <motion.div {...reveal(0.1)} className={`shrink-0 -mx-1 ${compact ? 'mt-4' : 'mt-8'}`}>
+            <SuggestionMarquee
+              items={AI_SUGGESTIONS}
+              disabled={ai.busy}
+              onPick={(suggestion) => {
+                setInput('');
+                void ai.send(suggestion);
+              }}
+            />
+          </motion.div>
+        )}
+        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center gap-x-2 md:gap-x-1 gap-y-2 shrink-0 ${aiMode ? 'hidden' : compact ? 'mt-4' : 'mt-8'}`}>
+          {!aiMode &&
+            CHIPS.map((chip, i) => (
                 <React.Fragment key={chip}>
                   {i > 0 && (
                     <span

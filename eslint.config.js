@@ -27,6 +27,7 @@ export default tseslint.config(
             "useTheme",
             "useEasterEgg",
             "useCommandPalette",
+            "useAsk",
             "useBooted",
             "RouteReadyBeacon",
             "toast",

@@ -16,6 +16,7 @@ import Navbar from "./components/DynamicNavigation";
 import Footer from "./components/Footer";
 import CommandPalette from "./components/CommandPalette";
 import { BootProvider, RouteReadyBeacon } from "./components/hero/BootOverlay";
+import { AskProvider } from "./components/ai/AskProvider";
 
 // Lazy Load Pages for Performance
 import { loadIndex, loadProjectDetail, loadedIndex, loadedProjectDetail } from "./lib/routeChunks";
@@ -229,11 +230,16 @@ const App = () => (
                 it several hundred milliseconds later. */}
             <BootProvider>
               <BrowserRouter>
-                <CommandPaletteProvider>
-                  <MainLayout>
-                    <AnimatedRoutes />
-                  </MainLayout>
-                </CommandPaletteProvider>
+                {/* Above the routes, so one conversation survives navigation
+                    and every door onto it — terminal, dock, case study,
+                    palette, footer — is the same assistant. */}
+                <AskProvider>
+                  <CommandPaletteProvider>
+                    <MainLayout>
+                      <AnimatedRoutes />
+                    </MainLayout>
+                  </CommandPaletteProvider>
+                </AskProvider>
               </BrowserRouter>
             </BootProvider>
             <Analytics />

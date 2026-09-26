@@ -1,9 +1,11 @@
 import { useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { ArrowUp, RotateCcw, Sparkles, Square } from 'lucide-react';
+import { ArrowUp, PanelRight, RotateCcw, Sparkles, Square } from 'lucide-react';
 
 import AiTranscript from '@/components/hero/AiTranscript';
-import { useAiSession } from '@/components/hero/useAiSession';
+import { useAsk } from '@/components/ai/AskProvider';
 import { MAX_QUESTION_CHARS } from '@/lib/aiHistory';
+import { projectStarters } from '@/lib/aiStarters';
+import SuggestionMarquee from '@/components/ai/SuggestionMarquee';
 import type { Project } from '@/types';
 
 /* ==========================================================================
@@ -19,35 +21,21 @@ import type { Project } from '@/types';
    project's full detail is in its prompt from the first round, and the
    opening questions are about this project rather than about everything.
 
-   Same session hook, same transcript, same evidence, same grounding marks:
-   one assistant with two doors, not two assistants.
+   Same session, same transcript, same evidence, same grounding marks: the
+   conversation here is the one the dock and the terminal hold (AskProvider),
+   so a question asked on the home page is still above this one.
    ========================================================================== */
 
-function startersFor(project: Project): string[] {
-  const study = project.caseStudy;
-  return [
-    'how does it work, end to end?',
-    ...(study?.tradeoffs?.length ? ['what did he trade off, and what did he reject?'] : []),
-    ...(study?.fieldNotes?.length ? ['what went wrong while building it?'] : []),
-    'what does this project show about how he works?',
-  ];
-}
-
 export default function ProjectAsk({ project }: { project: Project }) {
-  const ai = useAiSession({ projectId: project.id });
+  const { session: ai, ask: send, openAsk } = useAsk();
   const [question, setQuestion] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const starters = useMemo(() => startersFor(project), [project]);
+  const starters = useMemo(() => projectStarters(project), [project]);
 
   const ask = (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed || ai.busy) return;
-    if (trimmed.length > MAX_QUESTION_CHARS) {
-      ai.reject(`question too long — keep it under ${MAX_QUESTION_CHARS} characters.`);
-      return;
-    }
+    if (!text.trim() || ai.busy) return;
     setQuestion('');
-    void ai.send(trimmed);
+    send(text);
   };
 
   const onSubmit = (e: FormEvent) => {
@@ -71,16 +59,28 @@ export default function ProjectAsk({ project }: { project: Project }) {
           <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
           <span className="font-mono text-[12px] text-foreground truncate">ask about {project.title.toLowerCase()}</span>
         </span>
-        {ai.turns.length > 0 && (
+        <span className="flex items-center gap-4 shrink-0">
+          {/* The same conversation, in a panel that stays open while the
+              visitor scrolls back up to the part they were asking about. */}
           <button
             type="button"
-            onClick={ai.reset}
-            className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors py-1"
+            onClick={() => openAsk()}
+            className="hidden md:inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors py-1"
           >
-            <RotateCcw className="w-3 h-3" aria-hidden="true" />
-            new
+            <PanelRight className="w-3 h-3" aria-hidden="true" />
+            keep open
           </button>
-        )}
+          {ai.turns.length > 0 && (
+            <button
+              type="button"
+              onClick={ai.reset}
+              className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors py-1"
+            >
+              <RotateCcw className="w-3 h-3" aria-hidden="true" />
+              new
+            </button>
+          )}
+        </span>
       </div>
 
       <div className="px-4 md:px-5 py-4">
@@ -90,19 +90,7 @@ export default function ProjectAsk({ project }: { project: Project }) {
               answers come from this page and the rest of the site. every figure is checked against the site&rsquo;s
               data, and the queries behind an answer open under it.
             </p>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="suggested questions">
-              {starters.map((starter) => (
-                <button
-                  key={starter}
-                  type="button"
-                  onClick={() => ask(starter)}
-                  disabled={ai.busy}
-                  className="font-mono text-[11px] border border-border px-2.5 py-1.5 text-muted-foreground hover:border-primary/60 hover:text-primary transition-colors disabled:opacity-40"
-                >
-                  {starter}
-                </button>
-              ))}
-            </div>
+            <SuggestionMarquee items={starters} onPick={ask} disabled={ai.busy} className="-mx-1" />
           </>
         ) : (
           <AiTranscript

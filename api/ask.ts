@@ -4,6 +4,7 @@ import { executeToolCall, searchSite, type ToolCall, type ToolResult } from '../
 import type { AiSource } from '../src/lib/aiSources';
 import { collectSources } from '../src/lib/aiSources';
 import { unverifiedFigures } from '../src/lib/aiGrounding';
+import { audiencePrompt, isAudience, type Audience } from '../src/lib/aiStarters';
 import { ProviderHttpError, streamGemini, streamGroq, type Msg, type RoundRequest, type RoundResult, type ToolSpec } from './_lib/providers';
 import { admitQuestion, resetLimits, spendCall } from './_lib/limits';
 import { byHealth, markStruggling, resetHealth } from './_lib/health';
@@ -37,6 +38,9 @@ export const config = { runtime: 'edge' };
      · The page can say what the visitor is reading. On a case study, that
        project's full detail is in the prompt from the first round, so "how
        does this work?" needs no lookup and "this" means something.
+     · The visitor can say who they are — hiring or engineering — and the
+       answer is pitched for them. Register only: the grounding rules and the
+       audit are identical under every lens (aiStarters.ts).
 
    Refusals that happen before any work — bad input, rate limit, no key —
    are plain JSON, so the client can tell them apart by content type.
@@ -132,8 +136,10 @@ function pageContext(projectId: unknown): PageContext | null {
   return { projectId: project.id, title: project.title, detail };
 }
 
-function systemPrompt(page: PageContext | null, finalize: boolean): string {
+function systemPrompt(page: PageContext | null, audience: Audience, finalize: boolean): string {
   const parts = [BASE_PROMPT];
+  const lens = audiencePrompt(audience);
+  if (lens) parts.push(lens);
   if (page) {
     parts.push(
       `PAGE: the visitor is reading the case study for "${page.title}" (id ${page.projectId}). "this", "it", "this project" and "here" refer to it unless they name something else. Its full detail is below, so you do not need get_project for it.\n${page.detail}`
@@ -331,6 +337,7 @@ async function runRound(
   providers: Provider[],
   history: Msg[],
   page: PageContext | null,
+  audience: Audience,
   finalize: boolean,
   round: number,
   emit: Emit,
@@ -350,7 +357,7 @@ async function runRound(
       try {
         const result = await provider.run({
           messages: history,
-          system: systemPrompt(page, finalize),
+          system: systemPrompt(page, audience, finalize),
           tools: TOOLS,
           finalize,
           onText: (chunk) => {
@@ -415,6 +422,7 @@ async function runAgent(
   providers: Provider[],
   turns: TurnIn[],
   page: PageContext | null,
+  audience: Audience,
   emit: Emit,
   visitor: AbortSignal
 ): Promise<Outcome | null> {
@@ -425,7 +433,7 @@ async function runAgent(
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
     const finalize = round === MAX_ROUNDS - 1;
-    const out = await runRound(providers, history, page, finalize, round, emit, visitor);
+    const out = await runRound(providers, history, page, audience, finalize, round, emit, visitor);
 
     if (out.calls.length && !finalize) {
       // Some models narrate before calling ("let me check…"). That text is
@@ -508,7 +516,7 @@ export default async function handler(request: Request): Promise<Response> {
   const declaredLength = Number(request.headers.get('content-length') ?? 0);
   if (declaredLength > MAX_BODY_BYTES) return json({ type: 'error', error: 'request too large' }, 413);
 
-  let payload: { messages?: unknown; context?: { projectId?: unknown } };
+  let payload: { messages?: unknown; context?: { projectId?: unknown; audience?: unknown } };
   try {
     // Read as text first so an undeclared (chunked) body is held to the same
     // cap as a declared one.
@@ -558,6 +566,8 @@ export default async function handler(request: Request): Promise<Response> {
   // An unknown project id is ignored rather than refused: the page context is
   // a hint about where the visitor is, not part of the question.
   const page = pageContext(payload.context?.projectId);
+  // Same rule: an unknown lens is no lens, not a refusal.
+  const audience: Audience = isAudience(payload.context?.audience) ? payload.context.audience : 'general';
 
   const geminiKey = process.env.GEMINI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
@@ -599,7 +609,7 @@ export default async function handler(request: Request): Promise<Response> {
   /* Only an opening question is cacheable — see answerCache.ts. */
   const opening = messages.length === 1;
   const cacheable = opening && process.env.ASK_ANSWER_CACHE !== 'off';
-  const key = cacheable ? await cacheKey(CONTEXT.generatedAt, messages[0].content, page?.projectId ?? null) : null;
+  const key = cacheable ? await cacheKey(CONTEXT.generatedAt, messages[0].content, page?.projectId ?? null, audience) : null;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -617,7 +627,7 @@ export default async function handler(request: Request): Promise<Response> {
         if (cached) {
           await replay(cached, emit);
         } else {
-          const outcome = await runAgent(providers, messages, page, emit, request.signal);
+          const outcome = await runAgent(providers, messages, page, audience, emit, request.signal);
           // Never cache an answer with an unverified figure: serving it once
           // is a flagged mistake, serving it to everyone is a policy.
           if (key && outcome && outcome.unverified.length === 0) {
