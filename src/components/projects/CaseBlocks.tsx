@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 
-import type { CaseBlock, FieldNote } from '@/types';
+import type { CaseBlock } from '@/types';
 
 /* ==========================================================================
    CASE-STUDY BLOCKS
@@ -14,7 +14,7 @@ import type { CaseBlock, FieldNote } from '@/types';
      figure        a picture of the result
      callout       one sentence that must not be skimmed past
 
-   Plus field notes — debugging stories — which get their own section.
+   Field notes — debugging stories — live in components/case/CaseSections.
    ========================================================================== */
 
 /* ── Architecture ─────────────────────────────────────────────────────────
@@ -262,59 +262,5 @@ export function CaseBlocks({ blocks }: { blocks?: CaseBlock[] }) {
         }
       })}
     </div>
-  );
-}
-
-/* ── Field notes ──────────────────────────────────────────────────────────
-   Symptom, the explanations that did not hold, what it actually was, the fix,
-   and what now stops it coming back. The wrong turns are shown struck through
-   in the same visual language as a rejected trade-off: both are the part of
-   engineering most write-ups leave out. */
-
-export function FieldNotes({ notes }: { notes: FieldNote[] }) {
-  return (
-    <ol className="flex flex-col gap-px bg-border border border-border">
-      {notes.map((note, i) => (
-        <li key={note.title} className="bg-card p-5 md:p-7">
-          <h3 className="flex items-baseline gap-3 mb-5">
-            <span className="font-mono text-[11px] tabular-nums text-primary">{String(i + 1).padStart(2, '0')}</span>
-            <span className="text-[16px] md:text-[17px] font-semibold text-foreground leading-snug">{note.title}</span>
-          </h3>
-
-          <dl className="grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-x-5 gap-y-3 text-[14px] leading-[1.7]">
-            <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground sm:pt-1">symptom</dt>
-            <dd className="text-foreground/85">{note.symptom}</dd>
-
-            {note.wrongTurns?.length ? (
-              <>
-                <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground sm:pt-1">tried</dt>
-                <dd>
-                  <ul className="space-y-1">
-                    {note.wrongTurns.map((turn) => (
-                      <li key={turn} className="text-muted-foreground line-through decoration-muted-foreground/40">
-                        {turn}
-                      </li>
-                    ))}
-                  </ul>
-                </dd>
-              </>
-            ) : null}
-
-            <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-primary sm:pt-1">actually</dt>
-            <dd className="text-foreground">{note.rootCause}</dd>
-
-            <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground sm:pt-1">fix</dt>
-            <dd className="text-foreground/85">{note.fix}</dd>
-
-            {note.guard && (
-              <>
-                <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-emerald-400/90 sm:pt-1">guarded by</dt>
-                <dd className="text-foreground/85">{note.guard}</dd>
-              </>
-            )}
-          </dl>
-        </li>
-      ))}
-    </ol>
   );
 }

@@ -1,30 +1,40 @@
-import React, { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  Bug,
-  CheckCircle2,
-  ExternalLink,
-  GitBranch,
-  Github,
-  Info,
-  Layers,
-  MessageSquare,
-  Target,
-} from "lucide-react";
+import { AlertTriangle, Bug, ExternalLink, GitBranch, Github, Info, Layers, MessageSquare, Target } from "lucide-react";
 
 import { PROJECTS } from "@/data/projects";
-import { STATUS_CLASS, STATUS_LABEL, projectStatus } from "@/lib/project";
 import SEOHead from "@/components/SEOHead";
-import CaseStudyNav, { type CaseStudySection } from "@/components/projects/CaseStudyNav";
-import { CaseBlocks, FieldNotes } from "@/components/projects/CaseBlocks";
+import { CaseBlocks } from "@/components/projects/CaseBlocks";
 import ProjectAsk from "@/components/projects/ProjectAsk";
-import TransitionLink from "@/components/ui/TransitionLink";
-import { VIEW_TRANSITIONS, transitionName } from "@/lib/viewTransition";
+import { CaseContents, MobileContents, ReadingProgress } from "@/components/case/CaseContents";
+import { CaseHero, CaseSummary } from "@/components/case/CaseHero";
+import { CaseSection, FieldNotesList, Highlights, Tradeoffs } from "@/components/case/CaseSections";
+import { CaseFooter } from "@/components/case/CaseFooter";
+import { readingMinutes, sectionsFor, type CaseSection as Section } from "@/components/case/caseModel";
+import { VIEW_TRANSITIONS } from "@/lib/viewTransition";
 import type { Project, SEOMetadata } from "@/types";
+
+/* ==========================================================================
+   CASE STUDY
+
+   Laid out for the two ways these pages are actually read.
+
+   Skimmed: the hero says what it is, whether it is running and how long the
+   page takes; "in 30 seconds" gives the problem, approach and outcome in
+   their own first words; the trade-offs are visually the heaviest thing on
+   the page, because they are the most convincing.
+
+   Read: prose set for reading (16–17px, regular weight, 68ch), a contents
+   rail that fills as each section is read with an estimate of the time
+   left, headings that link to themselves, debugging stories folded to their
+   symptoms, and at the end the assistant — told which page it is on — then
+   where to go next.
+
+   Nothing on the page is written for the page. Every figure, sentence and
+   count comes from the project's data (caseModel derives the rest), so the
+   case study, the card, the index and the AI can never disagree.
+   ========================================================================== */
 
 const SITE_URL = "https://www.builtbyem.dev";
 const getOrigin = () => (typeof window !== "undefined" ? window.location.origin : SITE_URL);
@@ -38,177 +48,94 @@ function truncate(text: string, max = 155): string {
   return `${clipped.slice(0, lastSpace > 0 ? lastSpace : max).trimEnd()}…`;
 }
 
-/* Reading mode for the case-study prose.
-
-   This was 15px, light weight, in the muted grey — the hardest combination to
-   read for four sections of real writing, on the page that is nothing *but*
-   reading. The instrument styling (mono, uppercase, tracked) stays on the
-   labels and figures; the sentences get a size, weight and contrast meant for
-   sentences. */
+/* Reading mode for the case-study prose: a size, weight and contrast meant
+   for sentences. The instrument styling stays on labels and figures. */
 const PROSE = "text-[16px] md:text-[17px] text-foreground/80 leading-[1.75] max-w-[68ch]";
-
-/* ── Section heading ── */
-
-const SectionHeading = ({
-  id,
-  num,
-  label,
-  icon: Icon,
-}: {
-  id: string;
-  num: string;
-  label: string;
-  icon: React.ElementType;
-}) => (
-  /* scroll-mt clears the fixed navbar: without it an in-page jump lands with
-     the heading tucked underneath the bar. */
-  <div id={id} className="flex items-center gap-3 mb-6 pb-4 border-b border-border scroll-mt-28">
-    <span className="font-mono text-[11px] tabular-nums text-primary">{num}</span>
-    <Icon className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
-    <h2 className="text-[13px] font-mono uppercase tracking-[0.18em] text-foreground">{label}</h2>
-    <span className="flex-1 h-px bg-border" aria-hidden="true" />
-  </div>
-);
 
 /* ── Sidebar ── */
 
-const MetaSidebar = ({
-  project,
-  sections,
-}: {
-  project: Project;
-  sections: CaseStudySection[];
-}) => {
-  const status = projectStatus(project);
+const Sidebar = ({ project, minutes, sections }: { project: Project; minutes: number; sections: Section[] }) => (
+  /* h-full is load-bearing: a sticky child can only travel inside its
+     parent's box, and the aside must claim the stretched grid cell. */
+  <aside className="hidden lg:block h-full">
+    <div className="sticky top-28 flex flex-col gap-8">
+      <CaseContents sections={sections} minutes={minutes} />
 
-  return (
-    // Column placement is owned by the motion wrapper that renders this, so
-    // no col-span here — it would be inert anyway, since this is not a direct
-    // child of the grid.
-    /* h-full is load-bearing. A sticky element can only travel inside its
-       nearest scrolling ancestor's *box*, and this aside was sizing to its
-       own content — 684px against a 1929px article — so the sidebar detached
-       and scrolled away a third of the way down every long case study. The
-       grid cell already stretches; the aside has to claim that height for
-       the sticky child to have anywhere to go. */
-    <aside className="h-full">
-      <div className="lg:sticky lg:top-28 flex flex-col gap-8">
-        {/* Contents leads: on a page of four sections of real writing, the
-            first thing a skimming reader needs is the shape of it. */}
-        <CaseStudyNav sections={sections} />
-
-        {/* Status */}
-        <div>
-          <span className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-3 block">
-            // Status
-          </span>
-          <div className="flex items-center gap-2 border border-border bg-card px-3 py-2">
-            <span
-              className={`w-1.5 h-1.5 shrink-0 ${
-                status === "live" ? "bg-emerald-500 status-live" : "bg-muted-foreground"
-              }`}
-              aria-hidden="true"
-            />
-            <span className={`text-[11px] font-mono uppercase tracking-widest ${STATUS_CLASS[status]}`}>
-              {STATUS_LABEL[status]}
-            </span>
-          </div>
-        </div>
-
-        {/* Metrics */}
-        {project.metrics.length > 0 && (
-          <div>
-            <span className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-3 block">
-              // Key Figures
-            </span>
-            <dl className="border border-border bg-card divide-y divide-border">
-              {project.metrics.map((metric) => (
-                <div key={metric.label} className="flex flex-col gap-1 px-3 py-2.5">
-                  <dt className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                    {metric.label}
-                  </dt>
-                  <dd className="font-mono text-[15px] text-primary tabular-nums">{metric.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        )}
-
-        {/* Stack */}
-        <div>
-          <span className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-3 block">
-            // Stack
-          </span>
-          <ul className="flex flex-wrap gap-2">
-            {project.stack.map((tech) => (
-              <li
-                key={tech}
-                className="px-2.5 py-1 border border-border bg-card/50 text-muted-foreground text-[10px] font-mono uppercase tracking-wider"
-              >
-                {tech}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Links */}
-        {(project.github || project.liveUrl) && (
-          <div>
-            <span className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-3 block">
-              // Links
-            </span>
-            <div className="flex flex-col gap-2">
-              {project.github && (
-                <a
-                  href={project.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center justify-between border border-border bg-card px-3 py-2.5 hover:border-primary/40 transition-colors"
-                >
-                  <span className="flex items-center gap-2.5 text-muted-foreground group-hover:text-foreground transition-colors">
-                    <Github className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="text-[11px] font-mono uppercase tracking-wider">Source Code</span>
-                  </span>
-                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                </a>
-              )}
-              {project.liveUrl && (
-                <a
-                  href={project.liveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center justify-between border border-border bg-card px-3 py-2.5 hover:border-primary/40 transition-colors"
-                >
-                  <span className="flex items-center gap-2.5 text-muted-foreground group-hover:text-foreground transition-colors">
-                    <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="text-[11px] font-mono uppercase tracking-wider">Live Demo</span>
-                  </span>
-                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                </a>
-              )}
-            </div>
-          </div>
-        )}
+      <div>
+        <span className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-3 block">// Stack</span>
+        <ul className="flex flex-wrap gap-1.5">
+          {project.stack.map((tech) => (
+            <li
+              key={tech}
+              className="px-2 py-1 border border-border bg-card/50 text-muted-foreground text-[10px] font-mono uppercase tracking-wider"
+            >
+              {tech}
+            </li>
+          ))}
+          {!project.stack.length && <li className="font-mono text-[11px] text-muted-foreground">not built</li>}
+        </ul>
       </div>
-    </aside>
-  );
-};
+
+      {(project.github || project.liveUrl) && (
+        <div className="flex flex-col gap-2">
+          {project.github && (
+            <a
+              href={project.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-between border border-border bg-card px-3 py-2.5 hover:border-primary/40 transition-colors"
+            >
+              <span className="flex items-center gap-2.5 text-muted-foreground group-hover:text-foreground transition-colors">
+                <Github className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="text-[11px] font-mono uppercase tracking-wider">Source</span>
+              </span>
+              <span className="text-muted-foreground group-hover:text-primary transition-colors" aria-hidden="true">↗</span>
+            </a>
+          )}
+          {project.liveUrl && (
+            <a
+              href={project.liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-between border border-border bg-card px-3 py-2.5 hover:border-primary/40 transition-colors"
+            >
+              <span className="flex items-center gap-2.5 text-muted-foreground group-hover:text-foreground transition-colors">
+                <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="text-[11px] font-mono uppercase tracking-wider">Live</span>
+              </span>
+              <span className="text-muted-foreground group-hover:text-primary transition-colors" aria-hidden="true">↗</span>
+            </a>
+          )}
+        </div>
+      )}
+
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground leading-relaxed">
+        <kbd className="border border-border px-1">[</kbd> <kbd className="border border-border px-1">]</kbd> previous · next
+        <br />
+        select any sentence to ask about it
+      </p>
+    </div>
+  </aside>
+);
 
 /* ── Page ── */
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
   const project = PROJECTS.find((p) => p.id === id);
-  const projectIndex = PROJECTS.findIndex((p) => p.id === id);
+  /* Memoised: the contents rail and the mobile bar subscribe to scroll per
+     section list, and a fresh array each render would resubscribe both. */
+  const sections = useMemo(() => (project ? sectionsFor(project) : []), [project]);
 
-  // Wrap at both ends so navigation never dead-ends on the first or last project.
-  const previousProject =
-    projectIndex >= 0 ? PROJECTS[(projectIndex - 1 + PROJECTS.length) % PROJECTS.length] : null;
-  const nextProject = projectIndex >= 0 ? PROJECTS[(projectIndex + 1) % PROJECTS.length] : null;
-
+  /* To the top on arrival — unless the address names a section, which is
+     what a copied section link is for. */
   useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      const frame = requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView());
+      return () => cancelAnimationFrame(frame);
+    }
     window.scrollTo(0, 0);
   }, [id]);
 
@@ -217,13 +144,10 @@ const ProjectDetail = () => {
     const origin = getOrigin();
     const canonical = `${origin}/projects/${project.id}`;
     const description = truncate(project.caseStudy?.problem ?? project.description);
-    const image = project.image
-      ? `${origin}${project.image}`
-      : `${origin}/og-image.jpg`;
+    const image = project.image ? `${origin}${project.image}` : `${origin}/og-image.jpg`;
 
     /* SoftwareSourceCode is the accurate schema.org type for an engineering
-       project page — more specific than CreativeWork, and it lets the stack
-       be expressed as programmingLanguage rather than loose keywords. */
+       project page, and lets the stack be expressed as programmingLanguage. */
     const projectSchema = {
       "@context": "https://schema.org",
       "@type": "SoftwareSourceCode",
@@ -234,11 +158,7 @@ const ProjectDetail = () => {
       ...(project.github ? { codeRepository: project.github } : {}),
       programmingLanguage: project.stack,
       applicationCategory: project.category,
-      author: {
-        "@type": "Person",
-        name: "Emmanuel Moghalu",
-        url: origin,
-      },
+      author: { "@type": "Person", name: "Emmanuel Moghalu", url: origin },
       ...(project.image ? { image } : {}),
     };
 
@@ -266,11 +186,7 @@ const ProjectDetail = () => {
           }}
         />
         <h1 className="text-2xl text-foreground font-bold font-mono tracking-tighter">404 // NOT_FOUND</h1>
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="text-primary hover:underline font-mono text-sm"
-        >
+        <button type="button" onClick={() => navigate("/")} className="text-primary hover:underline font-mono text-sm">
           Return to root
         </button>
       </div>
@@ -279,46 +195,15 @@ const ProjectDetail = () => {
 
   const { caseStudy } = project;
   const headline = `${project.title} — ${project.subtitle}`;
-
-  /* Derived from what this page actually renders, not a fixed list — a
-     project without a case study shows Overview, and one whose trade-offs
-     supersede its decisions never renders the decisions block at all. A
-     hardcoded contents would link to headings that are not there. */
-  const sections: CaseStudySection[] = caseStudy
-    ? [
-        { id: "problem", num: "01", label: "The Problem" },
-        { id: "approach", num: "02", label: "The Approach" },
-        { id: "outcome", num: "03", label: "The Outcome" },
-        ...(caseStudy.tradeoffs?.length
-          ? [{ id: "tradeoffs", num: "04", label: "Trade-offs" }]
-          : project.decisions.length
-            ? [{ id: "decisions", num: "04", label: "Architecture Decisions" }]
-            : []),
-        ...(caseStudy.fieldNotes?.length
-          ? [{ id: "field-notes", num: "05", label: "Field Notes" }]
-          : []),
-        { id: "ask", num: "→", label: "Ask About It" },
-      ]
-    : [
-        { id: "overview", num: "01", label: "Overview" },
-        ...(project.decisions.length
-          ? [{ id: "decisions", num: "02", label: "Architecture Decisions" }]
-          : []),
-        { id: "ask", num: "→", label: "Ask About It" },
-      ];
+  const minutes = readingMinutes(project);
+  const decisionsNum = sections.find((s) => s.id === "decisions")?.num ?? "02";
+  const fieldNotesNum = sections.find((s) => s.id === "field-notes")?.num ?? "05";
 
   const metadata: SEOMetadata = {
     title: `${headline} | Emmanuel Moghalu`,
     description: seo.description,
     canonical: seo.canonical,
-    openGraph: {
-      title: headline,
-      description: seo.description,
-      image: seo.image,
-      imageAlt: headline,
-      url: seo.canonical,
-      type: "article",
-    },
+    openGraph: { title: headline, description: seo.description, image: seo.image, imageAlt: headline, url: seo.canonical, type: "article" },
     twitter: {
       card: "summary_large_image",
       site: "@mrebr",
@@ -330,358 +215,139 @@ const ProjectDetail = () => {
   };
 
   return (
-    <div className="pt-32 pb-24 min-h-screen bg-background relative selection:bg-primary/20 selection:text-primary">
-      {/* Routed through SEOHead rather than a bare Helmet so this page emits the
-          same complete tag set every other route does — which is what lets the
-          static tags in index.html be adopted instead of duplicated. */}
+    <div className="pt-28 md:pt-32 pb-24 min-h-screen bg-background relative selection:bg-primary/20 selection:text-primary">
       <SEOHead metadata={metadata}>
         <script type="application/ld+json">{JSON.stringify(seo.projectSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(seo.breadcrumbSchema)}</script>
       </SEOHead>
 
-      {/* Background */}
+      <ReadingProgress />
+
+      {/* Background: the drafting grid, fading out below the hero. */}
       <div className="absolute inset-0 z-0 pointer-events-none noise-overlay" />
       <div
-        className="absolute inset-0 z-0 pointer-events-none opacity-[0.05]"
+        className="absolute inset-x-0 top-0 h-[900px] z-0 pointer-events-none opacity-[0.05]"
         style={{
           backgroundImage:
             "linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
-          maskImage: "radial-gradient(ellipse 80% 50% at 50% 0%, #000 20%, transparent 90%)",
-          WebkitMaskImage: "radial-gradient(ellipse 80% 50% at 50% 0%, #000 20%, transparent 90%)",
+          maskImage: "radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 90%)",
+          WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 90%)",
         }}
       />
 
       <div className="container px-6 md:px-12 max-w-6xl mx-auto relative z-10">
-        {/* Breadcrumb */}
-        <motion.nav
-          initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="flex flex-wrap items-center gap-2 mb-12"
-          aria-label="Breadcrumb"
-        >
-          <TransitionLink
-            to="/"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-[11px] font-mono uppercase tracking-widest group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" aria-hidden="true" />
-            Home
-          </TransitionLink>
-          <span className="text-muted-foreground font-mono text-[11px]" aria-hidden="true">
-            /
-          </span>
-          {/* Now a real link — this was inert text before. */}
-          <TransitionLink
-            to="/#projects"
-            className="text-muted-foreground hover:text-foreground transition-colors font-mono text-[11px] uppercase tracking-widest"
-          >
-            Projects
-          </TransitionLink>
-          <span className="text-muted-foreground font-mono text-[11px]" aria-hidden="true">
-            /
-          </span>
-          <span className="text-primary font-mono text-[11px] uppercase tracking-widest" aria-current="page">
-            {project.title}
-          </span>
-        </motion.nav>
+        <CaseHero project={project} minutes={minutes} />
+        <CaseSummary project={project} />
 
-        {/* Header */}
-        <motion.header
-          initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-16"
-        >
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-mono uppercase tracking-[0.2em] border border-primary/20">
-              {project.category}
-            </span>
-            <span className="text-[10px] font-mono text-muted-foreground border border-border px-3 py-1 uppercase tracking-widest">
-              {project.timeline}
-            </span>
-          </div>
-
-          <h1
-            className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4 leading-[1.1] w-fit"
-            style={{ viewTransitionName: transitionName("title", project.id) }}
-          >
-            {project.title}
-          </h1>
-          {/* Mono, matching the subtitle treatment the index and cards use —
-              this page was the last place still setting it in large sans. */}
-          <p className="font-mono text-[13px] md:text-[15px] text-muted-foreground max-w-[60ch] leading-relaxed">
-            {project.subtitle}
-          </p>
-        </motion.header>
-
-        {/* Image */}
-        {project.image && (
-          <motion.figure
-            initial={VIEW_TRANSITIONS ? false : { opacity: 0, scale: 0.99 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full border border-border bg-card p-1.5 md:p-2 relative group overflow-hidden mb-16 transition-colors duration-500 hover:border-primary/50"
-            style={{ boxShadow: "var(--shadow-md), var(--shadow-glow)" }}
-          >
-            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-primary z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-primary z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-primary z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-primary z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-            <div className="w-full aspect-video overflow-hidden relative bg-muted">
-              <img
-                src={project.image}
-                alt={`${project.title} interface`}
-                loading="eager"
-                decoding="async"
-                className="w-full h-full object-cover object-top"
-                style={{ viewTransitionName: transitionName("art", project.id) }}
-              />
-            </div>
-          </motion.figure>
-        )}
-
-        {/* Body */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_240px] gap-12 lg:gap-16">
           <motion.article
             initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="lg:col-span-8 flex flex-col gap-14"
+            className="flex flex-col gap-16 min-w-0"
           >
-            {/* Scope notice — stated up front, not buried. Being explicit about
-                what is synthetic is a credibility gain, not a disclaimer. */}
+            <MobileContents sections={sections} />
+
+            {/* Scope notice — stated up front, not buried. */}
             {caseStudy?.notice && (
-              <div className="flex gap-4 border border-amber-500/25 bg-amber-500/5 p-5">
+              <div className="flex gap-4 border border-amber-500/25 bg-amber-500/5 p-5 -mt-6">
                 <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
-                  <span className="block text-[10px] font-mono uppercase tracking-[0.2em] text-amber-400 mb-2">
-                    Scope Notice
-                  </span>
-                  <p className="text-[13px] text-muted-foreground leading-relaxed font-light">
-                    {caseStudy.notice}
-                  </p>
+                  <span className="block text-[10px] font-mono uppercase tracking-[0.2em] text-amber-400 mb-2">Scope notice</span>
+                  <p className="text-[14px] text-foreground/75 leading-relaxed">{caseStudy.notice}</p>
                 </div>
               </div>
             )}
 
             {caseStudy ? (
               <>
-                <section>
-                  <SectionHeading id="problem" num="01" label="The Problem" icon={AlertTriangle} />
-                  <p className={PROSE}>
-                    {caseStudy.problem}
-                  </p>
+                <CaseSection id="problem" num="01" label="The Problem" icon={AlertTriangle}>
+                  <p className={PROSE}>{caseStudy.problem}</p>
                   <CaseBlocks blocks={caseStudy.blocks?.problem} />
-                </section>
+                </CaseSection>
 
-                <section>
-                  <SectionHeading id="approach" num="02" label="The Approach" icon={Layers} />
-                  <p className={PROSE}>
-                    {caseStudy.approach}
-                  </p>
+                <CaseSection id="approach" num="02" label="The Approach" icon={Layers}>
+                  <p className={PROSE}>{caseStudy.approach}</p>
                   <CaseBlocks blocks={caseStudy.blocks?.approach} />
-                </section>
+                </CaseSection>
 
-                <section>
-                  <SectionHeading id="outcome" num="03" label="The Outcome" icon={Target} />
-                  <p className={PROSE}>
-                    {caseStudy.outcome}
-                  </p>
+                <CaseSection
+                  id="outcome"
+                  num="03"
+                  label="The Outcome"
+                  icon={Target}
+                  aside={
+                    caseStudy.highlights?.length ? (
+                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground tabular-nums">
+                        {caseStudy.highlights.length} highlights
+                      </span>
+                    ) : undefined
+                  }
+                >
+                  <p className={PROSE}>{caseStudy.outcome}</p>
                   <CaseBlocks blocks={caseStudy.blocks?.outcome} />
+                  {caseStudy.highlights?.length ? <Highlights items={caseStudy.highlights} /> : null}
+                </CaseSection>
 
-                  {caseStudy.highlights && caseStudy.highlights.length > 0 && (
-                    <ul className="mt-8 flex flex-col gap-3">
-                      {caseStudy.highlights.map((item) => (
-                        <li key={item} className="flex items-start gap-3">
-                          <CheckCircle2
-                            className="w-3.5 h-3.5 text-primary shrink-0 mt-1"
-                            aria-hidden="true"
-                          />
-                          <span className="text-[14px] text-foreground/85 leading-relaxed">
-                            {item}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+                {caseStudy.tradeoffs?.length ? (
+                  <CaseSection
+                    id="tradeoffs"
+                    num="04"
+                    label="Trade-offs"
+                    icon={GitBranch}
+                    aside={
+                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground tabular-nums">
+                        {caseStudy.tradeoffs.length} decisions
+                      </span>
+                    }
+                  >
+                    <Tradeoffs project={project} tradeoffs={caseStudy.tradeoffs} />
+                  </CaseSection>
+                ) : null}
 
-                {caseStudy.tradeoffs && caseStudy.tradeoffs.length > 0 && (
-                  <section>
-                    <SectionHeading id="tradeoffs" num="04" label="Trade-offs" icon={GitBranch} />
-                    {/* The strongest content on the site, given the weight to
-                        match. A trade-off names the option that lost, which is
-                        the thing almost no portfolio does and the reason an
-                        engineer reading this page believes the rest of it.
-                        Previously it rendered at the same weight as every
-                        other paragraph, four sections down. */}
-                    <p className="font-mono text-[11px] text-muted-foreground mb-5 max-w-[68ch]">
-                      Each decision below names the option that was rejected, and why.
-                    </p>
-
-                    <ol className="flex flex-col gap-px bg-border border border-border">
-                      {caseStudy.tradeoffs.map((tradeoff, i) => (
-                        <li key={tradeoff.decision} className="bg-card p-5 md:p-6">
-                          <span className="flex items-baseline gap-2.5 mb-4">
-                            <span className="font-mono text-[10px] tabular-nums text-primary">
-                              {String(i + 1).padStart(2, "0")}
-                            </span>
-                            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground">
-                              {tradeoff.decision}
-                            </span>
-                          </span>
-
-                          {/* Chosen and rejected on their own rows with a
-                              shared label column, so the pair reads as one
-                              comparison rather than a run-on line that wraps
-                              unpredictably once a name gets long. */}
-                          <div className="grid grid-cols-[3.5rem_1fr] gap-x-3 gap-y-2 mb-4">
-                            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground pt-1">
-                              chose
-                            </span>
-                            <span className="font-mono text-[13px] text-emerald-400 leading-snug">
-                              {tradeoff.chose}
-                            </span>
-
-                            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground pt-1">
-                              over
-                            </span>
-                            <span className="font-mono text-[13px] text-muted-foreground leading-snug line-through decoration-muted-foreground/50">
-                              {tradeoff.rejected}
-                            </span>
-                          </div>
-
-                          <p className="text-[14px] text-foreground/75 leading-[1.75] max-w-[68ch] border-l border-primary/30 pl-4">
-                            {tradeoff.why}
-                          </p>
-                        </li>
-                      ))}
-                    </ol>
-                  </section>
-                )}
-
-                {caseStudy.fieldNotes && caseStudy.fieldNotes.length > 0 && (
-                  <section>
-                    <SectionHeading id="field-notes" num="05" label="Field Notes" icon={Bug} />
-                    <p className="font-mono text-[12px] text-muted-foreground mb-5 max-w-[68ch]">
-                      Bugs worth telling: what was seen, the explanations that did not hold, and what now stops each one
-                      coming back.
-                    </p>
-                    <FieldNotes notes={caseStudy.fieldNotes} />
-                  </section>
-                )}
+                {caseStudy.fieldNotes?.length ? (
+                  <CaseSection id="field-notes" num={fieldNotesNum} label="Field Notes" icon={Bug}>
+                    <FieldNotesList notes={caseStudy.fieldNotes} />
+                  </CaseSection>
+                ) : null}
               </>
             ) : (
-              /* No verified long-form source for this project — render the
-                 short form rather than padding the template with invention. */
-              <section>
-                <SectionHeading id="overview" num="01" label="Overview" icon={Layers} />
-                <p className={PROSE}>
-                  {project.description}
-                </p>
-              </section>
+              /* No verified long-form source for this project — the short
+                 form, rather than a template padded with invention. */
+              <CaseSection id="overview" num="01" label="Overview" icon={Layers}>
+                <p className={PROSE}>{project.description}</p>
+              </CaseSection>
             )}
 
-            {/* Decisions are suppressed once trade-offs exist.
-
-                Both describe the same choices, but a trade-off names the
-                rejected alternative and a decision does not — so showing both
-                meant reading the Redpanda rationale (or DuckDB, or semantic
-                clustering) twice on one page, the second time with less
-                information. The data is kept because the flagship listing
-                cards still render it. */}
+            {/* Decisions only where no trade-offs supersede them: both
+                describe the same choices, and a trade-off names what lost. */}
             {project.decisions.length > 0 && !caseStudy?.tradeoffs?.length && (
-              <section>
-                <SectionHeading
-                  id="decisions"
-                  num={caseStudy ? "04" : "02"}
-                  label="Architecture Decisions"
-                  icon={GitBranch}
-                />
-                <div className="flex flex-col gap-6">
+              <CaseSection id="decisions" num={decisionsNum} label="Architecture Decisions" icon={GitBranch}>
+                <ol className="flex flex-col gap-px bg-border border border-border">
                   {project.decisions.map((decision, i) => (
-                    <div key={decision.title} className="flex gap-4">
-                      <span className="font-mono text-[11px] text-primary mt-1 shrink-0">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
+                    <li key={decision.title} className="bg-card p-5 md:p-6 flex gap-4">
+                      <span className="font-mono text-[10px] tabular-nums text-primary pt-1">{String(i + 1).padStart(2, "0")}</span>
                       <div>
-                        <h3 className="text-[13px] font-semibold text-foreground mb-2">{decision.title}</h3>
-                        <p className="text-[13px] text-muted-foreground leading-relaxed font-light">
-                          {decision.detail}
-                        </p>
+                        <h3 className="text-[14px] font-semibold text-foreground mb-2">{decision.title}</h3>
+                        <p className="text-[14px] text-foreground/75 leading-[1.75]">{decision.detail}</p>
                       </div>
-                    </div>
+                    </li>
                   ))}
-                </div>
-              </section>
+                </ol>
+              </CaseSection>
             )}
 
-            {/* Last, because it is where a question occurs to someone: after
-                they have read the write-up, not before. */}
-            <section>
-              <SectionHeading id="ask" num="→" label="Ask About It" icon={MessageSquare} />
+            {/* Last, because it is where a question occurs to someone. */}
+            <CaseSection id="ask" num="→" label="Ask About It" icon={MessageSquare}>
               <ProjectAsk key={project.id} project={project} />
-            </section>
+            </CaseSection>
           </motion.article>
 
-          <motion.div
-            initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="lg:col-span-4 lg:order-first"
-          >
-            <MetaSidebar project={project} sections={sections} />
-          </motion.div>
+          <Sidebar project={project} minutes={minutes} sections={sections} />
         </div>
 
-        {/* Adjacent navigation */}
-        {(previousProject || nextProject) && (
-          <nav
-            className="mt-24 pt-8 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4"
-            aria-label="Adjacent projects"
-          >
-            {previousProject && (
-              <TransitionLink
-                to={`/projects/${previousProject.id}`}
-                className="group flex items-center gap-4 p-6 border border-border bg-card/30 hover:border-primary/40 transition-colors"
-              >
-                <ArrowLeft
-                  className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:-translate-x-1 transition-all shrink-0"
-                  aria-hidden="true"
-                />
-                <span>
-                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest block mb-2">
-                    Previous
-                  </span>
-                  <span className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                    {previousProject.title}
-                  </span>
-                </span>
-              </TransitionLink>
-            )}
-            {nextProject && (
-              <TransitionLink
-                to={`/projects/${nextProject.id}`}
-                className="group flex items-center justify-between gap-4 p-6 border border-border bg-card/30 hover:border-primary/40 transition-colors sm:col-start-2"
-              >
-                <span className="text-right sm:text-left ml-auto sm:ml-0">
-                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest block mb-2">
-                    Next
-                  </span>
-                  <span className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                    {nextProject.title}
-                  </span>
-                </span>
-                <ArrowRight
-                  className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0"
-                  aria-hidden="true"
-                />
-              </TransitionLink>
-            )}
-          </nav>
-        )}
+        <CaseFooter project={project} all={PROJECTS} />
       </div>
     </div>
   );

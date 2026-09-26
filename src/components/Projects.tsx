@@ -1,604 +1,265 @@
 import React from "react";
-import TransitionLink from "@/components/ui/TransitionLink";
-import { transitionName } from "@/lib/viewTransition";
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, ExternalLink, Github, LayoutGrid, List, Sparkles, Terminal } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Sparkles, Terminal } from "lucide-react";
 
-import type { Project, ProjectMetric } from "@/types";
 import { PROJECTS } from "@/data/projects";
-import { STATUS_CLASS, STATUS_LABEL, projectStatus } from "@/lib/project";
-import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
+import { useAsk } from "@/components/ai/AskProvider";
+import FlagshipStage from "@/components/projects/FlagshipStage";
+import WorkToolbar from "@/components/projects/WorkToolbar";
 import ProjectIndex from "@/components/projects/ProjectIndex";
-import { TierRule, groupByTier } from "@/components/projects/tiers";
+import ProjectCards from "@/components/projects/ProjectCards";
+import StackMatrix from "@/components/projects/StackMatrix";
+import CompareDock from "@/components/projects/CompareDock";
+import {
+  COMPARE_MAX,
+  DEFAULT_STATE,
+  TIERS,
+  applyWork,
+  isFiltered,
+  rankStack,
+  searchFromState,
+  stateFromSearch,
+  type Tier,
+  type WorkState,
+} from "@/components/projects/workModel";
 
 /* ==========================================================================
-   PROJECTS
+   WORK
 
-   One spotlight, then an index. Cards are the alternate view, not the
-   default.
+   A stage, then a catalogue.
 
-   This section was four self-declared tiers of cards — "01 Flagship
-   Architecture" through "04 Architecture Studies" — running 4,454px, half
-   the page, for twelve projects. Every card carried a category, a year, a
-   title, a subtitle, a metric row, a description paragraph, two architecture
-   decisions and its full stack. All of that is written better, at length, on
-   the case-study pages; repeating it here meant the section competed with
-   the thing it exists to route people into.
+   The flagships get a stage (FlagshipStage): four, chosen between rather
+   than rotated, each at a size that shows what it is. Below it, every
+   project — flagships included, so filters mean what they say — in the
+   catalogue: one toolbar, three views of the same results.
 
-   The four tier banners are gone, but the tier system is not. It survives
-   as a group rule inside the index — a rank glyph (▍▍▍ down to ┆) and a
-   hairline carrying the name — plus a filter. Grouping is preserved at one
-   line per tier instead of a heading block, which is what makes the
-   taxonomy available without it dominating the page.
+     index    the scanning view, in the terminal's language
+     cards    the browsing view, art on every card
+     matrix   projects × technologies — breadth and depth at a glance
 
-   All text runs at full token opacity. Dimming muted-foreground to 40%
-   measures 1.76:1 on this background where AA wants 4.5:1; only ≥ 0.9
-   passes. Quiet is done with size and tracking here, never with alpha.
+   Search reaches into the case studies, not just the titles, and says where
+   it matched. Filter state lives in the URL, so "his Python systems, newest
+   first" is a link. Any two or three projects can be compared side by side
+   and the comparison handed to the assistant.
 
-   Design-stage work stays visibly distinct wherever it appears — the status
-   column reads DESIGN STAGE in amber, and the note below the controls says
-   plainly that it is not built. That guarantee is the one thing the redesign
-   was not allowed to cost.
+   Two guarantees this section is not allowed to lose, whatever the design:
+   design-stage work always reads as not built (dashed borders, DESIGN STAGE
+   in amber, the caveat below), and every figure is the data's — counted
+   from PROJECTS, never written into the copy.
    ========================================================================== */
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/*  SHARED                                                                    */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
-/* One grammar for a metric, everywhere.
-
-   Previously there were three: a giant animated percentage in the spotlight,
-   `[Records: 1.5M+]` brackets on flagship cards, and the same brackets
-   stacked on prototypes. Label above, figure below, mono and tabular. */
-const Metric = ({ metric }: { metric: ProjectMetric }) => (
-  <div className="flex flex-col gap-0.5 min-w-0">
-    <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground truncate">
-      {metric.label}
-    </span>
-    <span className="font-mono text-[12px] text-primary tabular-nums truncate">{metric.value}</span>
-  </div>
-);
-
-const TechTag = ({ tech }: { tech: string }) => (
-  <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-wider border border-border/70 px-1.5 py-0.5">
-    {tech}
-  </span>
-);
-
-const ExternalLinks = ({ project }: { project: Project }) => (
-  <span className="flex items-center gap-3 shrink-0">
-    {project.github && (
-      <a
-        href={project.github}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="text-muted-foreground hover:text-foreground transition-colors"
-        aria-label={`${project.title} source code`}
-      >
-        <Github className="w-3.5 h-3.5" aria-hidden="true" />
-      </a>
-    )}
-    {project.liveUrl && (
-      <a
-        href={project.liveUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="text-muted-foreground hover:text-foreground transition-colors"
-        aria-label={`${project.title} live site`}
-      >
-        <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-      </a>
-    )}
-  </span>
-);
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/*  CARD                                                                      */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
-/* One card, not four.
-
-   The tiers used to each get their own component and layout, which is how a
-   section ends up with three ways to draw a metric. Tier is expressed by the
-   status line and a dashed border for design work — a difference in data,
-   not in construction. */
-const ProjectCard = ({ project, index }: { project: Project; index: number }) => {
-  const status = projectStatus(project);
-  const isDesign = project.tier === "design";
-  const hasImage = Boolean(project.image);
-
-  return (
-    <motion.article
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
-      transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.2), ease: EASE }}
-      /* Only the projects you can actually go and click carry a screenshot,
-         so the image alone is the signal that one is real and running — no
-         extra width needed. An earlier pass gave these cards two columns and
-         it read as jarring: the grid lurched every few rows and the
-         screenshots dominated a section whose job is scanning. Same
-         footprint, slimmer band, distinct by content. */
-      className={`group relative flex flex-col bg-card/25 hover:border-primary/40 transition-colors ${isDesign ? "border border-dashed border-border" : "border border-border/70"
-        }`}
-    >
-      {hasImage && (
-        <div className="relative w-full aspect-[16/6] overflow-hidden bg-muted border-b border-border/70">
-          <img
-            src={project.image}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.02]"
-            /* Full colour at rest. It was greyscale at 60% opacity until
-               hovered, so on a phone — which cannot hover — the work was
-               never seen in colour at all. The hover still says "this is
-               live" with a slight lift instead of by withholding the image. */
-            style={{ viewTransitionName: transitionName('art', project.id) }}
-          />
-
-          {/* Scanline wash, so a screenshot reads as something on a screen
-              rather than as stock imagery dropped into the layout. */}
-          <span
-            className="absolute inset-0 pointer-events-none opacity-40"
-            aria-hidden="true"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(to bottom, hsl(0 0% 0% / 0.28) 0px, hsl(0 0% 0% / 0.28) 1px, transparent 1px, transparent 3px)",
-            }}
-          />
-          <span
-            className="absolute inset-0 pointer-events-none bg-gradient-to-t from-card via-card/25 to-transparent"
-            aria-hidden="true"
-          />
-
-          {/* Registration marks, the same detail the case-study hero uses. */}
-          {(["top-2 left-2 border-t border-l", "top-2 right-2 border-t border-r", "bottom-2 left-2 border-b border-l", "bottom-2 right-2 border-b border-r"] as const).map(
-            (pos) => (
-              <span
-                key={pos}
-                aria-hidden="true"
-                className={`absolute w-2 h-2 border-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${pos}`}
-              />
-            )
-          )}
-
-          <span className="absolute bottom-2 left-3 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 bg-emerald-500 status-live" aria-hidden="true" />
-            <span className={STATUS_CLASS[status]}>{STATUS_LABEL[status]}</span>
-          </span>
-        </div>
-      )}
-
-      <div className="flex flex-col flex-1 p-5">
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary truncate">
-            {project.category}
-          </span>
-          {!hasImage && (
-            <span className={`font-mono text-[11px] uppercase tracking-wider shrink-0 ${STATUS_CLASS[status]}`}>
-              {STATUS_LABEL[status]}
-            </span>
-          )}
-        </div>
-
-        {/* Stretched link, rather than wrapping the card in one.
-
-          The repo links below are anchors, and an anchor cannot contain
-          another anchor — the browser force-closes the outer one and the DOM
-          comes out mangled. Pinning a pseudo-element from the title covers
-          the whole card for pointer users while leaving exactly one link in
-          the accessibility tree for the card itself. */}
-        <h3 className="font-mono text-[15px] leading-tight">
-          <TransitionLink
-            to={`/projects/${project.id}`}
-            className="text-foreground group-hover:text-primary transition-colors before:absolute before:inset-0 before:content-['']"
-          >
-            <span className="inline-block" style={{ viewTransitionName: transitionName('title', project.id) }}>
-              {project.title}
-            </span>
-          </TransitionLink>
-        </h3>
-        <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{project.subtitle}</p>
-
-        {project.metrics.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-border/50">
-            {project.metrics.slice(0, 3).map((metric) => (
-              <Metric key={metric.label} metric={metric} />
-            ))}
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-1 mt-4">
-          {project.stack.slice(0, 5).map((tech) => (
-            <TechTag key={tech} tech={tech} />
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between gap-3 mt-auto pt-4">
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-primary group-hover:text-primary transition-colors">
-            case study
-            <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
-          </span>
-          {/* Above the stretched link, so these stay individually clickable. */}
-          <span className="relative z-10">
-            <ExternalLinks project={project} />
-          </span>
-        </div>
-      </div>
-    </motion.article>
-  );
-};
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/*  SPOTLIGHT                                                                 */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
-/** Parses "99.5%" or "1.5M+" into a target plus suffix; null for "<10s". */
-function parseMetricForCounter(value: string): { target: number; suffix: string } | null {
-  // Thousands separators are part of the number, not the suffix: "4,076"
-  // otherwise parses as 4 followed by the text ",076" and counts to four.
-  const match = value.match(/^(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(.*)$/);
-  if (!match) return null;
-  return { target: parseFloat(match[1].replace(/,/g, '')), suffix: match[2] };
-}
-
-const Spotlight = ({ project }: { project: Project }) => {
-  const heroMetric = project.metrics[0];
-  const parsed = heroMetric ? parseMetricForCounter(heroMetric.value) : null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.6, ease: EASE }}
-      className="relative border border-primary/25 bg-card/40 p-6 md:p-8 mb-10"
-    >
-      <span className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-primary/70 via-primary/20 to-transparent" />
-
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-        <div className="min-w-0">
-          <span className="flex flex-wrap items-center gap-3 mb-4">
-            <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-primary border border-primary/30 bg-primary/5 px-2 py-1">
-              <Sparkles className="w-3 h-3" aria-hidden="true" />
-              featured
-            </span>
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              {project.category} · {project.timeline}
-            </span>
-          </span>
-
-          <h3
-            className="text-2xl md:text-3xl font-bold text-foreground leading-tight w-fit"
-            style={{ viewTransitionName: transitionName('title', project.id) }}
-          >
-            {project.title}
-          </h3>
-          <p className="font-mono text-[12px] text-muted-foreground mt-2">{project.subtitle}</p>
-
-          <TransitionLink to={`/projects/${project.id}`} className="btn-structural inline-flex items-center gap-3 w-fit mt-6">
-            View Case Study
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
-          </TransitionLink>
-        </div>
-
-        {heroMetric && (
-          <div className="flex flex-col items-start lg:items-end shrink-0">
-            <span className="font-mono text-4xl md:text-5xl font-bold text-primary tabular-nums leading-none">
-              {parsed ? <AnimatedCounter target={parsed.target} suffix={parsed.suffix} /> : heroMetric.value}
-            </span>
-            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mt-2">
-              {heroMetric.label}
-            </span>
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-};
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/*  CONTROLS                                                                  */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
-const Chip = ({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string;
-  count?: number;
-  active: boolean;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    aria-pressed={active}
-    className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest border px-2.5 py-1 transition-colors ${active
-        ? "border-primary bg-primary/10 text-primary"
-        : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-      }`}
-  >
-    {label}
-    {count !== undefined && <span className="text-muted-foreground tabular-nums">{count}</span>}
-  </button>
-);
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/*  SECTION                                                                   */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
-const TIERS = ["flagship", "production", "system", "design"] as const;
-
-// Ranked by real usage, so the common technologies — the ones that say
-// something about what this person builds — lead.
-const TECH_RANKED: { name: string; count: number }[] = Object.entries(
-  PROJECTS.reduce<Record<string, number>>((acc, project) => {
-    for (const tech of project.stack) acc[tech] = (acc[tech] ?? 0) + 1;
-    return acc;
-  }, {})
-)
-  .map(([name, count]) => ({ name, count }))
-  .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-
-const PRIMARY_TECH_COUNT = 10;
-
-/* ── Header figures ───────────────────────────────────────────────────────
-   Experience and Contact each state, in a sentence under the heading, what
-   the section actually contains. This one went straight from a title into a
-   filter row, so the first thing a reader met was a set of controls with
-   nothing saying what was being filtered.
-
-   Counted from PROJECTS rather than written out, for the same reason the
-   metrics are: a sentence that disagrees with the index directly beneath it
-   is worse than no sentence. Retiering a project updates this line. */
+/* Header figures, counted rather than written, so a sentence can never
+   disagree with the catalogue directly beneath it. */
 const BUILT_COUNT = PROJECTS.filter((p) => p.tier !== "design").length;
 const DESIGN_COUNT = PROJECTS.length - BUILT_COUNT;
 const CASE_STUDY_COUNT = PROJECTS.filter((p) => p.caseStudy).length;
 const SOURCE_OPEN_COUNT = PROJECTS.filter((p) => p.github).length;
+const LIVE_COUNT = PROJECTS.filter((p) => p.liveUrl && p.tier !== "design").length;
+const FIELD_NOTE_COUNT = PROJECTS.reduce((n, p) => n + (p.caseStudy?.fieldNotes?.length ?? 0), 0);
+const TRADEOFF_COUNT = PROJECTS.reduce((n, p) => n + (p.caseStudy?.tradeoffs?.length ?? 0), 0);
 
-/* `timeline` is prose — "2026", "Jan — Feb 2026", "2025 — Present" — so the
-   span is read out of it rather than parsed as a date. The fallback matters:
-   Math.min of an empty list is Infinity, which would print a heading that
-   says "Infinity — -Infinity" if a timeline ever lost its year. */
-const PROJECT_YEARS = PROJECTS.flatMap((p) => p.timeline.match(/\d{4}/g) ?? []).map(Number);
-const FIRST_YEAR = PROJECT_YEARS.length ? Math.min(...PROJECT_YEARS) : null;
-const LAST_YEAR = PROJECT_YEARS.length ? Math.max(...PROJECT_YEARS) : null;
+const FLAGSHIPS = PROJECTS.filter((p) => p.tier === "flagship");
+const STACK = rankStack(PROJECTS);
+const TIER_COUNTS = Object.fromEntries(TIERS.map((t) => [t, PROJECTS.filter((p) => p.tier === t).length])) as Record<Tier, number>;
 
-const spotlightProject: Project | undefined = PROJECTS.find((p) => p.tier === "flagship");
-// Nullable by design: an unconditional [0].id would throw at *import* time,
-// turning a data edit that retiers the last flagship into a blank page.
-const pool = spotlightProject ? PROJECTS.filter((p) => p.id !== spotlightProject.id) : PROJECTS;
-
-const Projects: React.FC = () => {
-  const [view, setView] = React.useState<"index" | "cards">("index");
-  const [tier, setTier] = React.useState<string | null>(null);
-  const [selectedTech, setSelectedTech] = React.useState<string[]>([]);
-  const [showAllTech, setShowAllTech] = React.useState(false);
-
-  const toggleTech = (tech: string) =>
-    setSelectedTech((prev) => (prev.includes(tech) ? prev.filter((t) => t !== tech) : [...prev, tech]));
-
-  const visible = React.useMemo(
-    () =>
-      pool.filter(
-        (project) =>
-          (tier === null || project.tier === tier) &&
-          (selectedTech.length === 0 || project.stack.some((t) => selectedTech.includes(t)))
-      ),
-    [tier, selectedTech]
+/* ── URL-synced state ─────────────────────────────────────────────────────
+   Read once from the address on mount; written back with replaceState so
+   filtering never adds history entries (Back should leave the page, not
+   undo a checkbox) and never goes through the router, which would re-render
+   the whole route for a query-string change. The hash is kept, so the page
+   stays anchored at #projects. */
+function useWorkState(): [WorkState, (patch: Partial<WorkState>) => void] {
+  const [state, setState] = React.useState<WorkState>(() =>
+    typeof window === "undefined" ? DEFAULT_STATE : stateFromSearch(window.location.search, STACK.map((t) => t.name))
   );
 
-  // A selected technology stays visible even if it lives in the long tail, so
-  // collapsing the list can never hide an active filter.
-  const shownTech = showAllTech
-    ? TECH_RANKED
-    : TECH_RANKED.filter((t, i) => i < PRIMARY_TECH_COUNT || selectedTech.includes(t.name));
-  const hiddenCount = TECH_RANKED.length - shownTech.length;
+  React.useEffect(() => {
+    const search = searchFromState(state, window.location.search);
+    if (search === window.location.search) return;
+    const url = `${window.location.pathname}${search}${window.location.hash}`;
+    window.history.replaceState(window.history.state, "", url);
+  }, [state]);
 
-  const showsDesign = visible.some((p) => p.tier === "design");
-  const cardGroups = React.useMemo(() => groupByTier(visible), [visible]);
+  const update = React.useCallback((patch: Partial<WorkState>) => setState((s) => ({ ...s, ...patch })), []);
+  return [state, update];
+}
+
+const Projects: React.FC = () => {
+  const [state, update] = useWorkState();
+  const [compare, setCompare] = React.useState<string[]>([]);
+  const prefersReduced = useReducedMotion();
+  const { openAsk } = useAsk();
+
+  // The search input updates on every keystroke; the list follows it one
+  // frame behind so typing never waits on a re-sort of three views.
+  const deferredQuery = React.useDeferredValue(state.query);
+  const results = React.useMemo(
+    () => applyWork(PROJECTS, { ...state, query: deferredQuery }),
+    [deferredQuery, state]
+  );
+
+  const toggleCompare = React.useCallback((id: string) => {
+    setCompare((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= COMPARE_MAX ? prev : [...prev, id]
+    );
+  }, []);
+  const compared = compare.map((id) => PROJECTS.find((p) => p.id === id)!).filter(Boolean);
+
+  const showsDesign = results.some((r) => r.project.tier === "design");
+  // Grouping by tier only makes sense while the list is in tier order and
+  // more than one tier is showing.
+  const grouped = state.sort === "tier" && state.tier === null && !deferredQuery.trim();
+
+  const resetFilters = () => update({ query: "", tier: null, stack: [] });
 
   return (
     <section id="projects" data-section="projects" className="py-24 relative" aria-label="Projects and case studies">
       <div className="container px-6 md:px-12 lg:px-24 max-w-7xl mx-auto">
-        {/* Header */}
+        {/* ── Header ── */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={prefersReduced ? false : { opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5, ease: EASE }}
-          className="mb-16 border-b border-border pb-8"
+          className="mb-12 border-b border-border pb-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
         >
-          {/* Matched to Experience and Contact exactly — same eyebrow size,
-              same heading scale, and now the same two lines underneath. This
-              section had drifted a step smaller, which read as a subsection
-              rather than a peer. */}
-          <span className="flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
-            <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
-            Module 02 // Engineering
-          </span>
-          {/* "Systems / 12" put a raw count where a name belongs, and the
-              count is already stated precisely below the filters. "Index" is
-              also what the default view now actually is. */}
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">
-            Systems <span className="text-muted-foreground font-mono font-normal">Index</span>
-          </h2>
-          {/* Says what distinguishes these entries, not that they exist. The
-              design/built split is stated as a count rather than spelled out
-              again in prose — the status column and the note below the
-              controls both carry the caveat in full, and a third statement of
-              it here made the opening paragraph longer than the two it is
-              matched to. */}
-          <p className="text-[15px] md:text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
-            {BUILT_COUNT} built systems and {DESIGN_COUNT} design studies. {CASE_STUDY_COUNT} carry
-            a full case study — the problem, the approach, the measured outcome, and the
-            alternative that was rejected.
-          </p>
-          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mt-4">
-            {FIRST_YEAR !== null && LAST_YEAR !== null && `${FIRST_YEAR} — ${LAST_YEAR} · `}
-            {SOURCE_OPEN_COUNT} of {PROJECTS.length} with source open
-          </p>
-        </motion.div>
-
-        {spotlightProject && <Spotlight project={spotlightProject} />}
-
-        {/* Controls */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.4 }}
-          className="flex flex-col gap-3 mb-5"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            {/* View toggle */}
-            <span className="flex items-center border border-border" role="group" aria-label="View">
-              {(
-                [
-                  { key: "index", icon: List, label: "Index" },
-                  { key: "cards", icon: LayoutGrid, label: "Cards" },
-                ] as const
-              ).map(({ key, icon: Icon, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setView(key)}
-                  aria-pressed={view === key}
-                  aria-label={`${label} view`}
-                  className={`flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest px-2.5 py-1 transition-colors ${view === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  <Icon className="w-3 h-3" aria-hidden="true" />
-                  {label}
-                </button>
-              ))}
+          <div>
+            <span className="flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
+              <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
+              Module 02 // Engineering
             </span>
-
-            <span className="w-px h-5 bg-border mx-1" aria-hidden="true" />
-
-            {/* Tier — a filter now, not four headings down the page */}
-            <Chip label="All" active={tier === null} onClick={() => setTier(null)} />
-            {TIERS.map((name) => {
-              const count = pool.filter((p) => p.tier === name).length;
-              if (!count) return null;
-              return (
-                <Chip
-                  key={name}
-                  label={name}
-                  count={count}
-                  active={tier === name}
-                  onClick={() => setTier(tier === name ? null : name)}
-                />
-              );
-            })}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {shownTech.map((tech) => (
-              <Chip
-                key={tech.name}
-                label={tech.name}
-                count={tech.count}
-                active={selectedTech.includes(tech.name)}
-                onClick={() => toggleTech(tech.name)}
-              />
-            ))}
-            {(hiddenCount > 0 || showAllTech) && (
-              <button
-                type="button"
-                onClick={() => setShowAllTech((v) => !v)}
-                aria-expanded={showAllTech}
-                className="font-mono text-[11px] uppercase tracking-widest text-primary hover:text-primary px-2 py-1 transition-colors"
-              >
-                {showAllTech ? "− less" : `+ ${hiddenCount} more`}
-              </button>
-            )}
-            {(selectedTech.length > 0 || tier !== null) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTech([]);
-                  setTier(null);
-                }}
-                className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
-              >
-                reset
-              </button>
-            )}
-          </div>
-
-          <span
-            className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
-            aria-live="polite"
-          >
-            showing {visible.length} of {pool.length}
-            {spotlightProject ? " · 1 featured above" : ""}
-          </span>
-        </motion.div>
-
-        {/* Design-stage caveat, shown only when such a row is actually on
-            screen — the one guarantee this redesign was not allowed to cost. */}
-        {showsDesign && (
-          <p className="text-[11px] text-muted-foreground leading-relaxed mb-5 max-w-2xl">
-            Rows marked <span className="text-amber-400 font-mono">DESIGN STAGE</span> are reference
-            architectures produced ahead of implementation — specified, not built, and not running in
-            production.
-          </p>
-        )}
-
-        {/* Results */}
-        {visible.length === 0 ? (
-          <div className="py-16 text-center border border-border/60">
-            <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-3">
-              nothing matches this filter
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">
+              Systems <span className="text-muted-foreground font-mono font-normal">Index</span>
+            </h2>
+            <p className="text-[15px] md:text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
+              {BUILT_COUNT} built systems and {DESIGN_COUNT} design studies. {CASE_STUDY_COUNT} carry a full case
+              study — the problem, the approach, the measured outcome, and the alternative that was rejected.
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedTech([]);
-                setTier(null);
-              }}
-              className="font-mono text-[10px] uppercase tracking-widest text-primary hover:text-primary-hover transition-colors"
-            >
-              reset filters
-            </button>
           </div>
-        ) : view === "index" ? (
-          <ProjectIndex projects={visible} grouped={tier === null} />
-        ) : (
-          /* Grouped by tier here too, using the same rule the index draws.
-             The card grid had lost the hierarchy entirely when the four
-             banners came out — a flat wall of eleven boxes where a flagship
-             and a design study looked like peers. The rule spans the grid,
-             costs one line, and keeps both views telling the same story. */
-          <motion.div layout className="flex flex-col gap-6">
-            {(cardGroups.length ? cardGroups : [{ tier: "", items: visible }]).map((group) => (
-              <div key={group.tier || "all"} className="flex flex-col gap-3">
-                {tier === null && group.tier && (
-                  <TierRule tier={group.tier} count={group.items.length} />
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <AnimatePresence mode="popLayout">
-                    {group.items.map((project, index) => (
-                      <ProjectCard key={project.id} project={project} index={index} />
-                    ))}
-                  </AnimatePresence>
-                </div>
+
+          {/* The catalogue's totals as a ledger — what a reader can go and
+              check, not adjectives about it. */}
+          <dl className="grid grid-cols-4 border border-border divide-x divide-border bg-card/30 self-start lg:self-end">
+            {[
+              { label: "live", value: LIVE_COUNT },
+              { label: "source open", value: SOURCE_OPEN_COUNT },
+              { label: "trade-offs", value: TRADEOFF_COUNT },
+              { label: "field notes", value: FIELD_NOTE_COUNT },
+            ].map((item) => (
+              <div key={item.label} className="px-4 py-3 min-w-[84px]">
+                <dd className="font-mono text-xl text-foreground tabular-nums leading-none">{item.value}</dd>
+                <dt className="mt-2 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground whitespace-nowrap">{item.label}</dt>
               </div>
             ))}
-          </motion.div>
+          </dl>
+        </motion.div>
+
+        <FlagshipStage projects={FLAGSHIPS} />
+
+        {/* ── Catalogue ── */}
+        <div className="flex items-baseline justify-between gap-4 mb-4">
+          <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-foreground">
+            <span className="text-primary mr-2">//</span>catalogue
+          </h3>
+          <button
+            type="button"
+            onClick={() =>
+              openAsk({
+                question: isFiltered(state) && results.length
+                  ? `of ${results.slice(0, 5).map((r) => r.project.title).join(", ")}, which best shows how he works, and why?`
+                  : "which of his systems is the strongest, and why?",
+              })
+            }
+            className="group inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Sparkles className="w-3 h-3 text-primary/70 group-hover:text-primary transition-colors" aria-hidden="true" />
+            {isFiltered(state) ? "ask about these" : "ask which to read first"}
+          </button>
+        </div>
+
+        <WorkToolbar
+          state={state}
+          onChange={update}
+          tierCounts={TIER_COUNTS}
+          stack={STACK}
+          total={PROJECTS.length}
+          shown={results.length}
+        />
+
+        {/* Design-stage caveat, whenever such a project is on screen. */}
+        {showsDesign && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed mb-5 max-w-2xl">
+            Entries marked <span className="text-amber-400 font-mono">DESIGN STAGE</span> are reference architectures
+            produced ahead of implementation — specified, not built, and not running in production.
+          </p>
         )}
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={results.length === 0 ? "empty" : state.view}
+            initial={prefersReduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            transition={{ duration: 0.28, ease: EASE }}
+          >
+            {results.length === 0 ? (
+              <div className="py-16 px-6 text-center border border-dashed border-border">
+                <p className="font-mono text-[12px] text-foreground mb-2">nothing matches that</p>
+                <p className="text-[12px] text-muted-foreground mb-5">
+                  the search reads every case study, so it may not be here — or it may be phrased differently.
+                </p>
+                <div className="flex items-center justify-center gap-5">
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="font-mono text-[10px] uppercase tracking-widest text-primary hover:text-primary-hover transition-colors"
+                  >
+                    clear filters
+                  </button>
+                  {state.query.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => openAsk({ question: `has he worked with ${state.query.trim()}?` })}
+                      className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <Sparkles className="w-3 h-3" aria-hidden="true" />
+                      ask instead
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : state.view === "cards" ? (
+              <ProjectCards results={results} grouped={grouped} compare={compare} onCompare={toggleCompare} compareMax={COMPARE_MAX} />
+            ) : state.view === "matrix" ? (
+              <StackMatrix
+                results={results}
+                all={PROJECTS}
+                selectedStack={state.stack}
+                onToggleStack={(tech) =>
+                  update({ stack: state.stack.includes(tech) ? state.stack.filter((t) => t !== tech) : [...state.stack, tech] })
+                }
+              />
+            ) : (
+              <ProjectIndex
+                results={results}
+                query={deferredQuery}
+                grouped={grouped}
+                compare={compare}
+                onCompare={toggleCompare}
+                compareMax={COMPARE_MAX}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
+
+      <CompareDock
+        projects={compared}
+        onRemove={(id) => setCompare((prev) => prev.filter((x) => x !== id))}
+        onClear={() => setCompare([])}
+      />
     </section>
   );
 };
