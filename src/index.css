@@ -118,11 +118,21 @@
     @apply border-border;
   }
 
+  /* overflow-x: clip, never hidden, on html, body and anything wrapping a
+     sticky element.
+
+     `hidden` on both html and body makes body a scroll container (html's
+     value goes to the viewport; body's then computes overflow-y: auto), and
+     a sticky element sticks to its nearest scroll container — here, a body
+     that never scrolls. So nothing on the site could stick: the hero's pin
+     for the dive into the event horizon scrolled straight up with the page,
+     and the case-study sidebar only appeared to work. `clip` cuts off the
+     sideways overflow just the same without creating a scroll container. */
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: 'cv11', 'ss01';
     scroll-behavior: smooth;
-    overflow-x: hidden;
+    overflow-x: clip;
     max-width: 100vw;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -130,7 +140,7 @@
 
   html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
+    overflow-x: clip;
     max-width: 100vw;
   }
 

@@ -2,14 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
-import { LOGO_PATHS } from '@/components/ui/LogoMark';
 import { MAX_QUESTION_CHARS as AI_MAX_QUESTION_CHARS } from '@/lib/aiHistory';
 import { buildMotd, type MotdTone } from '@/lib/motd';
 import { useTerminalSession } from './useTerminalSession';
-import StatusRail from './StatusRail';
 import { useAsk } from '@/components/ai/AskProvider';
 import AiTranscript, { AI_SUGGESTIONS } from './AiTranscript';
 import SuggestionMarquee from '@/components/ai/SuggestionMarquee';
+import { looksLikeQuestion } from '@/lib/fuzzy';
+import { emitCircuitSignal } from '@/lib/circuitBus';
 
 /* ==========================================================================
    TERMINAL HERO
@@ -50,7 +50,7 @@ const PROMPT = 'em@builtbyem:~/$';
    16px below `md` is not a style choice: iOS Safari zooms the page whenever a
    focused input is under 16px, so tapping the prompt — the hero's whole
    invitation — shoved the layout sideways on first touch. */
-const TERMINAL_TEXT = 'text-base md:text-[14px]';
+const TERMINAL_TEXT = 'text-base md:text-[17px]';
 
 const MOTD_TONE_CLASS: Record<MotdTone, string> = {
   identity: 'text-foreground/90',
@@ -62,7 +62,59 @@ const MOTD_TONE_CLASS: Record<MotdTone, string> = {
 /* Chips double as the page's calls to action. `work`, `resume` and `contact`
    are the buttons the old hero rendered — spelled as commands, so pressing
    one runs the shell rather than bypassing it. */
-const CHIPS = ['ai', 'queries', 'work', 'resume', 'contact'] as const;
+const CHIPS = ['ai', 'work', 'resume', 'contact'] as const;
+
+/* Typed into the empty prompt, one after another, so it is never a blank
+   stare. Questions and commands alternate on purpose: the prompt takes both,
+   and this is how a visitor finds that out without being told. */
+const EXAMPLES = [
+  'what has he actually shipped?',
+  'work',
+  'how does the reconciliation engine work?',
+  'resume',
+  'what trade-offs did he make, and why?',
+  'ls',
+] as const;
+
+/* The empty prompt types its examples out, holds them, and erases them.
+   Driven by one timeout chain; stops entirely while anything is typed. */
+function useTypedExample(active: boolean, reduced: boolean): string {
+  const [text, setText] = useState('');
+  useEffect(() => {
+    if (!active || reduced) return;
+    let example = 0;
+    let index = 0;
+    let erasing = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const current = EXAMPLES[example];
+      if (!erasing) {
+        index += 1;
+        setText(current.slice(0, index));
+        if (index >= current.length) {
+          erasing = true;
+          timer = setTimeout(tick, 2200);
+          return;
+        }
+        timer = setTimeout(tick, 55 + Math.random() * 45);
+        return;
+      }
+      index -= 2;
+      setText(current.slice(0, Math.max(0, index)));
+      if (index <= 0) {
+        erasing = false;
+        index = 0;
+        example = (example + 1) % EXAMPLES.length;
+        timer = setTimeout(tick, 600);
+        return;
+      }
+      timer = setTimeout(tick, 22);
+    };
+    timer = setTimeout(tick, 1400);
+    return () => clearTimeout(timer);
+  }, [active, reduced]);
+  return reduced ? 'ask a question, or type help' : text;
+}
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -112,6 +164,16 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
      when the dock opens further down the page, or on a case study. */
   const ai = useAsk().session;
   const [aiMode, setAiMode] = useState(false);
+
+  /* The empty prompt types its examples while nothing else is happening. */
+  const example = useTypedExample(live && !aiMode && inputValue === '' && !running, Boolean(prefersReduced));
+  const typedQuestion = !aiMode && looksLikeQuestion(inputValue);
+
+  /* The background listens. An answer in progress spins the disk up, the
+     same way a running command does (useTerminalSession emits that one). */
+  useEffect(() => {
+    emitCircuitSignal({ type: 'load', value: ai.busy ? 1 : 0 });
+  }, [ai.busy]);
 
   /* Where the visitor is standing in their own question history. */
   const [askedHistoryIndex, setAskedHistoryIndex] = useState<number | null>(null);
@@ -369,6 +431,26 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
       e.preventDefault();
 
       if (!aiMode) {
+        /* A question typed at the shell goes to the assistant.
+
+           "command not found: how" is the correct answer from a shell and
+           the wrong one from a portfolio: the visitor who types a question
+           into the only box on the screen has told us exactly what they
+           want. Commands never read as questions (none starts with a
+           question word and runs to three words), so nothing a command
+           user types is taken from them. */
+        const question = inputValue.trim();
+        if (looksLikeQuestion(question)) {
+          if (question.length > AI_MAX_QUESTION_CHARS) {
+            ai.reject(`question is ${question.length} characters — keep it under ${AI_MAX_QUESTION_CHARS}.`);
+            return;
+          }
+          setAiMode(true);
+          setInput('');
+          emitCircuitSignal({ type: 'burst', strength: 0.8 });
+          void ai.send(question);
+          return;
+        }
         submit(inputValue);
         return;
       }
@@ -473,6 +555,11 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
      useful one on a working screen, so it gives up its space to output. */
   const compact = hasOutput || aiMode;
 
+  // Output on screen: the black hole steps back so the text wins.
+  useEffect(() => {
+    emitCircuitSignal({ type: 'recede', value: compact ? 1 : 0 });
+  }, [compact]);
+
   return (
     /* The rail is a flex sibling, not absolutely positioned.
        It used to be pinned with `absolute bottom-0` inside this container —
@@ -481,36 +568,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
        socials with it, off the bottom of the screen. As a sibling it cannot
        be pushed anywhere; the scrollback above absorbs the growth instead. */
     <div className="relative flex-1 flex flex-col min-h-0">
-      <div className="w-full max-w-3xl mx-auto px-1 flex-1 flex flex-col justify-center min-h-0 py-2">
-        {/* ── Wordmark ── */}
-        <motion.div
-          {...reveal(0.05)}
-          animate={{
-            // Scale rather than a font/size swap: it is one compositor
-            // property, so the shrink is smooth and costs no layout.
-            scale: compact ? 0.62 : 1,
-            marginBottom: compact ? 4 : 44,
-            opacity: compact ? 0.75 : 1,
-          }}
-          transition={{ duration: prefersReduced ? 0 : 0.45, ease: EASE }}
-          style={{ transformOrigin: 'left top' }}
-          className="flex items-end gap-5 md:gap-6 shrink-0"
-        >
-          <svg
-            viewBox="0 0 200 120"
-            className="w-14 h-8 md:w-[72px] md:h-11 text-primary shrink-0"
-            aria-hidden="true"
-            style={{ filter: 'drop-shadow(0 0 14px hsl(var(--primary) / 0.35))' }}
-          >
-            {LOGO_PATHS.map((d, i) => (
-              <path key={i} d={d} fill="currentColor" />
-            ))}
-          </svg>
-          <span className="font-mono text-[28px] md:text-[42px] leading-none tracking-[0.34em] text-foreground uppercase select-none">
-            E·MC
-          </span>
-        </motion.div>
-
+      {/* Centred at rest — the one thing in the middle of the screen; in
+          use, the column fills it for output. */}
+      <div className="w-full max-w-2xl mx-auto px-1 flex-1 flex flex-col justify-center min-h-0 py-2">
         {/* ── Scrollback ──
             The banner and the session share one scroll region, because on a
             real login that is what they are: the MOTD is simply the first
@@ -522,7 +582,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           ref={scrollRef}
           onScroll={handleScroll}
           className={`min-h-0 overflow-y-auto font-mono text-[12px] md:text-[13px] leading-[2] pr-2 -mr-2 ${
-            compact ? 'flex-1 mb-5' : 'shrink-0 mb-12 md:mb-16'
+            compact ? 'flex-1 mb-5' : 'shrink-0 mb-6 md:mb-8'
           }`}
         >
           {/* The banner folds away once the shell is in use.
@@ -543,14 +603,17 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
               opacity: compact ? 0 : 1,
             }}
             transition={{ duration: prefersReduced ? 0 : 0.4, ease: EASE }}
-            className="space-y-1.5 overflow-hidden"
+            className="space-y-1.5 overflow-hidden text-center"
           >
-            {motd.map((line, i) =>
+            {/* Identity and whereabouts only. The inventory and build lines
+                moved: the build to the baseline, the counts to `ls` and the
+                Work section, where they are one command or one scroll away. */}
+            {motd.filter((line) => line.tone === 'identity' || line.tone === 'meta').map((line, i) =>
               line.tone === 'identity' ? (
                 <motion.h1
                   key={line.text}
                   {...reveal(0.15 + i * 0.06)}
-                  className={`text-[13px] md:text-[15px] font-normal ${MOTD_TONE_CLASS[line.tone]}`}
+                  className={`text-[14px] md:text-[16px] font-normal tracking-wide ${MOTD_TONE_CLASS[line.tone]}`}
                 >
                   {line.text}
                 </motion.h1>
@@ -649,7 +712,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           <form
             onSubmit={handleSubmit}
             onClick={() => focusInput()}
-            className={`flex items-center gap-2.5 border px-5 md:px-6 py-4 md:py-5 bg-background/30 backdrop-blur-sm transition-colors duration-300 cursor-text ${
+            className={`flex items-center gap-2.5 border px-5 md:px-6 py-4 md:py-[22px] bg-background/60 backdrop-blur-md transition-colors duration-300 cursor-text ${
               aiMode
                 ? `ai-border border-transparent ${ai.busy ? 'ai-border--busy' : ''}`
                 : inputFocused
@@ -707,7 +770,11 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                     ref={inputRef}
                     type="text"
                     value={inputValue}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      // Each keystroke is a small flare in the disk behind.
+                      emitCircuitSignal({ type: 'burst', strength: 0.12 });
+                    }}
                     onKeyDown={handlePromptKeyDown}
                     onKeyUp={syncCaret}
                     onClick={syncCaret}
@@ -790,6 +857,18 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                       {ghost}
                     </span>
                   )}
+
+                  {/* The typed example — offset past the block caret so the
+                      caret never sits on its first letter. */}
+                  {!aiMode && inputValue === '' && !running && example && charWidth > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-foreground/45 flex items-center truncate`}
+                      style={{ left: charWidth * 1.6, right: 0 }}
+                    >
+                      {example}
+                    </span>
+                  )}
                 </div>
 
                 {/* The way out, as a control rather than a keybinding.
@@ -837,9 +916,15 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         {/* ── Hint ── */}
         <motion.p
           {...reveal(0.55)}
-          className={`font-mono text-[11px] md:text-[12px] text-muted-foreground/45 shrink-0 ${compact ? 'mt-2.5' : 'mt-4'}`}
+          className={`font-mono text-[11px] md:text-[12px] text-muted-foreground/60 shrink-0 text-center ${compact ? 'mt-2.5' : 'mt-4'}`}
         >
-          {aiMode ? (
+          {typedQuestion ? (
+            /* Said as they type, so Enter doing something other than a
+               shell would is never a surprise. */
+            <>
+              <span className="text-primary/80">↵</span> asks the ai · answers cite the site&rsquo;s own data
+            </>
+          ) : aiMode ? (
             <>
               {/* Same split as the resting hint below: name the gesture the
                   device actually has. "esc to leave" was shown on phones that
@@ -859,9 +944,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   chips below do the same job with one tap, so mobile is
                   pointed at those and the typed form is kept for devices
                   that already have somewhere to type. */}
-              <span className="md:hidden">tap a command below</span>
+              <span className="md:hidden">ask anything, or tap below</span>
               <span className="hidden md:inline">
-                type <span className="text-primary/70">'help'</span> for more information
+                ask a question, or type <span className="text-primary/70">help</span> for commands
               </span>
             </>
           )}
@@ -884,7 +969,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             />
           </motion.div>
         )}
-        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center gap-x-2 md:gap-x-1 gap-y-2 shrink-0 ${aiMode ? 'hidden' : compact ? 'mt-4' : 'mt-8'}`}>
+        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center justify-center gap-x-2 md:gap-x-1 gap-y-2 shrink-0 ${aiMode ? 'hidden' : compact ? 'mt-4' : 'mt-6'}`}>
           {!aiMode &&
             CHIPS.map((chip, i) => (
                 <React.Fragment key={chip}>
@@ -918,22 +1003,20 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                         : 'text-muted-foreground/60 hover:text-primary'
                     }`}
                   >
-                    {chip === 'ai' ? 'ask ai' : chip}
+                    {chip === 'ai' ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3" aria-hidden="true" />
+                        ask ai
+                      </span>
+                    ) : (
+                      chip
+                    )}
                   </button>
                 </React.Fragment>
               ))}
         </motion.div>
       </div>
 
-      {/* ── Status rail — pinned to the bottom edge, tmux-style ── */}
-      <motion.div
-        initial={prefersReduced ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.9 }}
-        className="shrink-0 border-t border-border/60 px-1 pt-2 pb-1"
-      >
-        <StatusRail active={live} />
-      </motion.div>
     </div>
   );
 }

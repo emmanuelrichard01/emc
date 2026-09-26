@@ -1,147 +1,297 @@
-import { useRef } from 'react';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
-import { Command } from 'lucide-react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { motion, useMotionTemplate, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion';
 
-import { MODIFIER_KEY } from '@/lib/platform';
-import { useCommandPalette } from '@/components/CommandPaletteProvider';
-import CircuitCanvas from '@/components/hero/CircuitCanvas';
 import { useBooted } from '@/components/hero/BootOverlay';
 import TerminalHero from '@/components/hero/TerminalHero';
-import FastLane from '@/components/hero/FastLane';
+import EventHorizon from '@/components/hero/EventHorizon';
+import { HeroBaseline, HeroTopBar } from '@/components/hero/HeroChrome';
 
 /* ==========================================================================
    HERO
 
-   Composition only. The site boots (BootOverlay) and hands over to a live
-   shell that owns the viewport (TerminalHero), on the circuit board that was
-   already the background.
+   One prompt, in front of a black hole — and the way out is through it.
 
-   The previous hero split the screen: a decoding headline and CTA buttons on
-   the left, a 320px-tall console on the right. The console was the most
-   distinctive thing on the site and had the least room to be it, while the
-   headline said in prose what the terminal could simply demonstrate. This
-   gives the demonstration the whole screen and moves the identity copy into
-   the shell's message-of-the-day, where it arrives as output rather than as
-   decoration beside a terminal.
+   The screen is three things:
+
+     the edges   mark and shortcuts on top, socials and status underneath,
+                 small and quiet (HeroChrome)
+     the middle  the prompt, and nothing competing with it (TerminalHero)
+     behind      the event horizon — a close-up of a black hole rising out
+                 of the bottom-right corner, the disk on a cinematic
+                 diagonal, tinted to the accent and faded into the page so
+                 it is felt more than looked at; it reacts to what is typed
+                 into the prompt (EventHorizon)
+
+   THE TRANSITION
+   Scrolling on does not slide the hero away. It is a fade out, a beat of
+   black, and a fade in — nothing travels:
+
+     dive      the hero is pinned while the visitor falls into the hole. The
+               chrome fades first, the prompt softens where it stands, the
+               hole zooms (in the shader, so it stays sharp) with its photon
+               ring sweeping across the screen, until the shadow is the
+               screen and deepens to the page's own black.
+     reveal    the next section, pinned in its turn at the top of the
+               screen, grows out of the centre of the dark — scale and
+               opacity together, eased out — and settles just as its pin
+               lets go and ordinary scrolling resumes.
+
+   HOW NOTHING SHAKES
+   Both pins are CSS `position: sticky`, held by the browser on the same
+   thread that scrolls the page. An earlier version kept the next section in
+   place by counter-translating it from JavaScript every frame; the browser
+   scrolls and paints before script can answer, so each scroll step showed
+   the section moving and then snapping back — a one-frame race that read
+   as jitter, and cannot be tuned away. Now script only drives opacity and
+   scale, which are compositor-friendly and not positional, and no filter
+   is animated over the (very tall) section at all.
+
+     scene   100svh + DIVE of scroll; the hero sticks inside it
+     stage   the next section's own sticky box, pulled up one screen so it
+             sits beneath the hero's last screen, with REVEAL of extra room
+             below it — the length of its pin
+
+   The hero is black by the end of the dive and fades to transparent over
+   the page's matching black before it scrolls away, so its exit is
+   invisible and the next section is revealed only by its own grow.
+
+   Every step is tied to scroll position, not time: it plays forward and
+   backward with the wheel, stops where the visitor stops, and cannot be
+   "missed". Under reduced motion there are no pins and no dive — the hero
+   is an ordinary first screen and the next section simply follows it.
    ========================================================================== */
 
-export default function Hero() {
-  const sectionRef = useRef<HTMLElement>(null);
+/** Scroll the dive takes, as a multiple of the viewport. */
+const DIVE_LENGTH = 0.7;
+/** Scroll the reveal takes — how long the next section is pinned while it grows in. */
+const REVEAL_LENGTH = 0.45;
+
+/* Where the hole sits on screen, and its size — shared by the shader and
+   the CSS mask so the two can never drift apart. */
+const HOLE = { x: 0.92, y: 0.98, radius: 0.31, roll: -0.34 };
+
+export default function Hero({ children }: { children?: ReactNode }) {
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const prefersReduced = useReducedMotion();
-  const { open: openCommandPalette } = useCommandPalette();
 
-  /* The cold open belongs to <BootProvider> in App, not here.
-
-     It used to be rendered by this component — which lives in the lazily
-     loaded route chunk, so the overlay could not exist until the page it was
-     covering had already painted. All that is left of it here is the flag,
-     which gates focus and telemetry: focusing the prompt underneath a
+  /* The cold open belongs to <BootProvider> in App. What is left of it here
+     is the flag that gates focus: focusing the prompt underneath a
      full-screen overlay scrolls the page to an input nobody can see. */
   const live = useBooted();
 
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start start', 'end start'],
+  // 0 with the hero at rest, 1 when the scene has fully scrolled through.
+  const { scrollYProgress: raw } = useScroll({ target: sceneRef, offset: ['start start', 'end end'] });
+  /* A lightly smoothed copy of the scroll drives everything visual, so a
+     wheel's discrete steps glide rather than step. Nothing positional reads
+     it — both pins are CSS — so the smoothing can never make anything lag
+     behind where it is. */
+  const p = useSpring(raw, { stiffness: 140, damping: 30, mass: 0.6, restDelta: 0.0005 });
+
+  // The prompt fades where it stands — nothing on the hero moves.
+  const contentOpacity = useTransform(p, [0, 0.36], [1, 0]);
+  const contentBlur = useTransform(p, [0, 0.38], [0, 6]);
+  const contentFilter = useMotionTemplate`blur(${contentBlur}px)`;
+  // Faded is not gone: an invisible prompt must not still take clicks.
+  const contentPointer = useTransform(p, (v) => (v > 0.32 ? 'none' : 'auto'));
+
+  // The edges go first, so the dive is never framed by UI.
+  const chromeOpacity = useTransform(p, [0, 0.24], [1, 0]);
+
+  // The dive. Eased in — slow at first, then accelerating, as falling does —
+  // so the first stretch of scroll reads as a lean rather than a lurch.
+  const zoom = useTransform(p, (v) => {
+    const t = Math.min(1, Math.max(0, (v - 0.03) / 0.72));
+    return 1 + 12 * t * t * t;
   });
-  // A whisper, not a backdrop — see the background note below. Folded into
-  // the transform rather than a class, since the inline style would win.
-  const circuitOpacity = useTransform(scrollYProgress, [0, 0.8], [0.2, 0]);
+  // Up from its resting 72% as the hole takes over the screen.
+  const holeOpacity = useTransform(p, [0, 0.6], [0.72, 1]);
+  // The mask opens with the zoom, or it would clip the ring on its way past.
+  const maskW = useTransform(p, [0, 0.72], [78, 320]);
+  const maskH = useTransform(p, [0, 0.72], [95, 320]);
+  const mask = useMotionTemplate`radial-gradient(ellipse ${maskW}% ${maskH}% at ${HOLE.x * 100}% ${HOLE.y * 100}%, #000 38%, transparent 82%)`;
+
+  // The shadow deepens to the page's own black…
+  const handoff = useTransform(p, [0.62, 0.8], [0, 1]);
+  // …and once it is black, the hero goes transparent over the matching page
+  // black, so when its pin releases and it scrolls away nothing is seen to
+  // move. Out of the pointer's way from the moment it is dark.
+  const heroOpacity = useTransform(p, [0.86, 0.98], [1, 0]);
+  const heroPointer = useTransform(p, (v) => (v > 0.8 ? 'none' : 'auto'));
+
+  /* The reveal, measured against the stage's own pin: 0 as the stage reaches
+     the top of the screen (the dive's end), 1 when its pin lets go. */
+  const { scrollYProgress: stageRaw } = useScroll({ target: stageRef, offset: ['start start', 'end end'] });
+  const stageLength = useRef({ reveal: 1, total: 1 });
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const measure = () => {
+      stageLength.current = {
+        reveal: window.innerHeight * REVEAL_LENGTH,
+        total: Math.max(1, stage.offsetHeight - window.innerHeight),
+      };
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+  /* The stage's progress runs over its whole scrollable height (the section
+     is long); only its first REVEAL_LENGTH of that is the pin, so it is
+     rescaled here to 0..1 across the pin alone. */
+  const reveal = useSpring(
+    useTransform(stageRaw, (v) => {
+      const { reveal: r, total } = stageLength.current;
+      return Math.min(1, Math.max(0, (v * total) / r));
+    }),
+    { stiffness: 160, damping: 32, mass: 0.6, restDelta: 0.0005 }
+  );
+
+  // Growing out of the centre of the dark: eased out, so it moves most at
+  // the start and settles softly into place.
+  const grow = useTransform(reveal, (t) => 1 - Math.pow(1 - t, 3));
+  const nextOpacity = useTransform(grow, [0, 0.6], [0, 1]);
+  const nextScale = useTransform(grow, [0, 1], [0.9, 1]);
+
+  const still = Boolean(prefersReduced);
 
   return (
-    <section
-      ref={sectionRef}
+    <>
+    {/* The scene is taller than the screen by the length of the dive; the
+        hero is pinned inside it for that stretch. The id lives here, on the
+        whole scene, so "back to top" and #home land at its start. Stacked
+        above the next section, which it overlaps. */}
+    <div
+      ref={sceneRef}
       id="home"
       data-section="home"
-      aria-label="Introduction"
-      /* No top padding for a navbar, because there is no navbar here — it is
-         suppressed until the visitor scrolls past this section. The hero is a
-         terminal occupying a whole screen; a floating pill over it would be
-         the site apologising for its own idea. */
-      className="relative h-[100svh] min-h-[520px] flex flex-col overflow-hidden px-6 md:px-10 lg:px-16 pt-14 pb-4"
+      className="relative z-20"
+      style={{ height: still ? '100svh' : `${100 + DIVE_LENGTH * 100}svh` }}
     >
-      {/* ── Background ──
-          A flat, dim surface, the way the reference does it. The circuit
-          board is kept at a whisper rather than removed: it still answers
-          commands through the circuit bus, so the screen has a pulse when the
-          shell is used, but at rest it reads as one calm colour instead of as
-          pattern under 14px mono. */}
-      <div className="absolute inset-0 z-0 bg-[hsl(var(--hero-surface))]" aria-hidden="true" />
-
-      {/* Static grid — the site's own drafting language, held at a whisper.
-          Two scales, minor and major, masked so it fades out behind the
-          reading column and around the edges. This is the half of the
-          background that stays still; the canvas below is the half that
-          moves. Together they read as a surface with structure rather than
-          as either a flat void or a busy pattern. */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none"
-        aria-hidden="true"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, hsl(var(--foreground) / 0.022) 1px, transparent 1px),
-            linear-gradient(to bottom, hsl(var(--foreground) / 0.022) 1px, transparent 1px),
-            linear-gradient(to right, hsl(var(--foreground) / 0.032) 1px, transparent 1px),
-            linear-gradient(to bottom, hsl(var(--foreground) / 0.032) 1px, transparent 1px)
-          `,
-          backgroundSize: '48px 48px, 48px 48px, 192px 192px, 192px 192px',
-          maskImage:
-            'radial-gradient(ellipse 70% 60% at 40% 45%, transparent 0%, #000 55%, #000 100%)',
-          WebkitMaskImage:
-            'radial-gradient(ellipse 70% 60% at 40% 45%, transparent 0%, #000 55%, #000 100%)',
-        }}
-      />
-
-      <motion.div
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{ opacity: circuitOpacity }}
+      <motion.section
+        aria-label="Introduction"
+        style={still ? undefined : { opacity: heroOpacity, pointerEvents: heroPointer }}
+        className="sticky top-0 h-[100svh] min-h-[560px] flex flex-col overflow-hidden px-5 md:px-10 lg:px-14 pt-5 md:pt-7 pb-4 md:pb-5"
       >
-        <CircuitCanvas />
-      </motion.div>
+        {/* Surface: a dim slate rather than pure black, so the hole has
+            something to be darker than. */}
+        <div className="absolute inset-0 z-0 bg-[hsl(var(--hero-surface))]" aria-hidden="true" />
 
-      {/* Soft lift behind the reading column, and a darker edge around it, so
-          the text sits on its own surface without a visible box. */}
+        {/* The hole. Scroll owns this layer's opacity and mask; the slow
+            fade-in on arrival lives on the inner layer, so the two never
+            fight over one property. */}
+        <motion.div
+          className="absolute inset-0 z-0 pointer-events-none"
+          style={
+            still
+              ? {
+                  opacity: 0.72,
+                  maskImage: `radial-gradient(ellipse 78% 95% at ${HOLE.x * 100}% ${HOLE.y * 100}%, #000 38%, transparent 82%)`,
+                  WebkitMaskImage: `radial-gradient(ellipse 78% 95% at ${HOLE.x * 100}% ${HOLE.y * 100}%, #000 38%, transparent 82%)`,
+                }
+              : { opacity: holeOpacity, maskImage: mask, WebkitMaskImage: mask }
+          }
+        >
+          <motion.div
+            className="absolute inset-0"
+            initial={still ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 3, ease: 'easeOut' }}
+          >
+            <EventHorizon
+              className="absolute inset-0"
+              center={{ x: HOLE.x, y: HOLE.y }}
+              radius={HOLE.radius}
+              roll={HOLE.roll}
+              zoom={still ? undefined : zoom}
+            />
+          </motion.div>
+        </motion.div>
+
+        {/* A soft dark pool behind the prompt, so text never sits on disk
+            light, and a vignette to hold the frame. Fades with the prompt,
+            so it does not sit over the dive as a grey smudge. */}
+        <motion.div
+          className="absolute inset-0 z-[1] pointer-events-none"
+          aria-hidden="true"
+          style={{
+            opacity: still ? 1 : contentOpacity,
+            background:
+              'radial-gradient(ellipse 44% 30% at 50% 50%, hsl(var(--hero-surface) / 0.75), transparent 72%), radial-gradient(ellipse 110% 100% at 45% 45%, transparent 55%, hsl(0 0% 0% / 0.55) 100%)',
+          }}
+        />
+        <div className="absolute inset-0 z-[1] pointer-events-none select-none noise-overlay" />
+
+        <motion.div style={still ? undefined : { opacity: chromeOpacity }} className="relative z-20 shrink-0">
+          <HeroTopBar />
+        </motion.div>
+
+        <motion.div
+          className="relative z-10 flex-1 flex flex-col min-h-0"
+          style={still ? undefined : { opacity: contentOpacity, filter: contentFilter, pointerEvents: contentPointer }}
+        >
+          <TerminalHero live={live} />
+        </motion.div>
+
+        <motion.div style={still ? undefined : { opacity: chromeOpacity }} className="relative z-20 shrink-0">
+          <HeroBaseline />
+        </motion.div>
+
+        {/* The hand-off to the page's black (#050505, the Index backdrop). */}
+        {!still && (
+          <motion.div
+            className="absolute inset-0 z-30 pointer-events-none bg-[#050505]"
+            style={{ opacity: handoff }}
+            aria-hidden="true"
+          />
+        )}
+      </motion.section>
+    </div>
+
+    {/* The stage: the next section's own pin. Pulled up one screen so it
+        sits beneath the hero's last screen; the spacer below is the length
+        of the pin, during which the section — sticky at the top — grows in. */}
+    {/* Rendered in both modes, and always holding the ref. useScroll above
+        targets it, and framer throws if a target ref is still empty after
+        mount — the exact failure that once took the home page down for
+        every reduced-motion visitor. Under reduced motion it is simply a
+        wrapper: no pull-up, no pin, no reveal. */}
+    {children && (
       <div
-        className="absolute inset-0 z-[1] pointer-events-none"
-        aria-hidden="true"
-        style={{
-          background:
-            'radial-gradient(ellipse 60% 55% at 40% 45%, hsl(0 0% 100% / 0.014) 0%, transparent 70%), radial-gradient(ellipse 90% 80% at 50% 50%, transparent 40%, hsl(0 0% 0% / 0.45) 100%)',
-        }}
-      />
-      <div className="absolute inset-0 z-0 pointer-events-none select-none noise-overlay" />
-
-      {/* Faint CRT raster over the whole hero. Subtle enough to read as a
-          screen rather than as an effect — it disappears at a glance and only
-          registers as texture. */}
-      <div
-        className="absolute inset-0 z-[1] pointer-events-none opacity-[0.5]"
-        aria-hidden="true"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(to bottom, hsl(var(--foreground) / 0.018) 0px, hsl(var(--foreground) / 0.018) 1px, transparent 1px, transparent 3px)',
-        }}
-      />
-
-      {/* ── Shell ── */}
-      <div className="relative z-10 flex-1 flex flex-col min-h-0">
-        <TerminalHero live={live} />
+        ref={stageRef}
+        id={still ? undefined : 'hero-stage'}
+        className="relative z-10"
+        style={still ? undefined : { marginTop: '-100svh' }}
+      >
+        <motion.div
+          className={still ? undefined : 'sticky top-0'}
+          style={
+            still
+              ? undefined
+              : {
+                  opacity: nextOpacity,
+                  scale: nextScale,
+                  // The centre of the screen, not of the (much taller)
+                  // section: pinned at the top, half a viewport down is
+                  // where the eye is.
+                  transformOrigin: '50% 50svh',
+                  willChange: 'transform, opacity',
+                }
+          }
+        >
+          {children}
+        </motion.div>
+        {/* The pin's length — a real element, not padding: a sticky box can
+            only travel within its parent's content box, and padding is
+            outside it. */}
+        {!still && <div style={{ height: `${REVEAL_LENGTH * 100}svh` }} aria-hidden="true" />}
       </div>
-
-      <FastLane live={live} />
-
-      {/* Palette hint, floated clear of the shell's own status rail. */}
-      <motion.button
-        type="button"
-        initial={prefersReduced ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 1 }}
-        onClick={openCommandPalette}
-        aria-label={`Open command palette (${MODIFIER_KEY}+K)`}
-        className="absolute right-4 md:right-8 lg:right-12 top-24 z-20 hidden md:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 hover:text-foreground transition-colors group"
-      >
-        <Command className="w-3 h-3 group-hover:text-primary transition-colors" aria-hidden="true" />
-        <kbd className="font-mono">{MODIFIER_KEY}+K</kbd>
-      </motion.button>
-    </section>
+    )}
+    </>
   );
 }

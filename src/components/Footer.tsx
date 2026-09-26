@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useSpring, useInView } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowUp, CornerDownLeft, Sparkles } from "lucide-react";
@@ -10,6 +10,7 @@ import { COMMIT_SHA, IS_DEV_BUILD, formatRelativeBuildTime } from "@/lib/buildIn
 import { LOGO_PATHS } from "@/components/ui/LogoMark";
 import { useAsk } from "@/components/ai/AskProvider";
 import { MODIFIER_KEY } from "@/lib/platform";
+import { useLagosClock } from "@/lib/useLagosClock";
 import SuggestionMarquee from "@/components/ai/SuggestionMarquee";
 
 /* ==========================================================================
@@ -39,43 +40,6 @@ const CONNECT_LINKS = [
   { label: "X", href: "https://x.com/mrebr" },
   { label: "Email", href: "mailto:emma.moghalu@gmail.com" },
 ];
-
-/* -------------------------------------------------------------------------- */
-/*  LIVE LAGOS CLOCK — ticks on the minute boundary, not every second, so it   */
-/*  stays a quiet ambient detail rather than a distracting countdown.         */
-/* -------------------------------------------------------------------------- */
-
-function useLagosClock() {
-  const formatter = useMemo(
-    () => new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Africa/Lagos",
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    []
-  );
-  // Lazy initializer — runs once on mount only, so reading the clock here
-  // isn't the "impure render" pattern that a bare `useState(formatter.format(new Date()))`
-  // (re-evaluated every render) or a Date.now() effect body would be.
-  const [time, setTime] = useState(() => formatter.format(new Date()));
-
-  useEffect(() => {
-    const msUntilNextMinute = 60000 - (Date.now() % 60000);
-    let intervalId: ReturnType<typeof setInterval> | undefined;
-
-    const alignTimeout = setTimeout(() => {
-      setTime(formatter.format(new Date()));
-      intervalId = setInterval(() => setTime(formatter.format(new Date())), 60000);
-    }, msUntilNextMinute);
-
-    return () => {
-      clearTimeout(alignTimeout);
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [formatter]);
-
-  return time;
-}
 
 /* -------------------------------------------------------------------------- */
 /*  SCROLL-TO-TOP                                                              */

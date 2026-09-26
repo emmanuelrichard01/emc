@@ -1,7 +1,8 @@
 /* ==========================================================================
    CIRCUIT BUS
 
-   A one-way channel from the page into the hero's circuit animation.
+   A one-way channel from the page into the hero's background — once a
+   circuit board, now the event horizon (components/hero/EventHorizon.tsx).
 
    Deliberately a plain module rather than React context or state. The canvas
    consumes these signals inside its requestAnimationFrame loop, which lives
@@ -18,7 +19,9 @@ export type CircuitSignal =
   /** Something discrete happened — a command ran, an action fired. */
   | { type: 'burst'; strength?: number }
   /** Sustained work is or isn't in progress. 0 idle, 1 saturated. */
-  | { type: 'load'; value: number };
+  | { type: 'load'; value: number }
+  /** Content is on screen and the background should step back. 0 or 1. */
+  | { type: 'recede'; value: number };
 
 type Listener = (signal: CircuitSignal) => void;
 

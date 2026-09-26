@@ -20,7 +20,7 @@ const DIRECTION_THRESHOLD = 12;
 /** Below this, the bar is always shown regardless of direction. */
 const ALWAYS_VISIBLE_ABOVE = 300;
 
-/* Fraction of the viewport the visitor must scroll before the navigation
+/* How much of the viewport the hero must have left before the navigation
    exists at all on the landing page.
 
    The hero is a full-screen terminal, and navigating it is the point — you
@@ -29,9 +29,35 @@ const ALWAYS_VISIBLE_ABOVE = 300;
    So the site opens as a terminal and *becomes* a website on scroll: the nav
    arrives with the first real section, and from then on behaves normally.
 
+   Measured from where the hero actually ends, not a fixed scroll distance:
+   the hero is a pinned scroll scene now (the dive into the event horizon),
+   so it occupies more than one screen of scroll — and exactly one under
+   reduced motion. A fixed threshold would bring the pill in over the dive
+   in one case and late in the other.
+
    Only the landing route is affected. A case study is an ordinary page and
    needs its navigation immediately. */
 const NAV_REVEAL_FRACTION = 0.55;
+
+/* After the dive, the next section is pinned on its own stage while it
+   grows in (Hero.tsx, #hero-stage). The pill arrives once that reveal is
+   nearly done — the stage has scrolled 80% of its pin — so it never lands
+   on top of the section's entrance. Under reduced motion there is no stage,
+   and the hero's own end is the measure; the scrollY floor keeps a
+   one-screen hero from counting as passed at the very top. */
+const REVEAL_PIN_FRACTION = 0.45; // mirrors REVEAL_LENGTH in Hero.tsx
+
+function heroHasPassed(): boolean {
+  if (typeof window === 'undefined') return false;
+  const stage = document.getElementById('hero-stage');
+  if (stage) return stage.getBoundingClientRect().top < -window.innerHeight * REVEAL_PIN_FRACTION * 0.8;
+  const hero = document.getElementById('home');
+  if (!hero) return window.scrollY > window.innerHeight * NAV_REVEAL_FRACTION;
+  return (
+    window.scrollY > window.innerHeight * NAV_REVEAL_FRACTION &&
+    hero.getBoundingClientRect().bottom < window.innerHeight * 1.04
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /* LOGO                                                                       */
@@ -202,9 +228,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
      than a second listener and an effect that would have to setState on
      mount to catch up. Only the landing route consults it; everywhere else
      the nav is unconditional. */
-  const [scrolledPastHero, setScrolledPastHero] = useState(
-    () => typeof window !== 'undefined' && window.scrollY > window.innerHeight * NAV_REVEAL_FRACTION
-  );
+  const [scrolledPastHero, setScrolledPastHero] = useState(heroHasPassed);
   const pastHero = !isLanding || scrolledPastHero;
 
   // Reading progress across the document, smoothed so it glides rather than
@@ -232,7 +256,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
     lastScrollY.current = latest;
 
     setIsScrolled(latest > 100);
-    setScrolledPastHero(latest > window.innerHeight * NAV_REVEAL_FRACTION);
+    setScrolledPastHero(heroHasPassed());
 
     if (latest <= ALWAYS_VISIBLE_ABOVE) {
       travel.current = 0;

@@ -85,7 +85,7 @@ const Index = () => {
   };
 
   return (
-    <div className="bg-[#050505] min-h-screen relative selection:bg-primary/20 selection:text-primary overflow-x-hidden max-w-full">
+    <div className="bg-[#050505] min-h-screen relative selection:bg-primary/20 selection:text-primary overflow-x-clip max-w-full">
       {/* Global Background Grid for continuous flow */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none">
         <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] [background-size:24px_24px]" />
@@ -95,8 +95,11 @@ const Index = () => {
         <SEOHead metadata={seoMetadata} />
         <StructuredData />
 
-        <Hero />
-        <About />
+        {/* About is the hero's child: it waits beneath the pinned hero and
+            emerges as the dive into the event horizon completes. */}
+        <Hero>
+          <About />
+        </Hero>
         {/* Each module is entered along a trace drawn by the scroll — see
             SectionSeam. Numbered to match the modules' own eyebrows. */}
         <SectionSeam index="02" label="engineering" />
