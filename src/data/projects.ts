@@ -440,10 +440,10 @@ export const PROJECTS: Project[] = [
     metrics: [
       { label: "Corroboration", value: "Publishers" },
       { label: "Ingestion", value: "41 Feeds" },
-      { label: "Tests", value: "123" },
+      { label: "Tests", value: "180" },
     ],
     description:
-      "A story-centric news platform built on one bet: stories, not articles, are the primary entity. Coverage of the same event is clustered semantically into a single Story carrying a count of the independent publishers behind it — resolved via the Public Suffix List, so a newsroom cannot corroborate itself. Three editions reorder the whole corpus rather than slicing it, so none can run dry. Runs at $0 with every feature intact.",
+      "A story-centric news platform built on one bet: stories, not articles, are the primary entity. Coverage of the same event is clustered semantically into a single Story carrying a count of the independent publishers behind it — resolved via the Public Suffix List, so a newsroom cannot corroborate itself. Three editions reorder the whole corpus rather than slicing it, an hourly Briefing digests what two or more newsrooms confirmed, and Ask the Wire Room answers questions with numbered citations back to the stories. Runs at $0 with every feature intact.",
     decisions: [
       {
         title: "Corroboration Counted in Publishers",
@@ -455,23 +455,29 @@ export const PROJECTS: Project[] = [
         detail:
           "Momentum decays with the clock, not with writes: a story that drew ten outlets thirteen hours ago has zero now, and nothing touched its row to say so. A periodic sweep bulk-zeroes what aged out. Computing it per request cost 251ms; reading the column costs 7.6ms.",
       },
+      {
+        title: "Topics Decided by a Publisher Vote",
+        detail:
+          "A story's topics used to be the union of every article's tags, so they only grew and the 'main' topic was whichever row came back first. Each publisher now casts one vote, re-decided as coverage arrives, and the winner is stored as the story's primary topic.",
+      },
     ],
-    stack: ["Python", "Django", "Next.js", "PostgreSQL", "pgvector", "Celery", "Redis"],
+    stack: ["Python", "Django", "Next.js", "TypeScript", "PostgreSQL", "pgvector", "Celery", "Redis"],
     caseStudy: {
       problem:
         "When something happens, fifty outlets publish about it. Every feed shows fifty headlines and leaves the reader to work out that they are one event — and, more importantly, whether anyone independently confirmed it or whether fifty outlets are all repeating a single unverified wire report. That second question is the one that matters, and no aggregator answers it.",
       approach:
-        "Rebuilt from a legacy Django monolith around one architectural bet: stories, not articles, are primary. 41 RSS feeds are polled on conditional GETs (ETag/304, so an unchanged feed costs a round trip with no body), deep-fetched with trafilatura, sanitised with nh3, embedded locally with bge-small-en-v1.5, and matched against recent stories through a pgvector HNSW shortlist. Articles above the threshold collapse into one Story, which then counts distinct publishers rather than articles. Three editions — The Wire (newest), Developing (outlets gained in the last 12h), The Record (weight of corroboration) — are orderings of the same corpus rather than separate collections, which is what stops two of the three sitting permanently near-empty.",
+        "Rebuilt from a legacy Django monolith around one architectural bet: stories, not articles, are primary. 41 RSS feeds are polled on conditional GETs (ETag/304, so an unchanged feed costs a round trip with no body), deep-fetched with trafilatura, sanitised with nh3, embedded locally with bge-small-en-v1.5, and matched against recent stories through a pgvector HNSW shortlist. Articles above the threshold collapse into one Story, which then counts distinct publishers rather than articles. Three editions — The Wire (newest), Developing (outlets gained in the last 12h), The Record (weight of corroboration) — are orderings of the same corpus rather than separate collections, which is what stops two of the three sitting permanently near-empty. On top of the corpus sit two reading surfaces that need no model to work: the Briefing, an hourly digest of stories at least two independent newsrooms have filed on, and Ask the Wire Room, which retrieves at story level and streams an answer with [n] citations — degrading to extractive text when no key is configured.",
       outcome:
-        "123 tests passing, 41/41 feeds healthy, clean typecheck, zero lint errors. Semantic topic classification reaches 98% coverage, up from 53% under keyword rules. Shipped: a corroboration timeline plotting independent newsrooms over time and marking when a story crossed into confirmed, side-by-side framing comparison marking words unique to one outlet, conflicts-first machine-written briefs, per-edition outbound RSS, question answering with a semantic answer cache, tiered retention, and Prometheus metrics. The whole system also runs at $0 — batch work on GitHub Actions runners where the memory is, a 512MB API host, Neon and Vercel — with no feature dropped.",
+        "180 tests passing, clean typecheck, zero lint errors. Shipped: a corroboration timeline marking when a story crossed into confirmed, side-by-side framing comparison marking words unique to one outlet, conflicts-first briefs validated before display (claims attributed to outlets outside the story are dropped), the hourly Briefing, streamed and cited question answering with story scope and follow-up conversations, per-edition outbound RSS, evidence-first sharing with generated story cards, video badges that link out rather than re-host, tiered retention, and Prometheus metrics. Built for phones as well: Ask opens as a swipe-to-dismiss bottom sheet with voice input and listen-aloud on the browser's own speech APIs. The whole system runs at $0 — batch work on GitHub Actions runners where the memory is, a 512MB API host, Neon and Vercel — with no feature dropped, and it now reports its own database budget on every CI run after the September storage incident below.",
       highlights: [
         "The clustering threshold is 0.80 because it was measured, not chosen — a calibration command re-derives it against labelled pairs; an earlier 0.68 produced a 112-article blob of unrelated geopolitics",
         "Larger embedding models scored worse separation on those same labelled pairs, so the 384d model is a benchmarked result rather than a cost compromise",
+        "The corroboration number is never generated: it is a database aggregate a model is shown, and no model can produce or alter it",
+        "Topics combine where the publisher filed the piece — URL section, RSS categories, feed section, the outlet's beat — with what the text is about, after semantic similarity alone left 28% of live stories untagged",
         "Only the latest edition paginates: ranking scores are rewritten by clustering, and paginating a mutable key repeats and drops rows",
-        "Article (display excerpt) is separated from RawDocument (internal full text powering embeddings), so aggregation never becomes republication",
         "Tests cannot reach the network — an autouse fixture fails any test opening a non-local socket, added after mocked vendor SDKs silently stopped intercepting and the suite made live billed API calls",
+        "Liveness and readiness are separate endpoints: /health reports stale ingest and clustering backlog, which a restart cannot fix, so pointing an orchestrator at it turns a late cron into a restart loop",
         "Alerting targets clustering backlog first: unclustered articles are invisible to readers, so the product goes stale while every request still returns 200",
-        "Refuses to start with DEBUG=0 and no SECRET_KEY rather than falling back to a key committed to the repo",
       ],
       tradeoffs: [
         {
@@ -493,6 +499,12 @@ export const PROJECTS: Project[] = [
           why: "Three outlets write three headlines for one event. Exact matching creates permanent single-source silos — precisely the failure the product exists to fix. The threshold sits above every different-event pair in the labelled set, preferring a missed merge to an invented one.",
         },
         {
+          decision: "Story topic",
+          chose: "One vote per publisher, re-decided as coverage arrives",
+          rejected: "The union of every article's tags",
+          why: "A union only grows, so a story drifted into every beat any outlet filed it under, and its 'main' topic was whichever row the database returned first. A vote per publisher also means one outlet filing five pieces cannot outvote four newsrooms.",
+        },
+        {
           decision: "Pagination key",
           chose: "Cursor on (first_seen_at, id)",
           rejected: "Cursor on velocity or ranking score",
@@ -508,11 +520,93 @@ export const PROJECTS: Project[] = [
           decision: "Display model",
           chose: "~40-word excerpt plus outbound link",
           rejected: "Full article rendering",
-          why: "This is an aggregator, not a publisher. The outbound link is the obligation that comes with the content.",
+          why: "This is an aggregator, not a publisher. The outbound link is the obligation that comes with the content — the same rule keeps publisher video as a link to the outlet rather than a player here.",
         },
       ],
       notice:
-        "A high corroboration count is not a truth score, and the interface does not present it as one — ten outlets can repeat one mistaken report, which is exactly what a corroboration count looks like when it fails. A low count is not a red flag either: original investigative reporting starts at one outlet by definition. Known limits: publisher independence is inferred from domains, so outlets under common ownership count separately; vocabulary-divergent paraphrases (\"CBN holds rates\" vs \"Apex Bank keeps policy unchanged\") do not merge; and coverage skews toward English-language feeds.",
+        "A high corroboration count is not a truth score, and the interface does not present it as one — ten outlets can repeat one mistaken report, which is exactly what a corroboration count looks like when it fails. A low count is not a red flag either: original investigative reporting starts at one outlet by definition. Known limits: publisher independence is inferred from domains, so outlets under common ownership count separately; vocabulary-divergent paraphrases (\"CBN holds rates\" vs \"Apex Bank keeps policy unchanged\") do not merge; topic classification misfiles near category boundaries; and coverage skews toward English-language feeds.",
+      blocks: {
+        approach: [
+          {
+            kind: "architecture",
+            caption:
+              "Clustering is where the three distinguishing ideas live — semantic matching, publishers rather than articles, editions as orderings — and none of it involves a language model. The model only writes prose over work that has already succeeded, and can be switched off without the site losing its claim.",
+            columns: [
+              {
+                label: "Ingest · Actions cron",
+                nodes: [
+                  { id: "feeds", label: "41 RSS feeds", detail: "conditional GET · ETag / 304" },
+                  { id: "extract", label: "trafilatura → nh3", detail: "full text, sanitised" },
+                ],
+              },
+              {
+                label: "Cluster · no LLM",
+                nodes: [
+                  { id: "embed", label: "bge-small-en-v1.5", detail: "384d, local inference" },
+                  { id: "match", label: "pgvector HNSW", detail: "cosine ≥ 0.80 joins a story" },
+                  { id: "count", label: "Publisher recount", detail: "Public Suffix List + topic vote" },
+                ],
+              },
+              {
+                label: "Serve",
+                nodes: [
+                  { id: "pg", label: "Postgres + pgvector", detail: "Neon · budget reported per run" },
+                  { id: "api", label: "Django Ninja API", detail: "editions · Briefing · Ask (SSE)" },
+                  { id: "web", label: "Next.js 16", detail: "ISR, targeted revalidation" },
+                ],
+              },
+            ],
+            edges: [
+              { from: "feeds", to: "extract" },
+              { from: "extract", to: "embed" },
+              { from: "embed", to: "match" },
+              { from: "match", to: "count" },
+              { from: "count", to: "pg" },
+              { from: "pg", to: "api" },
+              { from: "api", to: "web" },
+            ],
+          },
+        ],
+        outcome: [
+          {
+            kind: "callout",
+            text: "The whole system runs at $0 with nothing given up — which is also why a 512MB database quota became a production incident. The field notes below are what that cost, and what now fails loudly if it happens again.",
+          },
+        ],
+      },
+      fieldNotes: [
+        {
+          title: "The database was full, and the feeds took the blame",
+          symptom:
+            "No new stories for days. The pipeline failed every run with `could not extend file because project size limit (512 MB) has been exceeded`, and healthy publishers — Politico among them — were being switched off by the circuit breaker one after another.",
+          wrongTurns: [
+            "\"Retention broke, so storage grew\" — the job logs showed the opposite: retention succeeded daily from Sep 3 to Sep 9 while storage kept climbing, and only started failing once the database was already full",
+          ],
+          rootCause:
+            "Three defects turned a quota into a sustained outage. Retention windows were sized for a VPS (payloads 45 days, single-source stories 90) on a 512 MB database — the cap was arithmetic, not bad luck. Retention could not run at the cap: its first write was an UPDATE, which needs free space for the new row version, so it failed and the story DELETE after it — the largest saving, and one that needs no space — never ran. And ingestion's catch-all recorded our own OperationalError against the feed being scraped, so after 12 of them the breaker deactivated the publisher.",
+          fix: "Neon-sized windows (3 / 14 / 10 days) and a 512 MB budget; retention reordered for a full disk — DELETEs, then VACUUM, then batched UPDATEs, each isolated so one failure no longer skips the rest; database errors re-raised instead of charged to publishers, with wrongly disabled feeds reactivated by recorded reason. The first maintenance run on the fix deleted 16,051 single-source stories and reactivated 9 feeds; the next pipeline ingested 798 articles with no failures.",
+          guard:
+            "core/tests/test_capacity.py covers the ordering and the error routing, and db_report prints size against budget on every CI run, warning at 80% of live data — the first signal is no longer Neon's own \"100% used\" email.",
+        },
+        {
+          title: "The stream that arrived all at once",
+          symptom:
+            "Ask the Wire Room was meant to stream. It displayed a blank box, then the whole answer in one piece.",
+          rootCause:
+            "Two layers each undid streaming on their own. The answer was generated whole and sent as one chunk — and a sync generator under ASGI is buffered whole regardless. Once it was async, gzip compressed the stream chunk by chunk into separate gzip members, which clients stop decoding after the first.",
+          fix: "An async generator relays tokens as the provider emits them, and event streams are exempt from gzip. First word now arrives in under a second.",
+        },
+        {
+          title: "The health check that answered 400 and passed",
+          symptom:
+            "The API went down on a nightly cycle, and the logs were full of DisallowedHost tracebacks — tens per instance lifetime.",
+          rootCause:
+            "The platform probed the container by its internal hostname, which was not in ALLOWED_HOSTS — and counted Django's 400 as a pass, so the check was decorative. Separately, liveness and readiness were one endpoint: /health reports degraded on stale ingest, which a restart cannot fix, so an orchestrator pointed at it turns a late cron into a restart loop. And the staleness threshold gave 15 minutes of margin against a cron GitHub delivered up to 138 minutes late overnight.",
+          fix: "The container's own hostname is trusted; /health/live reports only that the process serves HTTP and touches nothing else; staleness is 90 minutes — three missed runs — and configurable.",
+          guard:
+            "Verified against the real container hostname: 200 where it returned 400, a bogus Host still rejected with 400, and /health/live staying 200 while /health reports 503.",
+        },
+      ],
     },
   },
 

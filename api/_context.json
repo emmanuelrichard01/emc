@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-24T15:43:42.455Z",
+  "generatedAt": "2026-09-26T14:56:43.341Z",
   "person": {
     "name": "Emmanuel Moghalu",
     "role": "Data & Backend Engineer",
@@ -294,6 +294,7 @@
         "Python",
         "Django",
         "Next.js",
+        "TypeScript",
         "PostgreSQL",
         "pgvector",
         "Celery",
@@ -302,11 +303,11 @@
       "metrics": [
         "Corroboration: Publishers",
         "Ingestion: 41 Feeds",
-        "Tests: 123"
+        "Tests: 180"
       ],
       "summary": "When something happens, fifty outlets publish about it. Every feed shows fifty headlines and leaves the reader to work out that they are one event — and, more importantly, whether anyone independently confirmed it or whether fifty outlets are all repeating a single unverified wire report. That second question is the one that matters, and no aggregator answers it.",
       "hasCaseStudy": true,
-      "tradeoffCount": 6,
+      "tradeoffCount": 7,
       "tradeoffs": [
         {
           "decision": "Corroboration unit",
@@ -327,6 +328,12 @@
           "why": "Three outlets write three headlines for one event. Exact matching creates permanent single-source silos — precisely the failure the product exists to fix. The threshold sits above every different-event pair in the labelled set, preferring a missed merge to an invented one."
         },
         {
+          "decision": "Story topic",
+          "chose": "One vote per publisher, re-decided as coverage arrives",
+          "rejected": "The union of every article's tags",
+          "why": "A union only grows, so a story drifted into every beat any outlet filed it under, and its 'main' topic was whichever row the database returned first. A vote per publisher also means one outlet filing five pieces cannot outvote four newsrooms."
+        },
+        {
           "decision": "Pagination key",
           "chose": "Cursor on (first_seen_at, id)",
           "rejected": "Cursor on velocity or ranking score",
@@ -342,7 +349,7 @@
           "decision": "Display model",
           "chose": "~40-word excerpt plus outbound link",
           "rejected": "Full article rendering",
-          "why": "This is an aggregator, not a publisher. The outbound link is the obligation that comes with the content."
+          "why": "This is an aggregator, not a publisher. The outbound link is the obligation that comes with the content — the same rule keeps publisher video as a link to the outlet rather than a player here."
         }
       ],
       "links": {
