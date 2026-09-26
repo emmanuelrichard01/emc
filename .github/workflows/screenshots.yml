@@ -1,0 +1,82 @@
+# Refresh project screenshots
+#
+# Captures every live project (src/data/projects.ts: has `image` and
+# `liveUrl`, and `captureScreenshot` is not false) into public/images/, and
+# opens a pull request when any image changed.
+#
+# Why here rather than in the Vercel build:
+#   · the portfolio's images refresh when the *projects* change, not only
+#     when the portfolio happens to be pushed;
+#   · a capture is reviewed before it ships — a spinner, a cookie banner or
+#     an outage page never goes straight to production;
+#   · the new images land in the repo, so local dev and every build see them;
+#   · builds stay fast and deterministic, and quota is spent weekly, not per
+#     deploy (previews included).
+#
+# The pull request gets a Vercel preview like any other, so the new images
+# can be seen in place before merging. Merging deploys them.
+#
+# Setup (once):
+#   1. Settings → Secrets and variables → Actions → New repository secret:
+#      SCREENSHOT_API_KEY (the same value as on Vercel).
+#   2. Settings → Actions → General → Workflow permissions:
+#      tick "Allow GitHub Actions to create and approve pull requests".
+
+name: Refresh screenshots
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC — off the hour, where GitHub's scheduler is least congested
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# One refresh at a time; a manual run while the weekly one is going waits.
+concurrency:
+  group: screenshots
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # 24: runs the TypeScript data module the script imports natively
+      # (type stripping is on by default from Node 23.6).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Capture
+        env:
+          SCREENSHOT_API_KEY: ${{ secrets.SCREENSHOT_API_KEY }}
+          SCREENSHOTS_ALLOW_PARTIAL: '1'
+        run: |
+          if [ -z "$SCREENSHOT_API_KEY" ]; then
+            echo "::error::SCREENSHOT_API_KEY is not set as a repository secret — see the setup notes at the top of this workflow."
+            exit 1
+          fi
+          node scripts/fetch-screenshots.mjs
+
+      - name: Open or update the pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/refresh-screenshots
+          delete-branch: true
+          add-paths: public/images/*.png
+          commit-message: 'chore(images): refresh project screenshots'
+          title: 'chore(images): refresh project screenshots'
+          body: |
+            Fresh captures of the live projects, from the scheduled screenshot refresh.
+
+            **Before merging**, look at the images in the diff (GitHub shows them side by side) or on this PR's Vercel preview. Close the PR instead if a capture caught a loading state, a banner, or an outage — the committed images stay as they are.
+
+            Capture log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          labels: screenshots

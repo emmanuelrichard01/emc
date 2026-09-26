@@ -236,11 +236,18 @@ function sitemapPlugin(): Plugin {
 }
 
 /**
- * Recaptures project screenshots into the build output.
+ * Recaptures project screenshots into the build output — the fallback path.
  *
- * Runs only when SCREENSHOT_API_KEY is present, which on Vercel it is — so
- * every deploy ships current screenshots of the live sites, and a project
- * whose UI has moved on stops being represented by a stale image.
+ * The primary path is .github/workflows/screenshots.yml: a scheduled capture
+ * that opens a pull request, so a new image is reviewed before it ships and
+ * lands in the repo. This stays as a safety net for production only.
+ *
+ * Runs when SCREENSHOT_API_KEY is present AND the build is a production one:
+ *   · VERCEL_ENV=preview/development skips it — preview deploys (including
+ *     the screenshot PR's own) should show the committed images, spend no
+ *     quota and not add up to 45s to every branch push;
+ *   · SCREENSHOT_AT_BUILD=off turns it off everywhere, once the workflow is
+ *     trusted to be the only source.
  *
  * Writes into dist/ rather than public/. Vite copies public/ into dist/
  * before writeBundle, so these land on top of the committed images without
@@ -256,6 +263,11 @@ function screenshotPlugin(): Plugin {
     apply: "build",
     async writeBundle(options) {
       if (!process.env.SCREENSHOT_API_KEY) return;
+      if (process.env.SCREENSHOT_AT_BUILD === "off") return;
+      if (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") {
+        console.log(`\nscreenshots: skipped on a ${process.env.VERCEL_ENV} build — committed images ship as-is\n`);
+        return;
+      }
 
       const { captureAll } = await import("./scripts/screenshots.mjs");
       const outDir = path.join(options.dir ?? path.resolve(__dirname, "dist"), "images");
