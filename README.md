@@ -13,7 +13,7 @@ A performance-first, dark-mode portfolio built as a system interface rather than
 | **Framework** | React 19 + Vite 7 |
 | **Language** | TypeScript 5.9 (strict) |
 | **Styling** | Tailwind CSS 3 + CSS custom properties (runtime accent theming — two public, one unlockable) |
-| **Animation** | Framer Motion 12, plus hand-rolled `<canvas>` + `requestAnimationFrame` for the Hero circuit background |
+| **Animation** | Framer Motion 12, plus a hand-written WebGL fragment shader for the Hero's event-horizon background |
 | **Routing** | React Router 7 |
 | **Icons** | Lucide React, react-icons (Simple Icons) |
 | **SEO** | react-helmet-async + hand-authored JSON-LD structured data |
@@ -31,8 +31,9 @@ src/
 ├── components/
 │   ├── Hero.tsx                  # Composition only — copy, CTAs, socials
 │   ├── hero/
-│   │   ├── CircuitCanvas.tsx     # Source → hub → sink data path on <canvas>
-│   │   ├── OpsConsole.tsx        # Terminal UI + async, cancellable execution
+│   │   ├── EventHorizon.tsx      # WebGL black hole: the hero's background
+│   │   ├── HeroChrome.tsx        # Mark, shortcuts, socials, clock — the edges
+│   │   ├── TerminalHero.tsx      # The prompt: commands, questions, output
 │   │   ├── useConsoleCommands.tsx # The command registry (single source)
 │   │   └── useSystemTelemetry.ts # Measured FPS / uptime / heap
 │   ├── About.tsx                 # Bento grid: competencies, metrics, tech stack
@@ -57,7 +58,7 @@ src/
 │   ├── scrollToSection.ts        # Shared smooth-scroll-with-offset helper
 │   ├── platform.ts               # ⌘ vs Ctrl detection for shortcut hints
 │   ├── project.ts                # Project status derived from its actual links
-│   ├── circuitBus.ts             # One-way page → canvas signal channel
+│   ├── circuitBus.ts             # One-way page → background signal channel
 │   ├── portfolioQuery.ts         # SQL subset evaluated over the site's own data
 │   └── portfolioQuestions.ts     # Curated prepared queries behind `ask`
 ├── data/
@@ -91,14 +92,12 @@ The execution model is asynchronous and cancellable: a command may return a valu
 
 Other niceties: fish-style inline ghost completion (Tab or → to accept), Levenshtein typo suggestions, command history persisted across visits, and `ls` rows that are clickable rather than merely printed.
 
-The status bar is **measured, not simulated** — real render FPS from a frame counter, uptime from `performance.timeOrigin`, JS heap where the browser exposes it. It shows `--` until the first genuine sample rather than seeding a plausible-looking number.
+One input takes both commands and questions: anything that reads as a question goes to the assistant instead of answering "command not found", and the hint under the prompt says so as it is typed. The empty prompt types example questions and commands in turn, so it is never a blank stare. Everything else on the first screen — the mark, the ⌘K / ⌘J shortcuts, socials, Abuja time and the build SHA — sits at the edges, small, so the prompt is the only thing in the middle. `watch` still streams measured FPS, uptime and heap for anyone who asks.
 
-### Hero — the circuit background
-A `<canvas>` data path rather than a particle field. Nodes carry roles — ingest **sources** on the left, routing **hubs** through the middle, **sinks** on the right — and streams are Manhattan-routed from a source to a sink, flaring as they cross hubs and being absorbed on arrival. Motion is directional and purposeful rather than random drift.
+### Hero — the event horizon
+A close-up of a black hole rising out of the bottom-right corner, drawn by a WebGL fragment shader rather than played from a video: the reference loop was 9 MB of 4K with a seam every ten seconds; this is a few kilobytes that never loops. The shadow, the photon ring, the far side of the disk lensed into arcs over and under the hole, the near side crossing in front, relativistic beaming and streaming gas are all analytic — no ray marching, no textures. It is rendered smooth, tinted to the current accent (so the theme toggle, and the hidden phosphor theme, recolour it), at half resolution with a touch of film grain, and dissolved into the page with a mask.
 
-Implementation notes: the substrate (grid, routed traces, pads) is rasterised once to an offscreen canvas and blitted as a single `drawImage`; trails are `Float32Array` ring buffers; the head glow is a pre-rendered sprite rather than `shadowBlur`; the edge falloff is a CSS mask, not a per-frame composite. Nothing in the hot loop allocates. It self-tunes downward across three quality tiers, pauses off-screen and on hidden tabs, and is replaced by a static grid under `prefers-reduced-motion`.
-
-It also listens to the page: running any terminal command fires a packet across the board, and a streaming command raises sustained throughput — routed through `circuitBus.ts`, a plain module rather than React context, because the canvas consumes these inside its animation frame and shouldn't re-render anything to receive them.
+It listens through `circuitBus.ts` — a plain module, because the shader consumes these inside its animation frame and nothing should re-render to deliver them: keystrokes flare the disk, running commands and answers in progress spin it up, output on screen makes it recede, and the pointer tilts the camera by a degree or two. Capped at 30 fps, paused off-screen and in background tabs, one still frame under `prefers-reduced-motion`, and a CSS gradient where WebGL is unavailable.
 
 ### The query layer
 The site keeps its projects and roles in two tables, and you can read them.

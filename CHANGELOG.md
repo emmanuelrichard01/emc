@@ -5,6 +5,96 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — One prompt, in front of a black hole
+
+### Changed — hero
+- **The prompt is the centre.** The 42px wordmark, login banner inventory,
+  telemetry rail, flagship strip, circuit canvas, drafting grid and CRT
+  raster are gone. Name and whereabouts sit above the prompt; the mark and
+  the ⌘K / ⌘J shortcuts top edge; socials, Abuja time and the build SHA the
+  bottom edge (`hero/HeroChrome.tsx`).
+- **One input for commands and questions.** A question typed at the shell
+  goes to the assistant; the hint says "↵ asks the ai" as it is typed.
+  The empty prompt types example questions and commands in turn.
+- **Event horizon** (`hero/EventHorizon.tsx`): a WebGL black hole in close-up
+  from the bottom-right corner — analytic shadow, photon ring, lensed arcs,
+  near-side disk, beaming, streaming gas — accent-tinted, half resolution,
+  faded into the page. Replaces the reference video idea (9 MB, 4K, a seam
+  every 10 s) with a few KB that never loops and reacts: keystrokes flare
+  it, work in progress spins it up, output makes it recede, the pointer
+  tilts it. 30 fps cap, paused off-screen, still under reduced motion, CSS
+  fallback without WebGL.
+- `circuitBus` gains a `recede` signal; `useLagosClock` shared by the hero
+  and the footer.
+- **The way out is through the hole.** The hero is a pinned scroll scene
+  (`100svh` + `80svh` of scroll): the corner chrome fades first, the prompt
+  lifts, softens and fades, and the black hole zooms in — in the shader
+  (`uZoom`), so it stays sharp, with its photon ring sweeping across the
+  screen — until the shadow is the screen and hands over to the page's own
+  black. Scroll-linked, not timed: it plays backwards, stops where the
+  visitor stops. Uncapped frame rate only while diving. Reduced motion: no
+  pin, no dive.
+- The navbar appears when the hero has actually passed (measured from
+  `#home`), not after a fixed scroll distance the pinned scene would break.
+- **A fade out and a fade in, nothing travelling — and nothing shaking.**
+  Two CSS pins: the hero sticks for the dive (the hole fills the screen and
+  deepens to black, then the hero goes transparent over the matching page
+  black), and About sticks on its own stage (`#hero-stage`, pulled up one
+  screen, with a spacer for the pin's length) while it grows out of the
+  centre of the dark — scale 0.9 → 1 from mid-screen with opacity, eased out
+  — then scrolling resumes. Measured: About holds a constant position for
+  the whole reveal.
+  An earlier version held About in place by counter-translating it from
+  JavaScript each frame. The browser scrolls and paints before script can
+  answer, so every scroll step showed it move and snap back — the jitter.
+  Script now drives only opacity and scale, no filter is animated over the
+  section, and the stage renders in both modes so reduced motion never
+  meets an empty scroll target.
+
+### Changed — About
+- **Opens like every other module.** Eyebrow, two-tone heading ("Systems
+  that stay *correct*"), one line of description, a mono meta line, the
+  figures ledger to the right in the Work header's grammar (plus each
+  figure's source), and a hairline under it all — so About reads as module
+  01 of the same system, and its first screen is composed to be seen whole
+  as it grows out of the black hole.
+- **Stack → work, all the way.** Clicking a technology filters the catalogue
+  and lands on the results (`#work-catalogue`), not the top of the section.
+  `scrollToElementAndLand` waits for the filter to render before measuring,
+  and checks the landing once the scroll comes to rest, correcting it if
+  the list changed height mid-flight — which is what left it half way.
+- **In his words + profile.** The scroll-revealed bio set large, beside a
+  profile panel (portrait, whereabouts, roles, "ask how he works", CV).
+- **How I work — principles with receipts** (`data/principles.ts`): four
+  principles, each quoting a case study verbatim and linking to the section
+  that shows it. `principles.test.ts` fails the build if a quote stops
+  matching its project.
+- **Stack weighted by where it shipped** (`about/stackUsage.ts`): a bar per
+  technology counted from built projects and roles (design studies
+  excluded), the list on hover, and a click that filters the Work section
+  to that technology (`emc:work-filter`). A test fails if any listed
+  technology is used nowhere.
+
+### Fixed
+- **Nothing on the site could stick.** `overflow-x: hidden` on both `html`
+  and `body` made `body` a scroll container that never scrolls, so every
+  `position: sticky` element stuck to it — i.e. not at all. The hero's pin
+  for the dive scrolled straight up with the page (the landing wrapper's
+  own `overflow-x-hidden` broke it a second time), and the case-study
+  sidebar only appeared to work. All three are `overflow-x: clip` now,
+  which hides sideways overflow without creating a scroll container.
+  Measured after: the hero holds at `top: 0` for the whole dive.
+- The hero no longer lifts as it fades — it fades where it stands — and
+  the visual fades and zoom follow a lightly smoothed copy of the scroll so
+  wheel steps glide; the next section's hold-in-place reads the raw scroll,
+  so it never wobbles.
+- The shader's cleanup called `loseContext()`, so React's double effect run
+  in development (and any remount) got a dead context and silently fell
+  back to CSS. The context is now freed with the canvas.
+
+### Removed
+- `CircuitCanvas`, `circuitGeometry` (and its tests), `FastLane`, `StatusRail`.
+
 ## [Unreleased] — The Work section as a catalogue; case studies for skimmers and readers
 
 ### Added — Work
