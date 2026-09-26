@@ -5,6 +5,26 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The black hole, ray-traced
+
+### Changed
+- **The event horizon is computed, not drawn.** Each pixel integrates a
+  light ray through Schwarzschild spacetime (the Cartesian null geodesic,
+  ≤96 adaptive steps) and collects light where it crosses a flat, thin
+  accretion disk (3–15 Rs). The lensed halo over the hole, the secondary
+  image under it, the shadow and the lensed star field now emerge from the
+  physics instead of being painted as 2D arcs. Relativistic Doppler beaming
+  (∝ g³, with gravitational redshift) brightens and whitens the approaching
+  side; the disk follows a Novikov–Thorne-like profile; streaks orbit at the
+  Keplerian rate. The photon ring is added at the critical impact parameter
+  (3√3/2 Rs), occluded by the disk like the traced light, since the step
+  budget cannot follow many orbits. Stars are crisp points.
+- **Adaptive resolution.** The loop averages the browser's frame interval
+  and coarsens the render (2 → 4 px) if the page falls under ~24 fps,
+  rather than dropping frames on a slow GPU. Measured here: 12–17 ms a
+  frame at 720×405.
+- Composition, accent tinting, zoom, the dive and every reaction unchanged.
+
 ## [Unreleased] — One prompt, in front of a black hole
 
 ### Changed — hero

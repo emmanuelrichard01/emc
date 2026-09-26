@@ -6,53 +6,70 @@ import { onCircuitSignal } from '@/lib/circuitBus';
 /* ==========================================================================
    EVENT HORIZON
 
-   The hero's background: a black hole, drawn procedurally, seen through an
+   The hero's background: a black hole, ray-traced, seen through an
    instrument.
 
    Why a shader rather than the video it was modelled on. The reference was a
    10-second 4K loop — 9 MB, a visible seam every ten seconds, and deaf to
    everything on the page. This is a few kilobytes of GLSL that never loops
-   and listens: it renders the same Gargantua composition from first
-   principles, forever, and reacts to the terminal in front of it.
+   and listens.
 
-   WHAT IS DRAWN (all analytic — no ray marching, no textures)
-     shadow        the dark disc, radius R
-     photon ring   a hairline at ~1.03R, the brightest thing on screen
-     lensed arcs   the far side of the disk, bent up over the shadow and a
-                   thinner secondary image under it — the look that makes it
-                   read as a black hole rather than a planet with a ring
-     direct disk   the near side, a thin inclined band crossing in front
-     beaming       the approaching side brighter than the receding one
-     turbulence    streaks — concentric in the arcs, lengthwise in the
-                   band — drifting with the disk's rotation, so the gas
-                   flows rather than the picture turning
-     stars         sparse, and lensed: displaced away from the hole the way
-                   a real deflection bends the field behind it
+   WHAT IS COMPUTED, NOT DRAWN
+   Every pixel fires a ray from the camera and follows it through curved
+   spacetime around a Schwarzschild black hole, using the compact Cartesian
+   form of the null geodesic (Rs = 1):
+
+       d²x/dλ² = −1.5 · h² · x / |x|⁵        h = |x × dx/dλ|
+
+   The accretion disk is what it really is — a *flat*, thin ring in the
+   equatorial plane, from the innermost stable orbit (3 Rs) outward — and a
+   ray collects its light wherever it crosses that plane inside the ring.
+   The famous look is then not painted; it falls out of the physics:
+
+     lensed halo    light from the far side of the flat disk, bent up and
+                    over the hole — and a second image of it bent underneath
+     photon ring    rays that loop around the hole before escaping pile up
+                    in a thin bright circle at the shadow's edge (b ≈ 2.6 Rs)
+     shadow         rays that fall through the horizon: nothing comes back
+     beaming        the gas orbits at up to ~0.6c; the side moving toward
+                    the camera is Doppler-boosted (intensity ∝ g³) and
+                    whiter, the side moving away dimmer and warmer, and
+                    everything near the hole is gravitationally dimmed
+     disk light     a Novikov–Thorne-like profile: zero at the inner edge,
+                    peaking just outside it, falling off with radius
+     turbulence     streaks that orbit at the Keplerian rate (ω ∝ r^−1.5),
+                    so the inner gas visibly laps the outer
+     stars          looked up along each ray's *final* direction, so the
+                    background is lensed exactly as the disk is
 
    HOW IT LOOKS LIKE THE SITE
-   Rendered at a quarter of the display resolution and quantised to six
-   tones of the current accent through a 4×4 Bayer matrix, then upscaled
-   with nearest-neighbour. Physically shaped, instrument-rendered: pixels,
-   not a cinematic glow — and it follows the theme toggle, including the
-   hidden phosphor green.
+   The luminance the tracer produces is tone-mapped onto the current accent
+   — dark → accent → a warm near-white at the hottest — so it follows the
+   theme toggle, including the hidden phosphor green. Half resolution, a
+   touch of film grain, faded into the page by a mask in Hero.tsx.
 
    WHAT IT LISTENS TO (lib/circuitBus — no React state in the loop)
      burst   a keystroke or a command: the inner disk flares, then settles
      load    a command or an answer in progress: the disk spins up
      recede  output on screen: the hole dims and falls back, so text wins
-   and the pointer, which tilts the camera by a degree or two.
+   and the pointer, which moves the camera by a fraction of a degree.
 
    COST
-   ~80k fragments per frame at 1440×900, a handful of noise octaves each,
-   capped at 30 fps. Paused when off-screen or in a background tab. Under
-   reduced motion it draws one frame and stops. Without WebGL it is a static
-   CSS approximation. Never a reason for the page to feel slow.
+   ≤ 96 adaptive integration steps per pixel (small near the hole, large far
+   from it), at half resolution, capped at 30 fps outside the dive. The
+   loop measures its own frame time and coarsens the resolution on a slow
+   GPU rather than dropping frames. Paused off-screen and in background
+   tabs; one still frame under reduced motion; a CSS gradient without WebGL.
    ========================================================================== */
 
 const FRAG = /* glsl */ `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 
-uniform vec2  uRes;       // low-res buffer size in pixels
+uniform vec2  uRes;       // buffer size in pixels
 uniform float uTime;
 uniform float uPhase;     // accumulated disk rotation, integrated on the CPU
 uniform float uEnergy;    // 0..1 — flare from keystrokes and commands
@@ -61,9 +78,16 @@ uniform vec2  uTilt;      // pointer parallax, -1..1
 uniform vec3  uAccent;
 uniform vec3  uBg;
 uniform vec2  uCenter;    // where the hole sits, in 0..1 of the buffer
-uniform float uRadius;    // shadow radius, as a fraction of the buffer's short side
-uniform float uRoll;      // disk roll, radians — the cinematic diagonal
+uniform float uRadius;    // shadow radius on screen, as a fraction of the buffer's short side
+uniform float uRoll;      // camera roll, radians — the cinematic diagonal
 uniform float uZoom;      // 1 at rest; grows as the visitor scrolls into the hole
+
+// Units: Schwarzschild radius Rs = 1.
+const float RIN = 3.0;       // innermost stable circular orbit
+const float ROUT = 15.0;     // outer edge of the visible disk
+const float BCRIT = 2.598;   // critical impact parameter, 3√3/2 — the shadow's edge
+const float CAM = 30.0;      // camera distance
+const int   STEPS = 96;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -90,93 +114,139 @@ float fbm(vec2 p) {
   return v;
 }
 
+// Light emitted toward the camera by the disk at \`hit\`, for a photon
+// arriving along \`toCam\`. Returns luminance (x) and a warmth shift (y):
+// positive = blueshifted (whiter), negative = redshifted (warmer).
+vec2 disk(vec3 hit, vec3 toCam) {
+  float r = length(hit.xz);
+
+  // Novikov–Thorne-like radial profile, normalised to peak at ~1.
+  float x = RIN / r;
+  float profile = 17.6 * x * x * x * (1.0 - sqrt(x));
+
+  // Keplerian streaks: the texture is rotated at ω ∝ r^-1.5, so inner gas
+  // laps the outer. Sampled on a circle, so there is no seam at ±π.
+  float ang = atan(hit.z, hit.x) + uPhase * 9.0 * pow(r, -1.5);
+  vec2 onCircle = vec2(cos(ang), sin(ang));
+  float streak = fbm(vec2(r * 2.4, 0.0) + onCircle * 1.6);
+  float clump = fbm(onCircle * 3.5 + r * 0.6);
+  float gas = 0.35 + 1.05 * (0.65 * streak + 0.35 * clump);
+
+  // Relativistic beaming. Orbital speed in Schwarzschild, capped below c;
+  // gas orbits counter-clockwise seen from above.
+  float beta = min(0.62, sqrt(0.5 / max(r - 1.0, 0.5)));
+  vec3 v = normalize(vec3(-hit.z, 0.0, hit.x));
+  float gamma = inversesqrt(1.0 - beta * beta);
+  float doppler = 1.0 / (gamma * (1.0 - beta * dot(v, toCam)));
+  float g = doppler * sqrt(max(0.0, 1.0 - 1.0 / r));   // + gravitational redshift
+  float boost = g * g * g;
+
+  return vec2(profile * gas * boost, g - 1.0);
+}
+
+// Sparse stars on the celestial sphere, sampled along the lensed direction.
+// Each is a point at a random spot in its cell with a gaussian falloff, and
+// the cells are a couple of pixels across at the resting lens — so a star is
+// a crisp point, not a cell-shaped smear stretched by the projection.
+float stars(vec3 d) {
+  vec2 sph = vec2(atan(d.z, d.x), asin(clamp(d.y, -1.0, 1.0)));
+  vec2 g = sph * 900.0;
+  vec2 cell = floor(g);
+  float h = hash(cell);
+  if (h < 0.9985) return 0.0;
+  vec2 at = vec2(hash(cell + 1.7), hash(cell + 5.3)) * 0.6 + 0.2;
+  vec2 q = fract(g) - at;
+  float s = exp(-dot(q, q) * 70.0) * (0.3 + 0.7 * hash(cell + 3.1));
+  return s * (0.75 + 0.25 * sin(uTime * (0.4 + h * 1.7) + h * 50.0));
+}
+
 void main() {
   vec2 frag = gl_FragCoord.xy;
   float scale = min(uRes.x, uRes.y);
-  vec2 p = (frag - uCenter * uRes) / scale;
-  p -= uTilt * 0.018;                    // parallax: the camera drifts, the hole stays
-  p *= 1.0 + uRecede * 0.28;             // receding: smaller on screen
-  // Rolled onto a diagonal — a level disk reads as a diagram, a tilted one
-  // as a shot.
+
+  // Screen offset from where the hole sits, rolled onto the diagonal.
+  vec2 s = (frag - uCenter * uRes) / scale;
+  s *= 1.0 + uRecede * 0.28;
   float roll = uRoll + uTilt.x * 0.015;
-  p = mat2(cos(roll), -sin(roll), sin(roll), cos(roll)) * p;
+  s = mat2(cos(roll), -sin(roll), sin(roll), cos(roll)) * s;
 
-  float R = uRadius * uZoom;
-  float r = length(p);
-  float a = atan(p.y, p.x);
+  // Camera just above the disk plane, looking at the hole. The field of
+  // view is set so the shadow's edge lands at uRadius·uZoom on screen —
+  // zooming is narrowing the lens, as a real camera would.
+  float incl = 0.1 + uTilt.y * 0.012;
+  vec3 pos = CAM * vec3(0.0, sin(incl), -cos(incl));
+  vec3 fwd = normalize(-pos);
+  vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
+  vec3 up = cross(fwd, right);
+  float k = (BCRIT / CAM) / (uRadius * uZoom);
+  vec3 dir = normalize(fwd + (s.x * right + s.y * up) * k);
 
-  // ── Behind the hole: stars, the lensed far side, the photon ring ──
-  float behind = 0.0;
+  // ── Trace ──
+  vec3 c = cross(pos, dir);
+  float h2 = dot(c, c);
+  float light = 0.0;
+  float warmth = 0.0;
+  float trans = 1.0;
+  bool captured = false;
 
-  // Stars, lensed: sampled from a field pushed outward around the hole.
-  // One buffer pixel per star — a 2×2 block reads as debris, not distance.
-  vec2 sp = p + normalize(p + 1e-4) * (R * R * 1.8) / max(r, R);
-  vec2 cell = floor(sp * scale);
-  float h = hash(cell);
-  float star = step(0.9988, h) * (0.25 + 0.4 * hash(cell + 7.0));
-  star *= 0.7 + 0.3 * sin(uTime * (0.5 + h * 2.0) + h * 40.0);
-  behind += star * 0.6;
+  for (int i = 0; i < STEPS; i++) {
+    float r2 = dot(pos, pos);
+    float r = sqrt(r2);
+    if (r < 1.0) { captured = true; break; }
+    if (r > CAM + 2.0 && dot(pos, dir) > 0.0) break;   // escaped outward
 
-  // The far side of the disk, bent up over the shadow (thick, bright) and
-  // under it (the secondary image — thinner, dimmer). Textured along the
-  // angle, so it reads as streaming gas rather than a glow.
-  float top = smoothstep(-0.35, 1.0, sin(a));
-  float inner = R * 1.035;
-  float width = mix(R * 0.5, R * 1.25, top);
-  float x = (r - inner) / width;
-  float arc = step(0.0, x) * exp(-x * 1.9) * smoothstep(0.0, 0.05, x);
-  // Concentric: slow along the orbit, fast across it — streaks, not blots.
-  float arcGas = 0.6 * fbm(vec2(a * 1.6 - uPhase * 1.4, r / R * 16.0)) + 0.4 * fbm(vec2(a * 4.0 - uPhase * 1.8, r / R * 4.0));
-  behind += arc * mix(0.75, 1.7, top) * (0.45 + 1.1 * arcGas);
+    // Small steps where spacetime bends hardest, large ones far away.
+    float dt = clamp(0.09 * r - 0.05, 0.035, 1.6);
+    vec3 prev = pos;
+    dir += -1.5 * h2 * pos / (r2 * r2 * r) * dt;
+    pos += dir * dt;
 
-  // Photon ring: the hairline at the edge of the shadow.
-  behind += exp(-pow((r - R * 1.02) / (R * 0.022), 2.0)) * 1.3;
+    // Crossed the equatorial plane: did it pass through the disk?
+    if (prev.y * pos.y < 0.0) {
+      vec3 hit = mix(prev, pos, prev.y / (prev.y - pos.y));
+      float rr = length(hit.xz);
+      if (rr > RIN && rr < ROUT) {
+        vec2 e = disk(hit, -normalize(dir));
+        // Thin but not quite opaque, and soft at both edges.
+        float alpha = 0.92 * smoothstep(RIN, RIN * 1.06, rr) * (1.0 - smoothstep(ROUT * 0.62, ROUT, rr));
+        light += trans * e.x * alpha;
+        warmth += trans * e.y * alpha * e.x;
+        trans *= 1.0 - alpha;
+        if (trans < 0.02) break;
+      }
+    }
+  }
+  if (!captured) light += trans * stars(normalize(dir));
 
-  float shadow = 1.0 - smoothstep(R * 0.985, R * 1.01, r);
-  behind *= 1.0 - shadow;
+  // Photon ring. Rays with impact parameter near b = 3√3/2 orbit the hole
+  // (in principle, indefinitely) before escaping, stacking up ever-thinner
+  // images of the disk into one bright hairline at the shadow's edge. The
+  // step budget cannot follow a ray through many orbits, so the ring is
+  // added where theory puts it — at b_crit — and dimmed wherever the disk
+  // passes in front of it, exactly as the traced light is.
+  float b = sqrt(h2);
+  light += trans * 1.15 * exp(-pow((b - BCRIT) / 0.04, 2.0));
 
-  // ── In front: the near side of the disk, a band across the whole hole ──
-  float bandY = p.y + R * 0.3;
-  float along = abs(p.x);
-  float sigma = R * (0.11 + 0.035 * along / R);        // flares with distance
-  float thick = exp(-pow(bandY / sigma, 2.0));
-  float radial = exp(-pow((along - R * 1.2) / (R * 3.2), 2.0)) + 0.35 * exp(-pow(along / (R * 1.1), 2.0));
-  radial *= 1.0 - smoothstep(R * 5.0, R * 7.5, along);
-  // Streaks run along the disk and drift with its rotation; the approaching
-  // side (left) is brighter — relativistic beaming, the one asymmetry that
-  // makes it read as moving.
-  float bandGas = fbm(vec2(p.x / R * 1.3 - uPhase * 1.2, bandY / R * 7.0));
-  float beaming = clamp(1.0 - 0.28 * p.x / (R * 3.0), 0.6, 1.4);
-  float band = thick * radial * beaming * (0.35 + 1.05 * bandGas);
-  float cover = clamp(thick * radial * 1.4, 0.0, 1.0);  // how much it hides what is behind
+  // Energy flares the disk; receding dims everything.
+  light *= (1.0 + uEnergy * 0.5) * (1.0 - uRecede * 0.82);
 
-  float light = behind * (1.0 - cover * 0.7) + band * 1.1;
-
-  // Energy flares the inner disk and the arcs; receding dims everything.
-  light *= 1.0 + uEnergy * 0.6 * exp(-pow((r - R * 1.35) / (R * 1.6), 2.0));
-  light *= 1.0 - uRecede * 0.82;          // output on screen: text wins, decisively
-
-  // Melt into the page: the far side of the frame from the hole fades out,
-  // so it reads as something glimpsed at the edge of the screen rather than
-  // a picture placed on it. The hole itself may run off the canvas.
+  // Melt into the page away from the hole; the fade grows with the zoom so
+  // the photon ring stays visible as it sweeps across the screen.
   vec2 uv = frag / uRes;
   float reach = length((uv - uCenter) * vec2(uRes.x / uRes.y, 1.0));
-  // The fade grows with the zoom, so the photon ring stays visible as it
-  // sweeps across the screen on the way in.
   light *= 1.0 - smoothstep(0.45 * uZoom, 1.35 * uZoom, reach);
 
   // ── Tone: continuous, accent-tinted, soft-shouldered ──
-  // Hybrid: the structure is rendered smooth and realistic, then mapped
-  // onto the accent — dark → accent → a warm near-white at the hottest.
-  float l = 1.0 - exp(-light * 1.35);
+  float l = 1.0 - exp(-light * 0.95);
+  float w = clamp(warmth / max(light, 1e-3), -0.5, 0.5);
   vec3 shadowTint = mix(uBg, vec3(0.04, 0.045, 0.13), 0.55);
-  vec3 base = mix(uBg, shadowTint, shadow * (1.0 - cover));
-  vec3 warm = uAccent * 0.62;
-  vec3 hot = mix(uAccent, vec3(1.0, 0.95, 0.87), 0.5);
+  vec3 base = captured ? shadowTint : uBg;
+  vec3 warm = uAccent * 0.6;
+  // The approaching side runs whiter, the receding side deeper — beaming,
+  // made visible as colour as well as brightness.
+  vec3 hot = mix(uAccent, vec3(1.0, 0.96, 0.9), clamp(0.45 + w * 0.9, 0.0, 0.95));
   vec3 col = mix(base, warm, smoothstep(0.0, 0.5, l));
   col = mix(col, hot, smoothstep(0.5, 1.0, l));
-  // Film grain, a touch — it keeps a smooth gradient from banding at this
-  // resolution and gives the frame the texture of a shot, not a render.
   col += (hash(frag + fract(uTime) * 91.0) - 0.5) * 0.018;
   gl_FragColor = vec4(col, 1.0);
 }
@@ -187,10 +257,17 @@ attribute vec2 aPos;
 void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 `;
 
-/** Display pixels per rendered pixel. Larger is chunkier and cheaper. */
-/* 2 — the hybrid: a soft grain of pixels, not a mosaic. */
+/** Display pixels per rendered pixel, to start with. 2 is the hybrid: a soft
+    grain of pixels, not a mosaic. Raised automatically on a slow GPU. */
 const PIXEL = 2;
+/** The coarsest the renderer will go before it stops trying. */
+const PIXEL_MAX = 4;
 const FRAME_MS = 1000 / 30;
+/* The page's own frame budget. If the browser is delivering frames slower
+   than this on average — which, with the tracer the heaviest thing on the
+   page, means the GPU is behind — the resolution steps down. */
+const SLOW_FRAME_MS = 1000 / 24;
+const SAMPLES = 45;
 
 /* ── Colour ─────────────────────────────────────────────────────────── */
 
@@ -294,10 +371,11 @@ export default function EventHorizon({ center = { x: 0.5, y: 0.34 }, radius = 0.
     const themeObserver = new MutationObserver(setColours);
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
+    let pixel = PIXEL;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
-      const w = Math.max(1, Math.round(rect.width / PIXEL));
-      const h = Math.max(1, Math.round(rect.height / PIXEL));
+      const w = Math.max(1, Math.round(rect.width / pixel));
+      const h = Math.max(1, Math.round(rect.height / pixel));
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -336,6 +414,11 @@ export default function EventHorizon({ center = { x: 0.5, y: 0.34 }, radius = 0.
     let raf = 0;
     let last = performance.now();
     let lastDraw = 0;
+    // Adaptive resolution: a running average of the interval between the
+    // browser's frames, judged every SAMPLES frames.
+    let lastTick = 0;
+    let frameAvg = 0;
+    let samples = 0;
     let visible = true;
     const start = performance.now();
 
@@ -368,6 +451,22 @@ export default function EventHorizon({ center = { x: 0.5, y: 0.34 }, radius = 0.
 
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop);
+
+      if (lastTick) {
+        // Capped, so one long frame (a tab switch, a GC) is not a verdict.
+        const interval = Math.min(100, now - lastTick);
+        frameAvg = samples === 0 ? interval : frameAvg * 0.9 + interval * 0.1;
+        samples += 1;
+        if (samples >= SAMPLES) {
+          if (frameAvg > SLOW_FRAME_MS && pixel < PIXEL_MAX) {
+            pixel += 1;
+            resize();
+          }
+          samples = 0;
+        }
+      }
+      lastTick = now;
+
       // Full frame rate while the visitor is scrolling into the hole — the
       // dive has to move with the scroll, not a frame behind it.
       const diving = (shapeRef.current.zoom?.get() ?? 1) > 1.01;
@@ -379,6 +478,9 @@ export default function EventHorizon({ center = { x: 0.5, y: 0.34 }, radius = 0.
     const startLoop = () => {
       if (reduced || raf || !visible || document.hidden) return;
       last = performance.now();
+      // A resume is a fresh measurement, not a continuation of the last one.
+      lastTick = 0;
+      samples = 0;
       raf = requestAnimationFrame(loop);
     };
     const stopLoop = () => {
