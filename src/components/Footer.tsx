@@ -187,7 +187,7 @@ const Footer = () => {
   const deployed = formatRelativeBuildTime();
   const footerRef = useRef<HTMLElement>(null);
   const isInView = useInView(footerRef, { once: true, amount: 0.3 });
-  const lagosTime = useLagosClock();
+  const { time: lagosTime } = useLagosClock();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isLanding = pathname === "/";

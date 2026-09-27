@@ -82,7 +82,7 @@ export function HeroTopBar() {
 }
 
 export function HeroBaseline() {
-  const time = useLagosClock();
+  const { time } = useLagosClock();
   const prefersReduced = useReducedMotion();
 
   return (

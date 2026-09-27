@@ -5,6 +5,30 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The form keeps its promises
+
+### Added
+- **What it is about**, chosen first (a role, a project, collaboration,
+  something else): the message box then asks for the details that make a
+  first reply useful, and the message arrives under a subject that says what
+  it is, before it is opened. A real radio group — arrow keys move it.
+- **"Did you mean gmail.com?"** — a near miss of a major provider is offered,
+  never applied; real providers one edit from a bigger one (mail.com,
+  ymail.com) are never "corrected".
+- **Drafts survive.** What is typed is kept on the device and restored, with
+  a way to discard it; it is cleared once sent.
+- **A receipt, not a flash.** Sending replaces the form with what was sent,
+  where the reply goes and when; failing keeps the message in place and
+  offers the same message in the visitor's own mail app.
+- **The time in Abuja, live**, with whether it is a working hour and how far
+  ahead or behind the visitor it is — the honest answer to "when will I hear
+  back". The message box grows with the text; ⌘/Ctrl+Enter sends.
+
+### Changed
+- One clock for the whole site: `lib/lagosClock.ts` (pure, tested) behind
+  `useLagosClock`, which the hero, Contact and the footer now share — Contact
+  needed more than the time, and would otherwise have grown a second one.
+
 ## [Unreleased] — The ledger answers questions
 
 ### Added
