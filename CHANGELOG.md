@@ -5,6 +5,48 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The black hole, finished like film
+
+### Fixed
+- **The disk's turbulence turned the wrong way.** The streak texture rotated
+  clockwise while the velocity field used for Doppler beaming ran
+  counter-clockwise, so the gas was drawn orbiting one way and beamed as if
+  it orbited the other. Both now share one sense.
+### Changed
+- **An HDR pipeline** (WebGL2 with float targets; the old single pass
+  remains the fallback). The tracer writes linear radiance, which is
+  accumulated over jittered frames — reprojected through the dive and
+  clamped against ghosting — so the hairline photon ring and the stars are
+  supersampled instead of crawling; the brightest light blooms through a
+  four-level dual-filter pyramid; then it is toned onto the accent as before.
+- **The photon ring is lit by the disk.** It was a uniform circle painted at
+  b_crit. It is now the light of the gas where the ray's orbit crosses the
+  disk, beamed by that orbit's tilt (cos χ = L̂·ŷ): lopsided toward the
+  approaching side, turbulent, and it carries the hot spots.
+- **The dive is a fall.** The camera moves from 30 Rs to ~5 Rs while the lens
+  widens to keep the shadow exactly where Hero's mask expects it (a dolly
+  zoom, with the contract unit-tested), rising over the disk as it goes.
+  The camera is a static observer: its view passes through gravitational
+  aberration, and received light is blueshifted by its depth in the well.
+- **Keystrokes become hot spots.** Typing gathers a clump of hot gas in the
+  outer disk; running the command drops it in, and it spirals to the inner
+  edge, sheared into an arc and flashing each time it swings toward the
+  camera, then plunges. It is lensed like the rest of the disk, so it
+  appears in the secondary image and the ring too.
+- Velocity Verlet replaces Euler in the geodesic, at the same cost per step.
+  Rays beyond the page fade are no longer traced at all. The renderer
+  survives a lost GPU context, and under reduced motion it converges
+  sixteen jittered frames into one supersampled still.
+
+### Performance
+Measured on an Intel UHD iGPU at 2560×1440, uncapped, with a GPU sync each
+frame (the worst case: the full-rate dive), median of five interleaved
+runs: 31.3 fps before, 29.2 after — about 2 ms a frame. The tracer alone is
+unchanged; the cost is the finish, which runs at trace resolution and lets
+the browser's compositor upscale. At rest the loop is still capped at
+30 fps, and the adaptive resolution still steps down on a GPU that falls
+behind.
+
 ## [Unreleased] — Phones, audited
 
 Measured, not eyeballed: the site loaded in frames 390, 360 and 320px wide
