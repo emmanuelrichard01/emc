@@ -12,6 +12,16 @@ a personal portfolio site, not a versioned package.
   clockwise while the velocity field used for Doppler beaming ran
   counter-clockwise, so the gas was drawn orbiting one way and beamed as if
   it orbited the other. Both now share one sense.
+- **The catalogue's cursor preview could follow the pointer out of Work.**
+  It was shown on a row's `pointerenter` and hidden on `pointerleave`, and a
+  leave never fires when the page scrolls the list out from under a still
+  mouse, or when a filter removes the row beneath it; the preview is
+  `position: fixed`, so it stayed beside the cursor over the next section.
+  `AnimatePresence mode="wait"` could also strand a card after a quick run
+  of rows. The row is now read from what is under the pointer on every
+  move, re-read after a scroll or a change to the list, and cleared when
+  the pointer leaves the window; cards crossfade instead of queueing.
+
 ### Changed
 - **An HDR pipeline** (WebGL2 with float targets; the old single pass
   remains the fallback). The tracer writes linear radiance, which is

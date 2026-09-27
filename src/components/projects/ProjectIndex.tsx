@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
 import { ArrowRight, Check, ExternalLink, Github } from 'lucide-react';
 
@@ -87,10 +87,9 @@ interface RowProps {
   compared: boolean;
   compareFull: boolean;
   onCompare: (id: string) => void;
-  onHover: (project: Project | null) => void;
 }
 
-const IndexRow = ({ result, index, query, compared, compareFull, onCompare, onHover }: RowProps) => {
+const IndexRow = ({ result, index, query, compared, compareFull, onCompare }: RowProps) => {
   const { project, hit } = result;
   const status = projectStatus(project);
   const depth = depthOf(project);
@@ -107,12 +106,10 @@ const IndexRow = ({ result, index, query, compared, compareFull, onCompare, onHo
       exit={{ opacity: 0, transition: { duration: 0.12 } }}
       transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.18), ease: EASE }}
       className="group/row relative border-b border-border/60 last:border-b-0"
-      onPointerEnter={(e) => e.pointerType === 'mouse' && onHover(project)}
-      onPointerLeave={() => onHover(null)}
+      data-preview={project.id}
     >
       <TransitionLink
         to={`/projects/${project.id}`}
-        onFocus={() => onHover(null)}
         className={`${COLUMNS} group relative pl-4 md:pl-11 pr-4 py-3.5 hover:bg-primary/[0.045] focus-visible:bg-primary/[0.07] transition-colors ${
           compared ? 'bg-primary/[0.04]' : ''
         }`}
@@ -219,25 +216,90 @@ function useFinePointer(): boolean {
 
 const PREVIEW_W = 300;
 
-function CursorPreview({ project }: { project: Project | null }) {
+/*
+   Which row the preview shows is read from what is under the pointer, never
+   remembered from enter/leave events. Those were the source of a preview
+   that followed the cursor out of the section: a leave never fires when
+   the page scrolls the list out from under a still mouse, or when a filter
+   removes the row beneath it — and the preview is `position: fixed`, so it
+   stayed beside the cursor over whatever came next. Now every pointer
+   move asks which row (if any) the pointer is over; a scroll, or a change
+   to the list, asks again at the last known position; leaving the window
+   or losing focus clears it. There is no state that can go stale.
+*/
+function CursorPreview({ rootRef, projects }: { rootRef: RefObject<HTMLElement | null>; projects: Map<string, Project> }) {
   const prefersReduced = useReducedMotion();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const sx = useSpring(x, { stiffness: 500, damping: 40, mass: 0.5 });
   const sy = useSpring(y, { stiffness: 500, damping: 40, mass: 0.5 });
+  const [id, setId] = useState<string | null>(null);
+  const pointer = useRef<{ x: number; y: number } | null>(null);
 
   /* Positioned from the pointer, written to motion values — the preview
      moves every frame the mouse does, and none of it goes through React. It
-     flips to the cursor's left near the right edge so it never clips. */
+     flips to the cursor's left near the right edge so it never clips. The
+     row under the pointer does go through React, but only when it changes. */
   useEffect(() => {
+    const rowAt = (target: EventTarget | null) => {
+      const row = target instanceof Element ? target.closest('[data-preview]') : null;
+      return row && rootRef.current?.contains(row) ? row.getAttribute('data-preview') : null;
+    };
+    const place = (cx: number, cy: number) => {
+      const flip = cx + PREVIEW_W + 40 > window.innerWidth;
+      x.set(flip ? cx - PREVIEW_W - 24 : cx + 24);
+      y.set(Math.min(cy - 60, window.innerHeight - 260));
+    };
     const onMove = (e: PointerEvent) => {
-      const flip = e.clientX + PREVIEW_W + 40 > window.innerWidth;
-      x.set(flip ? e.clientX - PREVIEW_W - 24 : e.clientX + 24);
-      y.set(Math.min(e.clientY - 60, window.innerHeight - 260));
+      if (e.pointerType !== 'mouse') return;
+      pointer.current = { x: e.clientX, y: e.clientY };
+      place(e.clientX, e.clientY);
+      setId(rowAt(e.target));
+    };
+    // After a scroll, the content under a still pointer has changed.
+    let frame = 0;
+    const onScroll = () => {
+      if (frame || !pointer.current) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const p = pointer.current;
+        if (p) setId(rowAt(document.elementFromPoint(p.x, p.y)));
+      });
+    };
+    const clear = () => {
+      pointer.current = null;
+      setId(null);
+    };
+    // Out of the window: relatedTarget is null when the pointer left the document.
+    const onOut = (e: PointerEvent) => {
+      if (!e.relatedTarget) clear();
     };
     window.addEventListener('pointermove', onMove, { passive: true });
-    return () => window.removeEventListener('pointermove', onMove);
-  }, [x, y]);
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+    document.addEventListener('pointerout', onOut);
+    window.addEventListener('blur', clear);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('scroll', onScroll, { capture: true });
+      document.removeEventListener('pointerout', onOut);
+      window.removeEventListener('blur', clear);
+    };
+  }, [x, y, rootRef]);
+
+  /* A filter or sort can move or remove the row under a resting pointer.
+     Ask again once the list has laid out. */
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const p = pointer.current;
+      if (!p) return;
+      const row = document.elementFromPoint(p.x, p.y)?.closest('[data-preview]');
+      setId(row && rootRef.current?.contains(row) ? row.getAttribute('data-preview') : null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [projects, rootRef]);
+
+  const project = id ? projects.get(id) ?? null : null;
 
   return (
     <motion.div
@@ -245,7 +307,10 @@ function CursorPreview({ project }: { project: Project | null }) {
       style={{ x: prefersReduced ? x : sx, y: prefersReduced ? y : sy, width: PREVIEW_W }}
       aria-hidden="true"
     >
-      <AnimatePresence mode="wait">
+      {/* Overlapping crossfade rather than mode="wait": "wait" queues each
+          card behind the last one's exit, and a quick run of rows could
+          leave a stale card mounted. */}
+      <AnimatePresence initial={false}>
         {project && (
           <motion.div
             key={project.id}
@@ -253,7 +318,7 @@ function CursorPreview({ project }: { project: Project | null }) {
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.1 } }}
             transition={{ duration: 0.2, ease: EASE }}
-            className="border border-border bg-card shadow-2xl"
+            className="absolute left-0 top-0 w-full border border-border bg-card shadow-2xl"
           >
             <ProjectArt project={project} compact className="aspect-[16/10]" />
             <div className="flex items-center justify-between gap-3 px-3 py-2 border-t border-border">
@@ -283,7 +348,10 @@ interface ProjectIndexProps {
 
 export default function ProjectIndex({ results, query, grouped = true, compare, onCompare, compareMax }: ProjectIndexProps) {
   const fine = useFinePointer();
-  const [hovered, setHovered] = useState<Project | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Stable between renders unless the list itself changes — the preview
+  // re-checks what is under the pointer whenever it does.
+  const projectsById = useMemo(() => new Map(results.map((r) => [r.project.id, r.project])), [results]);
 
   if (!results.length) return null;
 
@@ -311,14 +379,13 @@ export default function ProjectIndex({ results, query, grouped = true, compare, 
           compared={compare.includes(project.id)}
           compareFull={compare.length >= compareMax}
           onCompare={onCompare}
-          onHover={setHovered}
         />
       );
     }
   }
 
   return (
-    <div className="border border-border bg-card/20" onPointerLeave={() => setHovered(null)}>
+    <div ref={rootRef} className="border border-border bg-card/20">
       <IndexHeader />
       <ul className="border-t border-border">
         <AnimatePresence initial={false}>{items}</AnimatePresence>
@@ -341,9 +408,7 @@ export default function ProjectIndex({ results, query, grouped = true, compare, 
         </span>
       </div>
 
-      {/* Only while the hovered project is still in the list — a filter can
-          remove the row from under a resting pointer, which fires no leave. */}
-      {fine && <CursorPreview project={hovered && byId.has(hovered.id) ? hovered : null} />}
+      {fine && <CursorPreview rootRef={rootRef} projects={projectsById} />}
     </div>
   );
 }
