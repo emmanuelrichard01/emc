@@ -5,6 +5,32 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The footer measures the visit
+
+### Added
+- **This visit, measured in your browser.** Beside the build receipt (what
+  shipped), the Core Web Vitals of the visit being read (how it arrived):
+  LCP, INP, CLS, TTFB and bytes transferred, from the browser's own
+  Performance APIs and rated against Google's thresholds. Definitions follow
+  the web-vitals library — CLS as the worst session window, INP grouped by
+  interaction with one outlier per fifty forgiven — and are tested
+  (`footer/vitals.ts`). A browser that cannot measure a metric says so; INP
+  starts as "click anything" and fills in when the visitor does. Collection
+  runs for the whole visit; React hears about it only while the footer is
+  on screen, at most once a second. It says plainly that the site also
+  reports anonymous vitals to Vercel Speed Insights.
+- **A reading trail on the sitemap.** Each section link carries how much of
+  that section this visit has had on screen, and sections not yet seen are
+  named. Seen rows are merged intervals, so re-reading never counts twice
+  and a jump never credits what it skipped (`footer/readingTrail.ts`).
+- **Source and changelog links** in the colophon.
+
+### Changed
+- The status dot is green only in working hours in Abuja; otherwise it says
+  "after hours" or "the weekend". It was "live" at any hour.
+- The watermark mark is uncovered by a wipe as the footer arrives, bookending
+  the cold open that draws it on.
+
 ## [Unreleased] — Two roles added to the ledger
 
 ### Added

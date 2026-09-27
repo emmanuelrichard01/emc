@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence, useScroll, useSpring, useInView } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useSpring, useInView, useReducedMotion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowUp, CornerDownLeft, Sparkles } from "lucide-react";
+import { ArrowUp, ArrowUpRight, CornerDownLeft, Sparkles } from "lucide-react";
 import { scrollToSection } from "@/lib/scrollToSection";
 import { SECTIONS } from "@/data/sections";
 // Shared with the hero's message-of-the-day, so the footer and the shell can
@@ -12,6 +12,10 @@ import { useAsk } from "@/components/ai/AskProvider";
 import { MODIFIER_KEY } from "@/lib/platform";
 import { useLagosClock } from "@/lib/useLagosClock";
 import SuggestionMarquee from "@/components/ai/SuggestionMarquee";
+import { useVisitVitals, type VisitVitals } from "@/components/footer/useVisitVitals";
+import { formatBytes, formatMetric, rate, type Metric, type Rating } from "@/components/footer/vitals";
+import { useReadingTrail } from "@/components/footer/useReadingTrail";
+import { READ, SKIPPED } from "@/components/footer/readingTrail";
 
 /* ==========================================================================
    FOOTER
@@ -30,6 +34,15 @@ import SuggestionMarquee from "@/components/ai/SuggestionMarquee";
    the build metadata becomes a legible receipt whose SHA links to the
    commit it names — which is the same claim the rest of the site makes
    about its numbers, applied to itself.
+
+   Two things only a footer can know, added since:
+
+     this visit   the Core Web Vitals of the visit being read, measured by
+                  the visitor's own browser (footer/vitals.ts) — the build
+                  receipt says what shipped; this says how it arrived
+     the trail    how much of each section this visitor has actually seen,
+                  on the sitemap, with what they skipped named
+                  (footer/readingTrail.ts)
    ========================================================================== */
 
 const REPO_URL = "https://github.com/emmanuelrichard01/emc";
@@ -167,6 +180,67 @@ const LastPrompt = () => {
 };
 
 /* -------------------------------------------------------------------------- */
+/*  THIS VISIT                                                                 */
+/* -------------------------------------------------------------------------- */
+
+const RATING_TONE: Record<Rating, string> = {
+  good: "bg-status-ok",
+  "needs-improvement": "bg-status-warn",
+  poor: "bg-status-error",
+};
+const RATING_LABEL: Record<Rating, string> = { good: "good", "needs-improvement": "fair", poor: "poor" };
+
+const VitalCell = ({ metric, name, value, supported, pending }: { metric: Metric; name: string; value: number | null; supported: boolean; pending: string }) => {
+  const rating = value === null ? null : rate(metric, value);
+  return (
+    <div className="bg-card px-4 py-3 min-w-0" title={name}>
+      <dt className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        {metric}
+        {rating && (
+          <span className="flex items-center gap-1.5 normal-case tracking-normal">
+            <span className={`w-1.5 h-1.5 ${RATING_TONE[rating]}`} aria-hidden="true" />
+            {RATING_LABEL[rating]}
+          </span>
+        )}
+      </dt>
+      <dd className="mt-2 font-mono text-[15px] text-foreground tabular-nums leading-none truncate">
+        {value !== null ? formatMetric(metric, value) : <span className="text-[11px] text-muted-foreground">{supported ? pending : "not measured here"}</span>}
+      </dd>
+    </div>
+  );
+};
+
+/* The visit, as the visitor's browser measured it. INP starts empty — it is
+   the slowest response to something the visitor did — so the cell invites
+   them to do something, and updates when they have. */
+const ThisVisit = ({ vitals }: { vitals: VisitVitals }) => (
+  <div className="mt-10 pt-8 border-t border-border">
+    <FooterColumnLabel>// This visit, measured in your browser</FooterColumnLabel>
+    <dl className="grid grid-cols-2 md:grid-cols-5 gap-px bg-border border border-border">
+      <VitalCell metric="LCP" name="Largest Contentful Paint — when the main content appeared" value={vitals.lcp} supported={vitals.supported.lcp} pending="measuring…" />
+      <VitalCell metric="INP" name="Interaction to Next Paint — the slowest response to something you did" value={vitals.inp} supported={vitals.supported.inp} pending="click anything" />
+      <VitalCell metric="CLS" name="Cumulative Layout Shift — how much the page moved under you" value={vitals.cls} supported={vitals.supported.cls} pending="measuring…" />
+      <VitalCell metric="TTFB" name="Time to First Byte — how long the server took to answer" value={vitals.ttfb} supported pending="—" />
+      <div className="bg-card px-4 py-3 col-span-2 md:col-span-1 min-w-0" title="Bytes over the network for the page and the resources it was allowed to time; cached files cost nothing">
+        <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">transferred</dt>
+        <dd className="mt-2 font-mono text-[15px] text-foreground tabular-nums leading-none">
+          {formatBytes(vitals.bytes)}
+          <span className="ml-2 text-[11px] text-muted-foreground">
+            {vitals.requests} req{vitals.cached > 0 ? ` · ${vitals.cached} cached` : ""}
+          </span>
+        </dd>
+      </div>
+    </dl>
+    <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+      {/* Said plainly because it is true: this strip only reads, but the site
+          does report anonymous vitals to Vercel Speed Insights (App.tsx). */}
+      Core Web Vitals, read from your browser and rated against Google&rsquo;s published thresholds. The site
+      also reports these, anonymously, to Vercel Speed Insights.
+    </p>
+  </div>
+);
+
+/* -------------------------------------------------------------------------- */
 /*  FOOTER                                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -182,15 +256,30 @@ const FooterColumnLabel = ({ children }: { children: React.ReactNode }) => (
 const footerLink =
   "relative py-2 -my-2 px-1.5 -mx-1.5 min-w-[32px] text-center md:min-w-0 md:text-left md:p-0 md:m-0 text-[11px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors";
 
+const SECTION_IDS = SECTIONS.map((section) => section.id);
+
 const Footer = () => {
   const year = new Date().getFullYear();
   const deployed = formatRelativeBuildTime();
   const footerRef = useRef<HTMLElement>(null);
   const isInView = useInView(footerRef, { once: true, amount: 0.3 });
-  const { time: lagosTime } = useLagosClock();
+  const clock = useLagosClock();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isLanding = pathname === "/";
+  const prefersReduced = useReducedMotion();
+  // Live, not once: the vitals only publish while someone can see them.
+  const onScreen = useInView(footerRef, { amount: 0 });
+  const vitals = useVisitVitals(onScreen);
+  const trail = useReadingTrail(SECTION_IDS, isLanding);
+  const skipped = isLanding ? SECTIONS.filter((section) => (trail[section.id] ?? 0) < SKIPPED) : [];
+
+  const goTo = (e: React.MouseEvent, id: string) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    if (isLanding) scrollToSection(id);
+    else navigate(`/#${id}`);
+  };
 
   return (
     <footer
@@ -215,9 +304,14 @@ const Footer = () => {
           having. Bled off the right edge and held at 7% so it reads as
           watermark rather than as a second logo, and masked so it fades out
           before it reaches the colophon it sits behind. */}
-      <div
+      {/* Revealed by a wipe as the footer arrives — the cold open draws
+          the mark on, and the close uncovers it the same way. */}
+      <motion.div
         className="absolute -right-16 -bottom-20 w-[420px] max-w-[70%] pointer-events-none select-none opacity-[0.07] text-foreground"
         aria-hidden="true"
+        initial={prefersReduced ? false : { clipPath: "inset(0 0 0 100%)" }}
+        animate={isInView || prefersReduced ? { clipPath: "inset(0 0 0 0%)" } : { clipPath: "inset(0 0 0 100%)" }}
+        transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
         style={{
           maskImage: 'linear-gradient(to left, #000 30%, transparent 100%)',
           WebkitMaskImage: 'linear-gradient(to left, #000 30%, transparent 100%)',
@@ -228,7 +322,7 @@ const Footer = () => {
             <path key={i} d={d} fill="currentColor" />
           ))}
         </svg>
-      </div>
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -248,9 +342,17 @@ const Footer = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
-            <span className="w-1.5 h-1.5 bg-status-ok status-live shrink-0" aria-hidden="true" />
-            <span>Abuja, NG — {lagosTime}</span>
+          {/* Green only when it is a working hour there — a dot that is
+              "live" at three in the morning is decoration pretending to be
+              status. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+            <span className={`w-1.5 h-1.5 shrink-0 ${clock.working ? "bg-status-ok status-live" : "bg-muted-foreground"}`} aria-hidden="true" />
+            <span>
+              Abuja, NG — <span className="text-foreground tabular-nums">{clock.time}</span>
+            </span>
+            <span className="normal-case tracking-normal">
+              · {clock.working ? "working hours" : clock.weekend ? "the weekend" : "after hours"}
+            </span>
           </div>
         </div>
 
@@ -266,6 +368,15 @@ const Footer = () => {
             reads, so{" "}
             <code className="font-mono text-foreground/80">queries</code> will reproduce any
             of them, and show the query it used.
+          </p>
+          {/* The reasoning behind every pass is written down; say where. */}
+          <p className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-[11px]">
+            <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="tap group inline-flex items-center gap-1 text-primary hover:text-foreground transition-colors">
+              source <ArrowUpRight className="w-3 h-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+            </a>
+            <a href={`${REPO_URL}/blob/main/CHANGELOG.md`} target="_blank" rel="noopener noreferrer" className="tap group inline-flex items-center gap-1 text-primary hover:text-foreground transition-colors">
+              changelog, with the reasoning <ArrowUpRight className="w-3 h-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+            </a>
           </p>
         </div>
 
@@ -284,23 +395,46 @@ const Footer = () => {
                 study they pointed at sections that do not exist there and
                 nothing replaced the browser's own handling — the same dead
                 links the navbar was fixed for, left behind in the footer. */}
+            {/* Each link carries how much of its section this visit has had on
+                screen — a hairline under the label — so the sitemap doubles
+                as a trail. Only on the landing page, where the sections are. */}
             <nav className="flex flex-wrap gap-x-5 gap-y-2.5" aria-label="Footer section links">
-              {SECTIONS.map((section) => (
-                <a
-                  key={section.id}
-                  href={isLanding ? `#${section.id}` : `/#${section.id}`}
-                  onClick={(e) => {
-                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-                    e.preventDefault();
-                    if (isLanding) scrollToSection(section.id);
-                    else navigate(`/#${section.id}`);
-                  }}
-                  className={footerLink}
-                >
-                  {section.label}
-                </a>
-              ))}
+              {SECTIONS.map((section) => {
+                const seen = trail[section.id];
+                return (
+                  <a
+                    key={section.id}
+                    href={isLanding ? `#${section.id}` : `/#${section.id}`}
+                    onClick={(e) => goTo(e, section.id)}
+                    className={footerLink}
+                    aria-label={isLanding && seen !== undefined ? `${section.label}, ${Math.round(seen * 100)}% read` : undefined}
+                  >
+                    {section.label}
+                    {isLanding && seen !== undefined && (
+                      <span className="absolute left-0 right-0 bottom-0.5 md:-bottom-1.5 h-px bg-border" aria-hidden="true">
+                        <span
+                          className={`absolute inset-y-0 left-0 transition-[width] duration-500 ${seen >= READ ? "bg-primary" : "bg-primary/60"}`}
+                          style={{ width: `${seen * 100}%` }}
+                        />
+                      </span>
+                    )}
+                  </a>
+                );
+              })}
             </nav>
+            {skipped.length > 0 && skipped.length < SECTIONS.length && (
+              <p className="mt-4 font-mono text-[11px] text-muted-foreground">
+                Not seen yet:{" "}
+                {skipped.map((section, i) => (
+                  <React.Fragment key={section.id}>
+                    {i > 0 && ", "}
+                    <a href={`#${section.id}`} onClick={(e) => goTo(e, section.id)} className="text-primary hover:text-foreground underline-offset-4 hover:underline transition-colors">
+                      {section.label}
+                    </a>
+                  </React.Fragment>
+                ))}
+              </p>
+            )}
           </div>
 
           <div>
@@ -324,6 +458,8 @@ const Footer = () => {
             </nav>
           </div>
         </div>
+
+        <ThisVisit vitals={vitals} />
 
         {/* Build receipt.
 
