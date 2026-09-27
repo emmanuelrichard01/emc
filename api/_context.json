@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-26T22:38:21.476Z",
+  "generatedAt": "2026-09-27T16:02:52.576Z",
   "person": {
     "name": "Emmanuel Moghalu",
     "role": "Data & Backend Engineer",
@@ -25,7 +25,7 @@
     "builtSystems": 11,
     "designStudies": 2,
     "caseStudies": 10,
-    "roles": 5
+    "roles": 7
   },
   "projects": [
     {
@@ -642,6 +642,21 @@
   ],
   "experience": [
     {
+      "id": "mercor",
+      "company": "Mercor",
+      "role": "Software Engineer, AI Benchmarking",
+      "type": "Part-time",
+      "period": "Jul — Sep 2026",
+      "summary": "Built Codebase Atlas Q&A, a repository-level benchmark and evaluation environment for Mercor's RL platform, testing frontier models on codebase comprehension and architectural reasoning.",
+      "stack": [
+        "Python",
+        "Docker",
+        "Bash",
+        "RewardKit",
+        "LLM Evaluation"
+      ]
+    },
+    {
       "id": "medvax",
       "company": "MedVax Health",
       "role": "Software & Data Engineer",
@@ -694,7 +709,7 @@
     {
       "id": "tac-africa",
       "company": "TAC AFRICA",
-      "role": "Full-Stack Software Engineer",
+      "role": "Full Stack Engineer",
       "type": "Part-time",
       "period": "Aug 2019 — Aug 2020",
       "summary": "Developed and maintained web applications serving 50,000+ users. Optimized backend APIs and SQL queries, reducing response latency by ~45% through structured debugging, log analysis, and database optimization.",
@@ -722,6 +737,20 @@
         "HTML/CSS"
       ],
       "note": "Undertaken alongside the National Innovative Diploma programme."
+    },
+    {
+      "id": "notap",
+      "company": "NOTAP",
+      "role": "Junior IT Consultant",
+      "type": "Internship",
+      "period": "Oct 2018 — Mar 2019",
+      "summary": "IT infrastructure and technical consulting at the National Office for Technology Acquisition and Promotion — deployment planning for small businesses, network set-up, and support for the staff who used it.",
+      "stack": [
+        "PHP",
+        "HTML/CSS",
+        "Networking"
+      ],
+      "note": "Concurrent with the first months at AfriHUB ICT."
     }
   ]
 }

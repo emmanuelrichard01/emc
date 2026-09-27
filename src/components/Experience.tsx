@@ -14,7 +14,7 @@ import { concurrentMonths, markFigures, stackTenure, unionMonths } from "@/compo
 /* ==========================================================================
    EXPERIENCE — the career ledger
 
-   Five roles, most of them run alongside a degree or another contract. The
+   Seven roles, most of them run alongside a degree or another contract. The
    section's job is to make that legible in the time a recruiter gives it,
    and to answer the questions they bring — how long, doing what, in which
    stack — from the dates themselves rather than from adjectives:
@@ -87,7 +87,7 @@ const RoleRow = ({ role, index, isLast, span, active, lit, tech, onActive, onTec
 
      Stacked on a phone this section ran 3,818px — 4.7 screens, 37% of the
      whole page — because the two columns that sit side by side on a desktop
-     fall on top of each other, and every one of five roles pays full price
+     fall on top of each other, and every one of the roles pays full price
      for a summary, three highlights and up to seven stack chips. The two most
      recent stay open; the rest keep their heading and dates, which with the
      timeline above is enough to read the shape of the career, and open on
@@ -292,7 +292,7 @@ const Experience: React.FC = () => {
               slow.
             </p>
             <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mt-4">
-              {startYear} — {endYear} · Health-tech, construction &amp; consulting
+              {startYear} — {endYear} · AI evaluation, health-tech, construction &amp; consulting
             </p>
           </div>
 

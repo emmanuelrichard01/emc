@@ -48,11 +48,10 @@ describe('the real ledger', () => {
     }
   });
 
-  it('ranks the technology used everywhere first', () => {
+  it('ranks the longest-used technology first, with every role that used it', () => {
     const [top] = stackTenure(EXPERIENCE, spans);
-    // Python appears in every role.
     expect(top.name).toBe('Python');
-    expect(top.roles).toHaveLength(EXPERIENCE.length);
+    expect(top.roles).toHaveLength(EXPERIENCE.filter((r) => r.stack.includes('Python')).length);
   });
 });
 

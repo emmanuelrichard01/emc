@@ -6,6 +6,22 @@ import type { ExperienceItem } from "@/types";
 
 export const EXPERIENCE: ExperienceItem[] = [
   {
+    id: "mercor",
+    company: "Mercor",
+    role: "Software Engineer, AI Benchmarking",
+    type: "Part-time",
+    period: "Jul — Sep 2026",
+    summary:
+      "Built Codebase Atlas Q&A, a repository-level benchmark and evaluation environment for Mercor's RL platform, testing frontier models on codebase comprehension and architectural reasoning.",
+    highlights: [
+      "Designed adversarial multi-module tasks that make AI agents trace cross-file dependencies, lifecycle ordering, state transitions and asymmetric configuration defaults across complex repositories",
+      "Engineered isolated container runtimes for executing AI-generated shell commands safely — controlled toolchains, reproducible environments, and isolated execution history",
+      "Built deterministic evaluation harnesses and grading rubrics with RewardKit, verifying each model's tool use against live repository state",
+      "Ran and analysed hundreds of evaluation trajectories to find recurring agent failure modes, validate reference solutions, and make the benchmark more reliable",
+    ],
+    stack: ["Python", "Docker", "Bash", "RewardKit", "LLM Evaluation"],
+  },
+  {
     id: "medvax",
     company: "MedVax Health",
     role: "Software & Data Engineer",
@@ -55,7 +71,7 @@ export const EXPERIENCE: ExperienceItem[] = [
   {
     id: "tac-africa",
     company: "TAC AFRICA",
-    role: "Full-Stack Software Engineer",
+    role: "Full Stack Engineer",
     type: "Part-time",
     period: "Aug 2019 — Aug 2020",
     summary:
@@ -81,5 +97,21 @@ export const EXPERIENCE: ExperienceItem[] = [
     ],
     stack: ["Python", "SQL", "JavaScript", "MySQL", "HTML/CSS"],
     note: "Undertaken alongside the National Innovative Diploma programme.",
+  },
+  {
+    id: "notap",
+    company: "NOTAP",
+    role: "Junior IT Consultant",
+    type: "Internship",
+    period: "Oct 2018 — Mar 2019",
+    summary:
+      "IT infrastructure and technical consulting at the National Office for Technology Acquisition and Promotion — deployment planning for small businesses, network set-up, and support for the staff who used it.",
+    highlights: [
+      "Designed tailored IT deployment plans for SMEs, improving operational efficiency by ~15%",
+      "Installed and configured secure network environments for stable connectivity across departments",
+      "Ran system health audits with documented remediation plans, and onboarded staff to new tools — lifting adoption by ~30%",
+    ],
+    stack: ["PHP", "HTML/CSS", "Networking"],
+    note: "Concurrent with the first months at AfriHUB ICT.",
   },
 ];

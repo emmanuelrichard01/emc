@@ -5,6 +5,14 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — Two roles added to the ledger
+
+### Added
+- **Mercor** (Software Engineer, AI Benchmarking, Jul–Sep 2026) and **NOTAP**
+  (Junior IT Consultant internship, Oct 2018 – Mar 2019), from LinkedIn;
+  TAC AFRICA's title now matches it. The timeline, tenure and totals follow
+  from the data, and the assistant's context is regenerated so it knows both.
+
 ## [Unreleased] — The form keeps its promises
 
 ### Added
