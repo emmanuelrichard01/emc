@@ -5,6 +5,14 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The prompt's hints step back
+
+### Changed
+- The prompt's self-typing example and tab completion use a ghost grey
+  (~3:1): legible, and a long way from typed input (~16:1) so neither can
+  look already typed. The resting hint steps aside once the prompt has been
+  used, for the rest of the visit.
+
 ## [Unreleased] — Audited: contrast, status, touch, cost
 
 An Impeccable audit (15/20) and a Taste review, then their fixes.

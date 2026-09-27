@@ -46,6 +46,11 @@
        so quiet is this, or size and tracking, never an alpha on muted
        (#888 at 40% measures 1.8:1). */
     --muted-quiet: 0 0% 50%; /* #7F7F7F */
+    /* Not text: text that has not happened yet — the prompt's self-typing
+       example and its tab completion. ~3:1, so it is legible, but a long
+       way from typed input (~16:1): it must never look already typed. Both
+       are aria-hidden; the input carries its own label. */
+    --muted-ghost: 0 0% 40%; /* #666666 */
 
     --accent: 0 0% 12%;
     --accent-foreground: 0 0% 93%;

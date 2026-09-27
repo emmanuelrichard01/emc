@@ -555,6 +555,13 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
      useful one on a working screen, so it gives up its space to output. */
   const compact = hasOutput || aiMode;
 
+  /* The resting hint teaches the prompt; once the visitor has used it —
+     a command run, or the AI opened — it has done its job and steps aside
+     for the rest of the visit, even after `clear`. Held as state set during
+     render rather than in an effect: it only ever flips one way. */
+  const [taught, setTaught] = useState(false);
+  if (compact && !taught) setTaught(true);
+
   // Output on screen: the black hole steps back so the text wins.
   useEffect(() => {
     emitCircuitSignal({ type: 'recede', value: compact ? 1 : 0 });
@@ -847,7 +854,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   {ghost && !autoTyping && (
                     <span
                       aria-hidden="true"
-                      className={`pointer-events-none absolute inset-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-quiet flex items-center`}
+                      className={`pointer-events-none absolute inset-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-ghost flex items-center`}
                       /* Same correction as the block: the completion is drawn
                          after an invisible copy of the value, so it has to
                          travel with the text it is completing. */
@@ -863,7 +870,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   {!aiMode && inputValue === '' && !running && example && charWidth > 0 && (
                     <span
                       aria-hidden="true"
-                      className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-quiet flex items-center truncate`}
+                      className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-ghost flex items-center truncate`}
                       style={{ left: charWidth * 1.6, right: 0 }}
                     >
                       {example}
@@ -938,7 +945,11 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
               · answers are generated and cite the data behind them
             </>
           ) : (
-            <>
+            /* Faded rather than removed, so the chips below keep their place. */
+            <span
+              className={`transition-opacity duration-700 ${taught ? 'opacity-0' : ''}`}
+              aria-hidden={taught || undefined}
+            >
               {/* "type 'help'" asks for a keyboard, which on a phone costs
                   about 40% of the viewport before anything is shown. The
                   chips below do the same job with one tap, so mobile is
@@ -948,7 +959,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
               <span className="hidden md:inline">
                 ask a question, or type <span className="text-primary/80">help</span> for commands
               </span>
-            </>
+            </span>
           )}
         </motion.p>
 
