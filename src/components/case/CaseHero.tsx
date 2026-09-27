@@ -95,7 +95,7 @@ export function CaseHero({ project, minutes }: { project: Project; minutes: numb
                 label: 'status',
                 value: (
                   <span className={`flex items-center gap-1.5 ${STATUS_CLASS[status]}`}>
-                    {status === 'live' && <span className="w-1.5 h-1.5 bg-emerald-500 status-live" aria-hidden="true" />}
+                    {status === 'live' && <span className="w-1.5 h-1.5 bg-status-ok status-live" aria-hidden="true" />}
                     {STATUS_LABEL[status]}
                   </span>
                 ),
@@ -165,7 +165,7 @@ export function CaseHero({ project, minutes }: { project: Project; minutes: numb
           aria-label="Copy a link to this case study"
           className="inline-flex items-center gap-2 px-3 py-2.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
         >
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" /> : <Link2 className="w-3.5 h-3.5" aria-hidden="true" />}
+          {copied ? <Check className="w-3.5 h-3.5 text-status-ok" aria-hidden="true" /> : <Link2 className="w-3.5 h-3.5" aria-hidden="true" />}
           {copied ? 'Copied' : 'Copy link'}
         </button>
       </motion.div>

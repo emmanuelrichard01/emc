@@ -119,7 +119,7 @@ export default function ProjectAsk({ project }: { project: Project }) {
           maxLength={MAX_QUESTION_CHARS + 50}
           placeholder="ask anything about this project…"
           // 16px on phones: anything smaller makes iOS zoom the page on focus.
-          className="flex-1 resize-none bg-transparent font-mono text-[16px] md:text-[13px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus:outline-none py-1.5 max-h-32"
+          className="flex-1 resize-none bg-transparent font-mono text-[16px] md:text-[13px] leading-relaxed text-foreground placeholder:text-muted-quiet focus:outline-none py-1.5 max-h-32"
         />
         {ai.busy ? (
           <button

@@ -63,7 +63,7 @@ class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-6 font-mono text-foreground selection:bg-destructive/30">
+        <div className="min-h-dvh flex items-center justify-center bg-background p-6 font-mono text-foreground selection:bg-destructive/30">
           <div className="max-w-2xl w-full border border-destructive bg-card p-8 relative overflow-hidden rounded-none">
 
             {/* Header */}
@@ -123,7 +123,7 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Footer */}
-            <div className="mt-8 pt-4 border-t border-border text-[11px] text-muted-foreground/60 flex justify-between items-center tracking-widest uppercase">
+            <div className="mt-8 pt-4 border-t border-border text-[11px] text-muted-quiet flex justify-between items-center tracking-widest uppercase">
               <span>ERR_CODE: 0xDEADBEEF</span>
               <span className="flex items-center gap-2">
                 <Terminal className="w-3 h-3" /> sys_log_v2.0

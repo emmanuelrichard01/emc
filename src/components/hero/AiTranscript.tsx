@@ -49,7 +49,7 @@ function AnswerText({ text, unverified }: { text: string; unverified?: string[] 
     parts.push(
       <mark
         key={match.index}
-        className="bg-transparent text-amber-300 underline decoration-dotted decoration-amber-400/80 underline-offset-4"
+        className="bg-transparent text-status-warn underline decoration-dotted decoration-status-warn/80 underline-offset-4"
         title="not found in the site's data"
       >
         {match[0]}
@@ -91,10 +91,10 @@ const StepTrace = ({ items }: { items: ToolResult[] }) => (
       const step = stepSummary(item);
       return (
         <li key={item.callId} className="ai-step flex items-baseline gap-2 text-[11px] leading-[1.7] min-w-0">
-          <span className="text-primary/70 shrink-0 select-none" aria-hidden="true">›</span>
+          <span className="text-primary/80 shrink-0 select-none" aria-hidden="true">›</span>
           <span className="uppercase tracking-widest text-[10px] text-muted-foreground shrink-0">{step.label}</span>
-          <span className="text-muted-foreground/80 truncate min-w-0">{step.detail}</span>
-          <span className={`shrink-0 tabular-nums ${step.failed ? 'text-amber-400/80' : 'text-primary/80'}`}>
+          <span className="text-muted-quiet truncate min-w-0">{step.detail}</span>
+          <span className={`shrink-0 tabular-nums ${step.failed ? 'text-status-warn/80' : 'text-primary/80'}`}>
             → {step.outcome}
           </span>
         </li>
@@ -126,7 +126,7 @@ const Evidence = ({ items }: { items: ToolResult[] }) => {
             <div key={item.callId} className="font-mono text-[11px]">
               <div className="text-muted-foreground uppercase tracking-widest text-[10px] mb-1">{item.name}</div>
 
-              {item.sql && <div className="text-primary/70 whitespace-pre-wrap break-words mb-1">{item.sql}</div>}
+              {item.sql && <div className="text-primary/80 whitespace-pre-wrap break-words mb-1">{item.sql}</div>}
 
               {item.table ? (
                 <div className="overflow-x-auto">
@@ -157,7 +157,7 @@ const Evidence = ({ items }: { items: ToolResult[] }) => {
                   </table>
                 </div>
               ) : (
-                <div className="text-muted-foreground/80 whitespace-pre-wrap break-words">
+                <div className="text-muted-quiet whitespace-pre-wrap break-words">
                   {item.content}
                   {item.content.length >= 600 ? '…' : ''}
                 </div>
@@ -285,7 +285,7 @@ export default function AiTranscript({
                exchange: an answer taller than the viewport should open at its
                beginning, not scrolled past its own first line. */
             <div key={turn.id} data-anchor className="mt-4 first:mt-0 text-foreground">
-              <span className="text-primary/60 select-none">? </span>
+              <span className="text-primary/80 select-none">? </span>
               {turn.text}
             </div>
           );
@@ -293,7 +293,7 @@ export default function AiTranscript({
 
         if (turn.role === 'system') {
           return (
-            <div key={turn.id} className="mt-1.5 text-amber-400/80 whitespace-pre-wrap">
+            <div key={turn.id} className="mt-1.5 text-status-warn/80 whitespace-pre-wrap">
               {turn.text}
               {isNewest && turn.retryable && canRetry && onRetry && (
                 <button
@@ -314,8 +314,8 @@ export default function AiTranscript({
         return (
           <div key={turn.id} className="mt-1.5">
             <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3 h-3 text-primary/60 shrink-0" aria-hidden="true" />
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+              <Sparkles className="w-3 h-3 text-primary/80 shrink-0" aria-hidden="true" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-quiet">
                 {turn.local
                   ? 'site data · no model'
                   : turn.degraded
@@ -344,7 +344,7 @@ export default function AiTranscript({
             {/* Said once, under the answer, in words — the marks above say
                 where; this says what they mean. */}
             {!turn.streaming && turn.unverified?.length ? (
-              <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-amber-300/90">
+              <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-status-warn/90">
                 <AlertTriangle className="w-3 h-3 mt-[3px] shrink-0" aria-hidden="true" />
                 <span>
                   {turn.unverified.length === 1 ? '1 figure' : `${turn.unverified.length} figures`} in this answer could
@@ -403,7 +403,7 @@ export default function AiTranscript({
           /* No aria-label, deliberately. This row is inserted into an
              aria-live log, so an override would announce "stop the current
              question" in place of the status a waiting user actually needs. */
-          className="group mt-3 flex items-center gap-2 py-2 -my-2 text-left text-muted-foreground/60 enabled:hover:text-primary transition-colors"
+          className="group mt-3 flex items-center gap-2 py-2 -my-2 text-left text-muted-quiet enabled:hover:text-primary transition-colors"
         >
           <TerminalIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
           <span className="font-mono text-[11px]">

@@ -208,7 +208,7 @@ function BootPanel({ waiting }: BootPanelProps) {
       // Lifts rather than merely fading: the panel pulls up and away, so
       // the hero underneath reads as having been there all along.
       exit={{ opacity: 0, y: -24, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } }}
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#050505] overflow-hidden"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-background overflow-hidden"
       role="status"
       aria-label="Starting up"
     >
@@ -310,7 +310,7 @@ function BootPanel({ waiting }: BootPanelProps) {
           wait is on the network, and offering a skip that cannot skip is
           worse than offering nothing. */}
       {!waiting && (
-        <span className="absolute bottom-8 font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground/40">
+        <span className="absolute bottom-8 font-mono text-[11px] uppercase tracking-[0.25em] text-muted-quiet">
           press any key to skip
         </span>
       )}

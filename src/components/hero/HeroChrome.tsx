@@ -112,7 +112,7 @@ export function HeroBaseline() {
         {/* Availability is already said once, under the name; the baseline
             keeps to what only it says — the local time, and the build. */}
         <span className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 bg-emerald-500 status-live" aria-hidden="true" />
+          <span className="w-1.5 h-1.5 bg-status-ok status-live" aria-hidden="true" />
           abuja {time}
         </span>
         {!IS_DEV_BUILD && (

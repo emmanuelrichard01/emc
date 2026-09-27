@@ -157,7 +157,7 @@ const IndexRow = ({ result, index, query, compared, compareFull, onCompare }: Ro
               <span className="flex items-end gap-px h-3" aria-hidden="true">
                 <span className="w-[3px] bg-primary/70" style={{ height: `${Math.min(100, 20 + depth.tradeoffs * 12)}%` }} />
                 <span
-                  className={`w-[3px] ${depth.fieldNotes ? 'bg-emerald-400/80' : 'bg-border'}`}
+                  className={`w-[3px] ${depth.fieldNotes ? 'bg-status-ok/80' : 'bg-border'}`}
                   style={{ height: `${Math.min(100, 20 + depth.fieldNotes * 20)}%` }}
                 />
               </span>

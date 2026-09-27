@@ -54,10 +54,10 @@ export default function SectionSeam({ index, label }: SectionSeamProps) {
         )}
       </div>
       <motion.div
-        className="mt-3 flex justify-end font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground/70"
+        className="mt-3 flex justify-end font-mono text-[10px] uppercase tracking-[0.25em] text-muted-quiet"
         style={prefersReduced ? undefined : { opacity: labelOpacity }}
       >
-        <span className="text-primary/70 mr-2">{index}</span>
+        <span className="text-primary/80 mr-2">{index}</span>
         {label}
       </motion.div>
     </div>

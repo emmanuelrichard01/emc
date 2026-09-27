@@ -292,7 +292,7 @@ export default function AskDock() {
                   claim — said in the hint so nobody reads it as a filter on
                   the truth. */}
               <div className="mt-3 flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70 shrink-0">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-quiet shrink-0">
                   pitch for
                 </span>
                 <div className="flex border border-border" role="radiogroup" aria-label="Who the answers are pitched for">
@@ -375,7 +375,7 @@ export default function AskDock() {
                         : 'ask anything about his work…'
                   }
                   // 16px on phones: anything smaller makes iOS zoom the page on focus.
-                  className="relative z-[2] flex-1 resize-none bg-transparent font-mono text-[16px] md:text-[13px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus:outline-none py-1"
+                  className="relative z-[2] flex-1 resize-none bg-transparent font-mono text-[16px] md:text-[13px] leading-relaxed text-foreground placeholder:text-muted-quiet focus:outline-none py-1"
                 />
 
                 {speech.supported && !busy && (
@@ -413,16 +413,16 @@ export default function AskDock() {
                     type="submit"
                     disabled={!question.trim()}
                     aria-label="Ask"
-                    className="relative z-[2] shrink-0 w-8 h-8 flex items-center justify-center bg-primary text-primary-foreground disabled:bg-transparent disabled:text-muted-foreground/60 transition-colors"
+                    className="relative z-[2] shrink-0 w-8 h-8 flex items-center justify-center bg-primary text-primary-foreground disabled:bg-transparent disabled:text-muted-quiet transition-colors"
                   >
                     <ArrowUp className="w-4 h-4" aria-hidden="true" />
                   </button>
                 )}
               </div>
 
-              <div className="mt-2 flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+              <div className="mt-2 flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-widest text-muted-quiet">
                 {speech.error ? (
-                  <span className="text-amber-300/90 normal-case tracking-normal text-[11px]" role="status">
+                  <span className="text-status-warn/90 normal-case tracking-normal text-[11px]" role="status">
                     {speech.error}
                   </span>
                 ) : (
@@ -430,7 +430,7 @@ export default function AskDock() {
                     ↵ ask · ⇧↵ newline · esc {busy ? 'stop' : 'close'} · {MODIFIER_KEY}+J
                   </span>
                 )}
-                <span className={`ml-auto tabular-nums ${remaining < 60 ? 'text-amber-300/90' : ''}`}>
+                <span className={`ml-auto tabular-nums ${remaining < 60 ? 'text-status-warn/90' : ''}`}>
                   {remaining < 100 ? `${remaining} left` : 'grounded'}
                 </span>
               </div>
@@ -481,7 +481,7 @@ function EmptyState({
               disabled={busy}
               className="group w-full flex items-baseline gap-3 py-2.5 border-b border-border text-left text-[12px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
             >
-              <span className="text-[10px] text-muted-foreground/50 tabular-nums group-hover:text-primary transition-colors">
+              <span className="text-[10px] text-muted-quiet tabular-nums group-hover:text-primary transition-colors">
                 {String(i + 1).padStart(2, '0')}
               </span>
               <span className="flex-1">{starter}</span>
@@ -496,7 +496,7 @@ function EmptyState({
         ))}
       </ul>
 
-      <p className="mt-5 text-[11px] text-muted-foreground/70 leading-relaxed">
+      <p className="mt-5 text-[11px] text-muted-quiet leading-relaxed">
         tip: select any sentence on the page to ask about it.
       </p>
     </div>

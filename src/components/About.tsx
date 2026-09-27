@@ -75,7 +75,12 @@ const METRICS = [
 const RevealWord = ({ word, index, total, progress }: { word: string; index: number; total: number; progress: MotionValue<number> }) => {
   const start = index / total;
   const end = Math.min(start + 2 / total, 1);
-  const blur = useTransform(progress, [start, end], ["blur(5px)", "blur(0px)"]);
+  // `none` once the word is sharp: blur(0px) is still a filter, and every
+  // revealed word would otherwise keep a filter layer of its own.
+  const blur = useTransform(progress, (p) => {
+    const t = Math.min(1, Math.max(0, (p - start) / (end - start)));
+    return t >= 1 ? "none" : `blur(${5 * (1 - t)}px)`;
+  });
   const color = useTransform(progress, [start, end], ["hsl(0 0% 53%)", "hsl(0 0% 90%)"]);
   const opacity = useTransform(progress, [start, end], [0.9, 1]);
   return (
@@ -353,7 +358,7 @@ const Stack = () => {
                         <span className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors">
                           <item.icon className="w-3.5 h-3.5" aria-hidden="true" />
                           <span className="font-mono text-[10px] uppercase tracking-wider whitespace-nowrap">{item.name}</span>
-                          <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80 ml-1">{u.count}</span>
+                          <span className="font-mono text-[10px] tabular-nums text-muted-quiet ml-1">{u.count}</span>
                         </span>
                         {/* Weight: where it actually shipped, relative to the most-used. */}
                         <span className="h-[2px] w-full bg-border overflow-hidden" aria-hidden="true">

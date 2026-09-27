@@ -155,7 +155,7 @@ const ProjectListing = ({ onOpen }: { onOpen: (id: string) => void }) => {
 
   return (
     <Pre>
-      <div className="text-muted-foreground/40">
+      <div className="text-muted-quiet">
         {'ID'.padEnd(idWidth)}
         {'TIER'.padEnd(tierWidth)}
         {'STATUS'.padEnd(statusWidth)}
@@ -181,7 +181,7 @@ const ProjectListing = ({ onOpen }: { onOpen: (id: string) => void }) => {
         );
       })}
 
-      <div className="text-muted-foreground/40 mt-1">
+      <div className="text-muted-quiet mt-1">
         {PROJECTS.length} systems — select an id to open its case study
       </div>
     </Pre>
@@ -403,7 +403,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
             return {
               output: (
                 <div className="flex flex-col gap-0.5">
-                  <div className="text-muted-foreground/40 mb-1">
+                  <div className="text-muted-quiet mb-1">
                     {CURATED_QUESTIONS.length} questions — select one, or run `queries &lt;n&gt;`
                   </div>
                   {CURATED_QUESTIONS.map((entry, i) => (
@@ -453,7 +453,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
               <div className="flex flex-col gap-1">
                 <div className="text-foreground">{entry.question}</div>
                 <Pre>
-                  <span className="text-muted-foreground/40">{entry.sql}</span>
+                  <span className="text-muted-quiet">{entry.sql}</span>
                 </Pre>
                 <Pre>{renderQueryTable(result)}</Pre>
                 <div className="text-primary">→ {entry.answer(result.rowCount)}</div>

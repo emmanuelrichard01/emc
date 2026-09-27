@@ -129,7 +129,7 @@ const ContactForm = () => {
      field in this form triggered it, so filling the form meant three
      unrequested zooms and a manual pinch to recover. Desktop keeps 13px. */
   const fieldClass = (name: string) =>
-    `w-full bg-card text-foreground text-base md:text-[13px] placeholder:text-muted-foreground/50 outline-none transition-all border ${
+    `w-full bg-card text-foreground text-base md:text-[13px] placeholder:text-muted-quiet outline-none transition-all border ${
       touched[name] && errors[name as keyof FieldErrors]
         ? "border-destructive focus:border-destructive"
         : focused === name
@@ -224,7 +224,7 @@ const ContactForm = () => {
             )}
             <span
               id="contact-message-count"
-              className={`tracking-normal normal-case ${formData.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-amber-400' : 'text-muted-foreground'}`}
+              className={`tracking-normal normal-case ${formData.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-status-warn' : 'text-muted-foreground'}`}
             >
               {formData.message.length}/{MAX_MESSAGE_LENGTH}
             </span>
@@ -270,7 +270,7 @@ const ContactForm = () => {
               <span>Sending</span>
             </motion.span>
           ) : formState === "success" ? (
-            <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-emerald-400">
+            <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-status-ok">
               <CheckCircle2 className="w-4 h-4" />
               <span>Sent</span>
             </motion.span>
@@ -352,7 +352,7 @@ const Contact: React.FC = () => {
                 </div>
                 <div
                   className={`flex items-center justify-between border bg-card px-4 py-3 group overflow-hidden gap-2 transition-all ${
-                    copied ? 'border-emerald-500/50' : 'border-border hover:border-muted-foreground'
+                    copied ? 'border-status-ok/50' : 'border-border hover:border-muted-foreground'
                   }`}
                 >
                   <span className="text-[13px] sm:text-sm font-mono text-foreground truncate">{EMAIL}</span>
@@ -365,7 +365,7 @@ const Contact: React.FC = () => {
                     <AnimatePresence mode="wait">
                       {copied ? (
                         <motion.div key="c" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }}>
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <CheckCircle2 className="w-4 h-4 text-status-ok" />
                         </motion.div>
                       ) : (
                         <motion.div key="p" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>

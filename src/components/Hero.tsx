@@ -91,7 +91,9 @@ export default function Hero({ children }: { children?: ReactNode }) {
   // The prompt fades where it stands — nothing on the hero moves.
   const contentOpacity = useTransform(p, [0, 0.36], [1, 0]);
   const contentBlur = useTransform(p, [0, 0.38], [0, 6]);
-  const contentFilter = useMotionTemplate`blur(${contentBlur}px)`;
+  // `none` at rest, not blur(0px): a zero blur is still a filter, and it
+  // kept the whole prompt on a filter layer, re-rasterised on every keystroke.
+  const contentFilter = useTransform(contentBlur, (b) => (b < 0.05 ? 'none' : `blur(${b}px)`));
   // Faded is not gone: an invisible prompt must not still take clicks.
   const contentPointer = useTransform(p, (v) => (v > 0.32 ? 'none' : 'auto'));
 
@@ -242,10 +244,10 @@ export default function Hero({ children }: { children?: ReactNode }) {
           <HeroBaseline />
         </motion.div>
 
-        {/* The hand-off to the page's black (#050505, the Index backdrop). */}
+        {/* The hand-off to the page's black (bg-background, the Index backdrop). */}
         {!still && (
           <motion.div
-            className="absolute inset-0 z-30 pointer-events-none bg-[#050505]"
+            className="absolute inset-0 z-30 pointer-events-none bg-background"
             style={{ opacity: handoff }}
             aria-hidden="true"
           />

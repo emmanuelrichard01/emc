@@ -62,7 +62,7 @@ function Segmented<T extends string>({
             aria-checked={selected}
             title={option.title}
             onClick={() => onSelect(option.value)}
-            className={`relative flex items-center gap-1.5 px-2.5 py-2.5 sm:py-1.5 font-mono text-[10px] uppercase tracking-widest whitespace-nowrap transition-colors ${
+            className={`tap relative flex items-center gap-1.5 px-2.5 py-2.5 sm:py-1.5 font-mono text-[10px] uppercase tracking-widest whitespace-nowrap transition-colors ${
               selected ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -77,7 +77,7 @@ function Segmented<T extends string>({
             <span className="relative flex items-center gap-1.5">
               {option.label}
               {option.count !== undefined && (
-                <span className={`tabular-nums ${selected ? 'text-primary/70' : 'text-muted-foreground/80'}`}>
+                <span className={`tabular-nums ${selected ? 'text-primary/80' : 'text-muted-quiet'}`}>
                   {option.count}
                 </span>
               )}
@@ -140,7 +140,7 @@ function StackPicker({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className={`flex items-center gap-1.5 border px-2.5 py-2.5 sm:py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+        className={`tap flex items-center gap-1.5 border px-2.5 py-2.5 sm:py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors ${
           selected.length || open
             ? 'border-primary/60 text-primary bg-primary/5'
             : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
@@ -170,7 +170,7 @@ function StackPicker({
                 onChange={(e) => setFilter(e.target.value)}
                 placeholder="find a technology…"
                 aria-label="Find a technology"
-                className="flex-1 min-w-0 bg-transparent font-mono text-base md:text-[12px] text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+                className="flex-1 min-w-0 bg-transparent font-mono text-base md:text-[12px] text-foreground placeholder:text-muted-quiet focus:outline-none"
               />
               {selected.length > 0 && (
                 <button
@@ -192,7 +192,7 @@ function StackPicker({
                       role="checkbox"
                       aria-checked={on}
                       onClick={() => onToggle(tech.name)}
-                      className="group w-full flex items-center gap-3 px-3 py-1.5 text-left hover:bg-foreground/[0.03] transition-colors"
+                      className="tap group w-full flex items-center gap-3 px-3 py-1.5 text-left hover:bg-foreground/[0.03] transition-colors"
                     >
                       <span
                         className={`w-3.5 h-3.5 shrink-0 flex items-center justify-center border transition-colors ${
@@ -261,7 +261,7 @@ export default function WorkToolbar({ state, onChange, tierCounts, stack, total,
             }}
             placeholder="search systems, stack, decisions…"
             maxLength={80}
-            className="flex-1 min-w-0 bg-transparent font-mono text-base md:text-[12px] text-foreground placeholder:text-muted-foreground/70 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+            className="flex-1 min-w-0 bg-transparent font-mono text-base md:text-[12px] text-foreground placeholder:text-muted-quiet focus:outline-none [&::-webkit-search-cancel-button]:hidden"
           />
           {state.query && (
             <button
@@ -370,7 +370,7 @@ export default function WorkToolbar({ state, onChange, tierCounts, stack, total,
                 type="button"
                 onClick={token.clear}
                 aria-label={`Remove filter ${token.label}`}
-                className="group inline-flex items-center gap-1.5 border border-primary/40 bg-primary/5 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary hover:border-primary transition-colors"
+                className="tap group inline-flex items-center gap-1.5 border border-primary/40 bg-primary/5 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary hover:border-primary transition-colors"
               >
                 {token.label}
                 <X className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" aria-hidden="true" />
@@ -379,7 +379,7 @@ export default function WorkToolbar({ state, onChange, tierCounts, stack, total,
             <button
               type="button"
               onClick={() => onChange({ query: '', tier: null, stack: [] })}
-              className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
+              className="tap font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
             >
               clear all
             </button>

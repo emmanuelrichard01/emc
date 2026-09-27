@@ -134,7 +134,7 @@ const LastPrompt = () => {
         }}
         className="group flex items-center gap-3 border border-border bg-background/40 px-3 md:px-4 py-2.5 focus-within:border-primary/60 transition-colors max-w-2xl"
       >
-        <span className="hidden sm:inline font-mono text-[13px] text-primary/60 shrink-0 select-none" aria-hidden="true">
+        <span className="hidden sm:inline font-mono text-[13px] text-primary/80 shrink-0 select-none" aria-hidden="true">
           em@builtbyem:~/$ ask
         </span>
         <Sparkles className="sm:hidden w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
@@ -148,7 +148,7 @@ const LastPrompt = () => {
           placeholder="anything the page didn't answer…"
           autoComplete="off"
           // 16px below md: iOS zooms the page on focus for anything smaller.
-          className="flex-1 min-w-0 bg-transparent font-mono text-base md:text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+          className="flex-1 min-w-0 bg-transparent font-mono text-base md:text-[13px] text-foreground placeholder:text-muted-quiet focus:outline-none"
         />
         <button
           type="submit"
@@ -249,7 +249,7 @@ const Footer = () => {
           </div>
 
           <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
-            <span className="w-1.5 h-1.5 bg-emerald-500 status-live shrink-0" aria-hidden="true" />
+            <span className="w-1.5 h-1.5 bg-status-ok status-live shrink-0" aria-hidden="true" />
             <span>Abuja, NG — {lagosTime}</span>
           </div>
         </div>
@@ -337,7 +337,7 @@ const Footer = () => {
             <span>© {year} Emmanuel Moghalu</span>
             {/* The shortcuts, stated once where someone looking for them
                 would look. Desktop only: a phone has none of these keys. */}
-            <span className="hidden md:flex items-center gap-3 text-muted-foreground/80" aria-label="Keyboard shortcuts">
+            <span className="hidden md:flex items-center gap-3 text-muted-quiet" aria-label="Keyboard shortcuts">
               <span><kbd className="border border-border px-1 py-px">{MODIFIER_KEY}+K</kbd> go</span>
               <span><kbd className="border border-border px-1 py-px">{MODIFIER_KEY}+J</kbd> ask</span>
               <span><kbd className="border border-border px-1 py-px">/</kbd> ask</span>

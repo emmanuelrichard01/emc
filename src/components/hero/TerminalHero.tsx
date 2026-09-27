@@ -55,8 +55,8 @@ const TERMINAL_TEXT = 'text-base md:text-[17px]';
 const MOTD_TONE_CLASS: Record<MotdTone, string> = {
   identity: 'text-foreground/90',
   meta: 'text-muted-foreground',
-  stat: 'text-muted-foreground/70',
-  hint: 'text-muted-foreground/40',
+  stat: 'text-muted-quiet',
+  hint: 'text-muted-quiet',
 };
 
 /* Chips double as the page's calls to action. `work`, `resume` and `contact`
@@ -641,7 +641,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                 <div key={line.id} className="w-full min-w-0" data-line-type={line.type}>
                   {line.type === 'cmd' ? (
                     <span className="text-foreground font-medium whitespace-pre-wrap break-all">
-                      <span className="text-primary/50">{PROMPT} </span>
+                      <span className="text-primary/80">{PROMPT} </span>
                       {line.content}
                     </span>
                   ) : (
@@ -658,7 +658,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   clearSession();
                   focusInput();
                 }}
-                className="mt-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/30 hover:text-primary transition-colors"
+                className="mt-2 font-mono text-[11px] uppercase tracking-widest text-muted-quiet hover:text-primary transition-colors"
               >
                 clear ⌃L
               </button>
@@ -712,7 +712,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           <form
             onSubmit={handleSubmit}
             onClick={() => focusInput()}
-            className={`flex items-center gap-2.5 border px-5 md:px-6 py-4 md:py-[22px] bg-background/60 backdrop-blur-md transition-colors duration-300 cursor-text ${
+            className={`flex items-center gap-2.5 border px-5 md:px-6 py-4 md:py-[22px] bg-background/80 transition-colors duration-300 cursor-text ${
               aiMode
                 ? `ai-border border-transparent ${ai.busy ? 'ai-border--busy' : ''}`
                 : inputFocused
@@ -735,7 +735,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
               >
                 <span className="w-1.5 h-1.5 bg-primary status-live shrink-0" aria-hidden="true" />
                 <span className="text-primary shrink-0">{running.name}</span>
-                <span className="text-muted-foreground/50 truncate group-hover:text-primary transition-colors">
+                <span className="text-muted-quiet truncate group-hover:text-primary transition-colors">
                   running — tap or ^C to cancel
                 </span>
               </button>
@@ -749,7 +749,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                     <>
                       <Sparkles className="w-3.5 h-3.5" />
                       ask
-                      <span className="text-muted-foreground/40">?</span>
+                      <span className="text-muted-quiet">?</span>
                     </>
                   ) : (
                     PROMPT
@@ -847,7 +847,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   {ghost && !autoTyping && (
                     <span
                       aria-hidden="true"
-                      className={`pointer-events-none absolute inset-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-foreground/25 flex items-center`}
+                      className={`pointer-events-none absolute inset-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-quiet flex items-center`}
                       /* Same correction as the block: the completion is drawn
                          after an invisible copy of the value, so it has to
                          travel with the text it is completing. */
@@ -863,7 +863,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   {!aiMode && inputValue === '' && !running && example && charWidth > 0 && (
                     <span
                       aria-hidden="true"
-                      className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-foreground/45 flex items-center truncate`}
+                      className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-quiet flex items-center truncate`}
                       style={{ left: charWidth * 1.6, right: 0 }}
                     >
                       {example}
@@ -902,7 +902,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
 
                 {unlocked && (
                   <span
-                    className="font-mono text-[10px] text-primary/70 shrink-0 hidden sm:inline"
+                    className="font-mono text-[10px] text-primary/80 shrink-0 hidden sm:inline"
                     title="Query layer unlocked"
                   >
                     Ω
@@ -916,7 +916,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         {/* ── Hint ── */}
         <motion.p
           {...reveal(0.55)}
-          className={`font-mono text-[11px] md:text-[12px] text-muted-foreground/60 shrink-0 text-center ${compact ? 'mt-2.5' : 'mt-4'}`}
+          className={`font-mono text-[11px] md:text-[12px] text-muted-quiet shrink-0 text-center ${compact ? 'mt-2.5' : 'mt-4'}`}
         >
           {typedQuestion ? (
             /* Said as they type, so Enter doing something other than a
@@ -930,10 +930,10 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   device actually has. "esc to leave" was shown on phones that
                   have no Escape key. */}
               <span className="md:hidden">
-                tap <span className="text-primary/70">exit</span> to leave
+                tap <span className="text-primary/80">exit</span> to leave
               </span>
               <span className="hidden md:inline">
-                <span className="text-primary/70">esc</span> to leave
+                <span className="text-primary/80">esc</span> to leave
               </span>{' '}
               · answers are generated and cite the data behind them
             </>
@@ -946,7 +946,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   that already have somewhere to type. */}
               <span className="md:hidden">ask anything, or tap below</span>
               <span className="hidden md:inline">
-                ask a question, or type <span className="text-primary/70">help</span> for commands
+                ask a question, or type <span className="text-primary/80">help</span> for commands
               </span>
             </>
           )}
@@ -997,10 +997,10 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                        matches the AI starter questions directly below and
                        makes the affordance obvious. The desktop treatment is
                        untouched. */
-                    className={`font-mono text-[11px] md:text-[12px] border border-border md:border-0 px-2.5 md:px-1 md:-mx-1 py-1.5 md:py-2 md:-my-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed md:underline-offset-4 md:hover:underline decoration-primary/40 ${
+                    className={`tap font-mono text-[11px] md:text-[12px] border border-border md:border-0 px-2.5 md:px-1 md:-mx-1 py-1.5 md:py-2 md:-my-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed md:underline-offset-4 md:hover:underline decoration-primary/40 ${
                       chip === 'ai'
                         ? 'text-primary/80 hover:text-primary'
-                        : 'text-muted-foreground/60 hover:text-primary'
+                        : 'text-muted-quiet hover:text-primary'
                     }`}
                   >
                     {chip === 'ai' ? (

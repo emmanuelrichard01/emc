@@ -199,7 +199,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { isOpen, open, close } = useCommandPalette();
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background font-sans antialiased selection:bg-primary/20 selection:text-primary">
+    <div className="relative flex min-h-dvh flex-col bg-background font-sans antialiased selection:bg-primary/20 selection:text-primary">
       {/* Skip navigation — WCAG 2.4.1 Bypass Blocks */}
       <a href="#main-content" className="skip-nav">
         Skip to main content

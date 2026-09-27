@@ -177,7 +177,7 @@ const ProjectDetail = () => {
 
   if (!project || !seo) {
     return (
-      <div className="min-h-screen flex items-center justify-center flex-col gap-4 bg-background noise-overlay">
+      <div className="min-h-dvh flex items-center justify-center flex-col gap-4 bg-background noise-overlay">
         <SEOHead
           metadata={{
             title: "Project not found | Emmanuel Moghalu",
@@ -215,7 +215,7 @@ const ProjectDetail = () => {
   };
 
   return (
-    <div className="pt-28 md:pt-32 pb-24 min-h-screen bg-background relative selection:bg-primary/20 selection:text-primary">
+    <div className="pt-28 md:pt-32 pb-24 min-h-dvh bg-background relative selection:bg-primary/20 selection:text-primary">
       <SEOHead metadata={metadata}>
         <script type="application/ld+json">{JSON.stringify(seo.projectSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(seo.breadcrumbSchema)}</script>
@@ -251,10 +251,10 @@ const ProjectDetail = () => {
 
             {/* Scope notice — stated up front, not buried. */}
             {caseStudy?.notice && (
-              <div className="flex gap-4 border border-amber-500/25 bg-amber-500/5 p-5 -mt-6">
-                <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="flex gap-4 border border-status-warn/25 bg-status-warn/5 p-5 -mt-6">
+                <Info className="w-4 h-4 text-status-warn shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
-                  <span className="block text-[10px] font-mono uppercase tracking-[0.2em] text-amber-400 mb-2">Scope notice</span>
+                  <span className="block text-[10px] font-mono uppercase tracking-[0.2em] text-status-warn mb-2">Scope notice</span>
                   <p className="text-[14px] text-foreground/75 leading-relaxed">{caseStudy.notice}</p>
                 </div>
               </div>

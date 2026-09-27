@@ -137,7 +137,7 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
     idle: <Download className="w-4 h-4" />,
     preparing: <Loader2 className="w-4 h-4 animate-spin text-primary" />,
     downloading: <FileDown className="w-4 h-4 text-primary" />,
-    success: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
+    success: <CheckCircle2 className="w-4 h-4 text-status-ok" />,
   };
 
   const inFlight = status === 'downloading' || status === 'preparing';

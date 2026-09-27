@@ -493,7 +493,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
             onClick={toggleAsk}
             aria-label={askOpen ? 'Close the assistant' : 'Ask the assistant'}
             aria-expanded={askOpen}
-            className={`shrink-0 w-9 flex items-center justify-center active:scale-95 transition-transform ${
+            className={`shrink-0 w-10 flex items-center justify-center active:scale-95 transition-transform ${
               askOpen ? 'text-primary' : 'text-primary/80'
             }`}
           >
@@ -504,7 +504,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
             type="button"
             onClick={onOpenCommandPalette}
             aria-label="Open command palette"
-            className="shrink-0 w-9 flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
+            className="shrink-0 w-10 flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
           >
             <Command className="h-4 w-4" aria-hidden="true" />
           </button>

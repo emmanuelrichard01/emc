@@ -41,6 +41,11 @@
 
     --muted: 0 0% 8%;
     --muted-foreground: 0 0% 53%; /* #888888 */
+    /* The quietest text allowed: 4.6:1 on every surface here, including the
+       hero's slate and a card. Below it, text is decoration, not content —
+       so quiet is this, or size and tracking, never an alpha on muted
+       (#888 at 40% measures 1.8:1). */
+    --muted-quiet: 0 0% 50%; /* #7F7F7F */
 
     --accent: 0 0% 12%;
     --accent-foreground: 0 0% 93%;
@@ -51,6 +56,14 @@
     --success-foreground: 0 0% 98%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 98%;
+
+    /* Status — meaning, not decoration, so it must survive the accent
+       changing under it. Warn sits yellower than the amber accent so a
+       caution never reads as a highlight; the phosphor theme moves ok off
+       green (below), where it would vanish into the accent. */
+    --status-ok: 158 64% 52%;
+    --status-warn: 46 96% 64%;
+    --status-error: 0 91% 71%;
 
     /* Hairline borders */
     --border: 0 0% 12%; /* rgba(255,255,255,0.06) roughly */
@@ -93,6 +106,7 @@
     --primary-muted: 145 72% 50% / 0.1;
     --primary-hover: 145 72% 58%;
     --primary-hue: 145;
+    --status-ok: 188 78% 58%;
     --ring: 145 72% 50%;
     --shadow-glow: 0 0 24px hsl(145 72% 50% / 0.14);
     --gradient-primary: linear-gradient(135deg, hsl(145 72% 50%), hsl(145 72% 34%));
@@ -101,15 +115,15 @@
 
   .theme-purple {
     /* Primary - Tech Purple System */
-    --primary: 271 91% 65%; /* #a855f7 */
-    --primary-foreground: 0 0% 100%;
-    --primary-muted: 271 91% 65% / 0.1;
-    --primary-hover: 271 91% 70%;
+    --primary: 271 91% 74%; /* lightened from 65%: accent text is 6.7:1, and 4.7:1 at /80 */
+    --primary-foreground: 0 0% 2%;
+    --primary-muted: 271 91% 74% / 0.1;
+    --primary-hover: 271 91% 79%;
     --primary-hue: 271;
-    --ring: 271 91% 65%;
-    --shadow-glow: 0 0 24px hsl(271 91% 65% / 0.12);
-    --gradient-primary: linear-gradient(135deg, hsl(271 91% 65%), hsl(271 91% 50%));
-    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(271 91% 65% / 0.04), transparent 60%);
+    --ring: 271 91% 74%;
+    --shadow-glow: 0 0 24px hsl(271 91% 74% / 0.12);
+    --gradient-primary: linear-gradient(135deg, hsl(271 91% 74%), hsl(271 91% 58%));
+    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(271 91% 74% / 0.04), transparent 60%);
   }
 }
 
@@ -142,6 +156,17 @@
     scroll-behavior: smooth;
     overflow-x: clip;
     max-width: 100vw;
+  }
+
+  /* No word left alone on a line: headings share their lines out evenly,
+     and running text avoids a one-word last line. Both are hints the
+     browser drops where unsupported, costing nothing there. */
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  p, li, dd, blockquote {
+    text-wrap: pretty;
   }
 
   /* Safe area padding for notched/island devices */
@@ -751,5 +776,15 @@ html, body, * {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* A thumb, not a cursor. On touch screens the primary controls are at least
+   44px tall (Apple's and Material's minimum; WCAG AA's 24px is the floor,
+   not the target). Scoped to coarse pointers, so the desktop keeps its
+   density. */
+@media (pointer: coarse) {
+  .tap {
+    min-height: 44px;
   }
 }

@@ -51,9 +51,15 @@ export default {
 					DEFAULT: 'hsl(var(--warning))',
 					foreground: 'hsl(var(--warning-foreground))'
 				},
+				status: {
+					ok: 'hsl(var(--status-ok))',
+					warn: 'hsl(var(--status-warn))',
+					error: 'hsl(var(--status-error))'
+				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
+					foreground: 'hsl(var(--muted-foreground))',
+					quiet: 'hsl(var(--muted-quiet))'
 				},
 				accent: {
 					DEFAULT: 'hsl(var(--accent))',

@@ -24,8 +24,8 @@ export const STATUS_LABEL: Record<ProjectStatus, string> = {
 };
 
 export const STATUS_CLASS: Record<ProjectStatus, string> = {
-  live: 'text-emerald-400',
+  live: 'text-status-ok',
   'source-available': 'text-primary',
   private: 'text-muted-foreground',
-  design: 'text-amber-400',
+  design: 'text-status-warn',
 };

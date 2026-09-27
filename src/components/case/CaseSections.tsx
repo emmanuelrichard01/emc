@@ -75,7 +75,7 @@ export function CaseSection({
           aria-label={`Copy a link to ${label}`}
           className="p-1 text-muted-foreground opacity-0 group-hover/heading:opacity-100 focus-visible:opacity-100 hover:text-primary transition-all"
         >
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" /> : <Hash className="w-3.5 h-3.5" aria-hidden="true" />}
+          {copied ? <Check className="w-3.5 h-3.5 text-status-ok" aria-hidden="true" /> : <Hash className="w-3.5 h-3.5" aria-hidden="true" />}
         </button>
         <span className="flex-1 h-px" aria-hidden="true" />
         {aside}
@@ -136,7 +136,7 @@ export function Tradeoffs({ project, tradeoffs }: { project: Project; tradeoffs:
                 column, so the pair reads as one comparison. */}
             <div className="grid grid-cols-[3.5rem_1fr] gap-x-3 gap-y-2 mb-4">
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground pt-1">chose</span>
-              <span className="font-mono text-[13px] text-emerald-400 leading-snug">{t.chose}</span>
+              <span className="font-mono text-[13px] text-status-ok leading-snug">{t.chose}</span>
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground pt-1">over</span>
               <span className="font-mono text-[13px] text-muted-foreground leading-snug line-through decoration-muted-foreground/50">
                 {t.rejected}
@@ -249,7 +249,7 @@ export function FieldNotesList({ notes }: { notes: FieldNote[] }) {
                       <dd className="text-foreground/85">{note.fix}</dd>
                       {note.guard && (
                         <>
-                          <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-emerald-400/90 sm:pt-1">guarded by</dt>
+                          <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-status-ok/90 sm:pt-1">guarded by</dt>
                           <dd className="text-foreground/85">{note.guard}</dd>
                         </>
                       )}

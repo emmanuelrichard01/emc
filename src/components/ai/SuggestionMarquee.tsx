@@ -57,10 +57,10 @@ export default function SuggestionMarquee({
         tabIndex={copy ? -1 : undefined}
         disabled={disabled}
         onClick={() => onPick(question)}
-        className="group flex items-center gap-2 whitespace-nowrap font-mono text-[11px] md:text-[12px] text-muted-foreground/80 px-3 py-2 border border-transparent hover:border-primary/40 hover:text-foreground hover:bg-primary/[0.04] focus-visible:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="group flex items-center gap-2 whitespace-nowrap font-mono text-[11px] md:text-[12px] text-muted-quiet px-3 py-2 border border-transparent hover:border-primary/40 hover:text-foreground hover:bg-primary/[0.04] focus-visible:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <Sparkles
-          className="w-3 h-3 text-primary/40 group-hover:text-primary transition-colors shrink-0"
+          className="w-3 h-3 text-primary/80 group-hover:text-primary transition-colors shrink-0"
           aria-hidden="true"
         />
         {question}

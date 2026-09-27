@@ -212,7 +212,7 @@ export default function FlagshipStage({ projects }: { projects: Project[] }) {
                     and the tab beside it already states the status. */}
                 {project.image && (
                   <span className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-background/80 backdrop-blur-sm border border-border px-2 py-1 font-mono text-[10px] uppercase tracking-widest">
-                    {status === 'live' && <span className="w-1.5 h-1.5 bg-emerald-500 status-live" aria-hidden="true" />}
+                    {status === 'live' && <span className="w-1.5 h-1.5 bg-status-ok status-live" aria-hidden="true" />}
                     <span className={STATUS_CLASS[status]}>{STATUS_LABEL[status]}</span>
                   </span>
                 )}
@@ -286,7 +286,7 @@ export default function FlagshipStage({ projects }: { projects: Project[] }) {
                        and on a phone they are the stage's only other doors. */
                     className="group/ask inline-flex items-center gap-1.5 py-2.5 -my-2.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-primary/70 group-hover/ask:text-primary transition-colors" aria-hidden="true" />
+                    <Sparkles className="w-3.5 h-3.5 text-primary/80 group-hover/ask:text-primary transition-colors" aria-hidden="true" />
                     ask about it
                   </button>
                   <span className="flex items-center gap-5 ml-auto">

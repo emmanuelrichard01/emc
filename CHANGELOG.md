@@ -5,6 +5,38 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — Audited: contrast, status, touch, cost
+
+An Impeccable audit (15/20) and a Taste review, then their fixes.
+
+### Fixed
+- **Text faded with alpha failed contrast, site-wide.** Muted text at
+  20–80% opacity measured 1.3–3.9:1 — console output, hints, SQL lines, a
+  button, the contact placeholder, most of them in the hero terminal. A
+  `muted-quiet` token (`#7F7F7F`, 4.6:1 on every surface, including the
+  hero slate and a card) replaces all 37; accent text below 80% (15 uses)
+  is now `/80`. Only the two `aria-hidden` separator dots stay faint.
+- **The purple theme's accent failed as text** (3.98:1 even at 90%). It is
+  lighter — 6.7:1 solid, 4.7:1 at `/80` — with dark text on purple buttons.
+- **Status colours ignored the theme.** Raw emerald, amber and red (32 uses)
+  are now `status-ok / warn / error` tokens. Under the phosphor theme "ok"
+  moves to cyan, where green would vanish into the accent; "warn" sits
+  yellower than the amber accent so a caution never reads as a highlight.
+
+### Changed
+- **Touch targets.** A `tap` utility sets 44px minimum height on coarse
+  pointers only (the desktop keeps its density): hero chips, the Work
+  toolbar and its menu, filter pills. The island's side buttons are 40px
+  wide, not 36 — 44 would leave "CONTACT" 1.4px from truncating at 390.
+- **No idle filters.** The hero prompt's dive blur and About's per-word
+  reveal output `none` at rest instead of `blur(0px)`, which is still a
+  filter: the whole prompt sat on a filter layer, re-rasterised on every
+  keystroke. The prompt box no longer backdrop-blurs the black hole, which
+  repaints under it thirty times a second; it is a touch more opaque instead.
+- **Type.** Headings balance their lines and running text avoids one-word
+  last lines (`text-wrap`); full-height screens use `dvh`, so mobile
+  toolbars do not jump the layout; the page backdrop uses its token.
+
 ## [Unreleased] — The black hole, finished like film
 
 ### Fixed

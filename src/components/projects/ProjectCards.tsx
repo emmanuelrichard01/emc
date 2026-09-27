@@ -61,7 +61,7 @@ function ProjectCard({ project, index, compared, compareFull, onCompare }: CardP
         />
         {project.image && (
           <span className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-background/80 backdrop-blur-sm border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest">
-            {status === 'live' && <span className="w-1.5 h-1.5 bg-emerald-500 status-live" aria-hidden="true" />}
+            {status === 'live' && <span className="w-1.5 h-1.5 bg-status-ok status-live" aria-hidden="true" />}
             <span className={STATUS_CLASS[status]}>{STATUS_LABEL[status]}</span>
           </span>
         )}

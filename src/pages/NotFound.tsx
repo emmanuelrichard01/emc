@@ -17,7 +17,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-background p-6 pt-20 font-mono selection:bg-red-500/20">
+    <div className="min-h-[80dvh] flex items-center justify-center bg-background p-6 pt-20 font-mono selection:bg-status-error/20">
       {/* This route previously rendered no head tags at all, so a 404 inherited
           whatever the last page set — the homepage title, its canonical, its
           social card — and invited crawlers to index it under that identity. */}
@@ -41,7 +41,7 @@ const NotFound = () => {
         {/* Header */}
         <div className="flex items-center gap-3 mb-8 pb-4 border-b border-border">
           <div className="flex gap-1">
-            <div className="w-1.5 h-1.5 bg-red-500/80 status-live" />
+            <div className="w-1.5 h-1.5 bg-status-error/80 status-live" />
             <div className="w-1.5 h-1.5 bg-border" />
             <div className="w-1.5 h-1.5 bg-border" />
           </div>
@@ -67,7 +67,7 @@ const NotFound = () => {
           </motion.div>
 
           <div className="bg-muted border border-border p-4 text-xs text-muted-foreground overflow-x-auto">
-            <code className="block mb-2 text-red-400">
+            <code className="block mb-2 text-status-error">
               Error: Destination host unreachable
             </code>
             <code className="block mb-2">

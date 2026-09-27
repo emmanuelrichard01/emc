@@ -493,13 +493,13 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                             >
                               {cmd.title}
                             </div>
-                            <div className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">
+                            <div className="text-[10px] text-muted-quiet mt-0.5 truncate">
                               {cmd.subtitle}
                             </div>
                           </div>
                         </div>
                         {cmd.meta && !selected && (
-                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 pr-2 shrink-0">
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-quiet pr-2 shrink-0">
                             {cmd.meta}
                           </span>
                         )}
