@@ -101,7 +101,7 @@ const Projects: React.FC = () => {
   );
 
   /* Other sections can point the catalogue at a technology — About's stack
-     does, on click — without reaching into this section's state: they
+     and the career ledger's tenure strip do, on click — without reaching into this section's state: they
      dispatch an event, and the filter becomes that one technology. */
   React.useEffect(() => {
     const onFilter = (e: Event) => {

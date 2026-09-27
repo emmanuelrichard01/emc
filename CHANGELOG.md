@@ -5,6 +5,26 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The ledger answers questions
+
+### Added
+- **A career timeline.** The whole career on one axis, one lane per role:
+  length drawn as length, and a band marking the months when two roles ran
+  at once. Every lane is a button that takes you to its role (opening it on
+  a phone, where older rows start collapsed); pointing at a lane lights its
+  row and the reverse. It replaces the small bar each row carried.
+- **Time in the stack.** For each technology, the months in which a role
+  used it — counted as a union, so concurrent roles are never double-counted.
+  Choosing one lights the roles that used it in the chart and the list, and
+  where Work has built projects in it, links to the catalogue filtered to
+  them (the same event About's stack sends). Row stack chips make the same
+  selection.
+- **Totals in the header** — working time, time in two roles at once, roles,
+  technologies — all derived from the rows (`experience/ledgerModel.ts`,
+  tested against the real ledger: no technology can claim more time than
+  the calendar holds).
+- Measured outcomes in the copy (~40%, 50,000+, ~45%) are set to be found.
+
 ## [Unreleased] — The prompt's hints step back
 
 ### Changed
