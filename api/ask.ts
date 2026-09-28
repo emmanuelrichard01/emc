@@ -1,8 +1,10 @@
-/* Explicit `.js` extensions and a JSON import attribute throughout api/ and
-   everything it reaches in src/: Vercel type-checks this function as Node
-   ESM (NodeNext), which requires both. Vite, Vitest and the edge bundler
-   all resolve `./x.js` to `./x.ts`, so the app is indifferent to them. */
-import CONTEXT from './_context.json' with { type: 'json' };
+/* Explicit `.js` extensions throughout api/ and everything it reaches in
+   src/: Vercel type-checks this function as Node ESM (NodeNext), which
+   requires them, and Vite, Vitest and the edge bundler all resolve `./x.js`
+   to `./x.ts`. The context is a generated .ts module rather than JSON:
+   NodeNext would want a JSON import attribute, and the edge bundler rejects
+   that syntax (see scripts/build-ai-context.mjs). */
+import CONTEXT from './_context.js';
 import { PROJECTS } from '../src/data/projects.js';
 import { executeToolCall, searchSite, type ToolCall, type ToolResult } from '../src/lib/aiTools.js';
 import type { AiSource } from '../src/lib/aiSources.js';

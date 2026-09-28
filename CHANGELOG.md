@@ -14,10 +14,15 @@ a personal portfolio site, not a versioned package.
   path aliases; the endpoint and the `src/` modules it reaches had none of
   the three, so the check was blind to real mistakes behind a wall of
   resolution errors. Imports there now carry `.js` extensions (Vite, Vitest
-  and the edge bundler resolve them to the `.ts` files), `_context.json` is
-  imported `with { type: 'json' }`, and `@/types` is imported relatively.
-  Verified against a local NodeNext check that reproduces Vercel's errors on
-  the previous code and passes on this.
+  and the edge bundler resolve them to the `.ts` files) and `@/types` is
+  imported relatively. Verified against a local NodeNext check that
+  reproduces Vercel's errors on the previous code and passes on this.
+- **…and the first fix broke the deploy.** It imported the generated context
+  `with { type: 'json' }`, which the type check requires for JSON and
+  Vercel's edge bundler rejects ("Expected ';' but found 'with'"). The
+  failed build left the previous deployment serving. The context is now
+  generated as `api/_context.ts`, a plain module every tool accepts, so the
+  function imports no JSON at all.
 
 ## [Unreleased] — The footer measures the visit
 
