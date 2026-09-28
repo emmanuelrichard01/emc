@@ -1,14 +1,18 @@
-import CONTEXT from './_context.json';
-import { PROJECTS } from '../src/data/projects';
-import { executeToolCall, searchSite, type ToolCall, type ToolResult } from '../src/lib/aiTools';
-import type { AiSource } from '../src/lib/aiSources';
-import { collectSources } from '../src/lib/aiSources';
-import { unverifiedFigures } from '../src/lib/aiGrounding';
-import { audiencePrompt, isAudience, type Audience } from '../src/lib/aiStarters';
-import { ProviderHttpError, streamGemini, streamGroq, type Msg, type RoundRequest, type RoundResult, type ToolSpec } from './_lib/providers';
-import { admitQuestion, resetLimits, spendCall } from './_lib/limits';
-import { byHealth, markStruggling, resetHealth } from './_lib/health';
-import { cacheKey, readAnswer, resetAnswerCache, writeAnswer, type CachedAnswer } from './_lib/answerCache';
+/* Explicit `.js` extensions and a JSON import attribute throughout api/ and
+   everything it reaches in src/: Vercel type-checks this function as Node
+   ESM (NodeNext), which requires both. Vite, Vitest and the edge bundler
+   all resolve `./x.js` to `./x.ts`, so the app is indifferent to them. */
+import CONTEXT from './_context.json' with { type: 'json' };
+import { PROJECTS } from '../src/data/projects.js';
+import { executeToolCall, searchSite, type ToolCall, type ToolResult } from '../src/lib/aiTools.js';
+import type { AiSource } from '../src/lib/aiSources.js';
+import { collectSources } from '../src/lib/aiSources.js';
+import { unverifiedFigures } from '../src/lib/aiGrounding.js';
+import { audiencePrompt, isAudience, type Audience } from '../src/lib/aiStarters.js';
+import { ProviderHttpError, streamGemini, streamGroq, type Msg, type RoundRequest, type RoundResult, type ToolSpec } from './_lib/providers.js';
+import { admitQuestion, resetLimits, spendCall } from './_lib/limits.js';
+import { byHealth, markStruggling, resetHealth } from './_lib/health.js';
+import { cacheKey, readAnswer, resetAnswerCache, writeAnswer, type CachedAnswer } from './_lib/answerCache.js';
 
 export const config = { runtime: 'edge' };
 

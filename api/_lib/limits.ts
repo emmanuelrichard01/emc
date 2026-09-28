@@ -1,4 +1,4 @@
-import { digest, pipeline } from './store';
+import { digest, pipeline } from './store.js';
 
 /* ==========================================================================
    LIMITS — questions per visitor, provider calls per day.

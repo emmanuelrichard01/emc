@@ -1,4 +1,5 @@
-import type { Project, ProjectStatus } from '@/types';
+// Relative with an extension, not `@/types`: reached from api/ask.ts (see aiTools.ts).
+import type { Project, ProjectStatus } from '../types/index.js';
 
 /**
  * Derives a project's public status from the links it actually has.

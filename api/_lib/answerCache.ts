@@ -1,6 +1,6 @@
-import type { ToolResult } from '../../src/lib/aiTools';
-import type { AiSource } from '../../src/lib/aiSources';
-import { digest, pipeline } from './store';
+import type { ToolResult } from '../../src/lib/aiTools.js';
+import type { AiSource } from '../../src/lib/aiSources.js';
+import { digest, pipeline } from './store.js';
 
 /* ==========================================================================
    ANSWER CACHE — the opening question, answered once per deploy.

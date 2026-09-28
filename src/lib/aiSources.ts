@@ -1,7 +1,7 @@
 // Relative imports only: api/ask.ts bundles this module (see aiTools.ts).
-import { PROJECTS } from '../data/projects';
-import { EXPERIENCE } from '../data/experience';
-import type { ToolCall } from './aiTools';
+import { PROJECTS } from '../data/projects.js';
+import { EXPERIENCE } from '../data/experience.js';
+import type { ToolCall } from './aiTools.js';
 
 /* ==========================================================================
    AI SOURCES

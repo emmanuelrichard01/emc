@@ -1,7 +1,8 @@
 // Type-only import: this module is also loaded by vite.config.ts to generate
-// the sitemap, and an explicit `import type` guarantees esbuild elides it
-// rather than trying to resolve the "@" alias outside the app build.
-import type { Project } from "@/types";
+// the sitemap, and an explicit `import type` guarantees esbuild elides it.
+// Relative with an extension, not `@/types`, because api/ask.ts reaches it
+// and Vercel type-checks that function as Node ESM (see src/lib/aiTools.ts).
+import type { Project } from "../types/index.js";
 
 export const PROJECTS: Project[] = [
   /* ── TIER 1: FLAGSHIP ─────────────────────────────────────────────────── */

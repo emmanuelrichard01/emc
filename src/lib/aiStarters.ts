@@ -1,6 +1,6 @@
 // Relative imports only: api/ask.ts bundles this module (see aiTools.ts).
-import type { Project } from '../types';
-import { MAX_QUESTION_CHARS } from './aiHistory';
+import type { Project } from '../types/index.js';
+import { MAX_QUESTION_CHARS } from './aiHistory.js';
 
 /* ==========================================================================
    AI STARTERS, LENSES AND LINKS

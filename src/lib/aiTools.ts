@@ -1,10 +1,12 @@
-// Relative, not `@/`: api/ask.ts imports this module, and the Edge Function
-// bundler does not know the app's path alias. Everything reachable from here
-// must stay alias-free (type-only `@/types` imports are erased, so they are fine).
-import { PROJECTS } from '../data/projects';
-import { EXPERIENCE } from '../data/experience';
-import { STATUS_LABEL, projectStatus } from './project';
-import { isQueryError, runQuery } from './portfolioQuery';
+// Relative, not `@/`, and with `.js` extensions: api/ask.ts imports this
+// module. The Edge Function bundler does not know the app's path alias, and
+// Vercel type-checks the function as Node ESM, which wants explicit
+// extensions. Everything reachable from here must follow both rules — type
+// imports included, since the type check resolves them too.
+import { PROJECTS } from '../data/projects.js';
+import { EXPERIENCE } from '../data/experience.js';
+import { STATUS_LABEL, projectStatus } from './project.js';
+import { isQueryError, runQuery } from './portfolioQuery.js';
 
 /* ==========================================================================
    AI TOOLS

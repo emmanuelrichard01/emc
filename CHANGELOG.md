@@ -5,6 +5,20 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The answering endpoint type-checks on Vercel
+
+### Fixed
+- **Vercel's type check of `/api/ask` failed** (without failing the deploy).
+  It checks the function as Node ESM (NodeNext), which requires explicit
+  file extensions on relative imports, an import attribute on JSON, and no
+  path aliases; the endpoint and the `src/` modules it reaches had none of
+  the three, so the check was blind to real mistakes behind a wall of
+  resolution errors. Imports there now carry `.js` extensions (Vite, Vitest
+  and the edge bundler resolve them to the `.ts` files), `_context.json` is
+  imported `with { type: 'json' }`, and `@/types` is imported relatively.
+  Verified against a local NodeNext check that reproduces Vercel's errors on
+  the previous code and passes on this.
+
 ## [Unreleased] — The footer measures the visit
 
 ### Added

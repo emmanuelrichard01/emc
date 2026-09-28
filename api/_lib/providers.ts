@@ -1,4 +1,4 @@
-import type { ToolCall } from '../../src/lib/aiTools';
+import type { ToolCall } from '../../src/lib/aiTools.js';
 
 /* ==========================================================================
    PROVIDERS — streaming clients for Gemini and Groq.
