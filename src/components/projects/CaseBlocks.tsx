@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
+
+import { Plate } from '@/components/ui/Reveal';
 
 import type { CaseBlock } from '@/types';
 
@@ -89,7 +91,13 @@ function ArchitectureDiagram({ block }: { block: Architecture }) {
           d = `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
         }
 
-        drawn.push({ key: `${edge.from}->${edge.to}`, d, label: edge.label, lx: (x1 + x2) / 2, ly: (y1 + y2) / 2 });
+        /* A label sits at the middle of its line — unless the line crosses a
+           whole column to get there, where the middle is behind a node. Then
+           it sits in the gutter just past its source, on the source's row. */
+        const spansColumn = Math.abs(x2 - x1) > Math.max(a.width, b.width);
+        const lx = spansColumn ? x1 + (x2 > x1 ? 28 : -28) : (x1 + x2) / 2;
+        const ly = spansColumn ? y1 - 2 : (y1 + y2) / 2;
+        drawn.push({ key: `${edge.from}->${edge.to}`, d, label: edge.label, lx, ly });
       }
       setEdges(drawn);
     };
@@ -105,7 +113,7 @@ function ArchitectureDiagram({ block }: { block: Architecture }) {
 
   return (
     <figure className="my-2">
-      <div className="relative border border-border bg-card/40 p-5 md:p-7 overflow-hidden">
+      <div className="relative border-y border-border py-7 md:py-10 overflow-hidden">
         <div
           ref={ref}
           className="relative grid gap-y-8 gap-x-12 md:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
@@ -120,7 +128,7 @@ function ArchitectureDiagram({ block }: { block: Architecture }) {
             >
               <defs>
                 <marker id="arch-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                  <path d="M0,0 L8,4 L0,8 z" fill="hsl(var(--primary) / 0.7)" />
+                  <path d="M0,1 L7,4 L0,7" fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="1.2" />
                 </marker>
               </defs>
               {edges.map((edge) => (
@@ -128,8 +136,8 @@ function ArchitectureDiagram({ block }: { block: Architecture }) {
                   key={edge.key}
                   d={edge.d}
                   fill="none"
-                  stroke="hsl(var(--primary) / 0.45)"
-                  strokeWidth="1.25"
+                  stroke="hsl(var(--rule-strong))"
+                  strokeWidth="1"
                   markerEnd="url(#arch-arrow)"
                 />
               ))}
@@ -137,11 +145,15 @@ function ArchitectureDiagram({ block }: { block: Architecture }) {
           )}
 
           {block.columns.map((column) => (
-            <div key={column.label} className="relative flex flex-col gap-3 md:justify-center">
-              <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">{column.label}</span>
+            <div key={column.label} className="relative flex flex-col gap-3">
+              <span className="t-caption mb-1">{column.label}</span>
               {column.nodes.map((node) => (
-                <div key={node.id} data-node={node.id} className="relative border border-border bg-background px-3.5 py-2.5">
-                  <span className="block text-[13px] font-medium text-foreground leading-snug">{node.label}</span>
+                <div
+                  key={node.id}
+                  data-node={node.id}
+                  className="relative border border-rule-strong bg-background px-3.5 py-3 transition-colors duration-300 hover:border-foreground/60"
+                >
+                  <span className="block text-[13.5px] font-medium text-foreground leading-snug">{node.label}</span>
                   {node.detail && (
                     <span className="block text-[12px] text-muted-foreground leading-snug mt-0.5">{node.detail}</span>
                   )}
@@ -167,10 +179,9 @@ function ArchitectureDiagram({ block }: { block: Architecture }) {
                     x={edge.lx}
                     y={edge.ly - 5}
                     textAnchor="middle"
-                    className="font-mono"
-                    fontSize="11"
+                    fontSize="11.5"
                     fill="hsl(var(--muted-foreground))"
-                    stroke="hsl(var(--card))"
+                    stroke="hsl(var(--background))"
                     strokeWidth="4"
                     paintOrder="stroke"
                   >
@@ -184,16 +195,16 @@ function ArchitectureDiagram({ block }: { block: Architecture }) {
 
         {/* The same edges in words: the whole diagram below md, and the whole
             diagram for a screen reader at every width. */}
-        <ul className="mt-6 space-y-1 font-mono text-[12px] text-muted-foreground md:sr-only">
+        <ul className="mt-6 space-y-1.5 text-[13px] text-muted-foreground md:sr-only">
           {block.edges.map((edge) => (
             <li key={`${edge.from}->${edge.to}`}>
-              {labelOf(edge.from)} <span className="text-primary">→</span> {labelOf(edge.to)}
+              {labelOf(edge.from)} <span className="text-foreground" aria-label="to">→</span> {labelOf(edge.to)}
               {edge.label ? ` · ${edge.label}` : ''}
             </li>
           ))}
         </ul>
       </div>
-      <figcaption className="mt-3 text-[13px] text-muted-foreground leading-relaxed max-w-[68ch]">{block.caption}</figcaption>
+      <figcaption className="mt-4 t-caption max-w-[68ch]">{block.caption}</figcaption>
     </figure>
   );
 }
@@ -203,25 +214,26 @@ function ArchitectureDiagram({ block }: { block: Architecture }) {
 function CodeExcerpt({ block }: { block: Extract<CaseBlock, { kind: 'code' }> }) {
   return (
     <figure className="my-2">
-      <div className="border border-border bg-card/60">
-        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2">
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{block.lang}</span>
+      <div className="bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 md:px-5 py-2.5">
+          <span className="t-caption">{block.href ? block.href.split('/').slice(-1)[0] : block.lang}</span>
           {block.href && (
             <a
               href={block.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground hover:text-primary transition-colors py-1"
+              className="group tap inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
             >
-              view source <ExternalLink className="w-3 h-3" aria-hidden="true" />
+              <span className="link-draw">View on GitHub</span>
+              <ArrowUpRight className="nudge-up w-3.5 h-3.5" aria-hidden="true" />
             </a>
           )}
         </div>
-        <pre className="overflow-x-auto p-4 text-[12.5px] leading-[1.7] font-mono text-foreground/90">
+        <pre className="overflow-x-auto px-4 md:px-5 py-5 text-[12.5px] md:text-[13px] leading-[1.75] font-mono text-foreground/90">
           <code>{block.code}</code>
         </pre>
       </div>
-      <figcaption className="mt-3 text-[13px] text-muted-foreground leading-relaxed max-w-[68ch]">{block.caption}</figcaption>
+      <figcaption className="mt-4 t-caption max-w-[68ch]">{block.caption}</figcaption>
     </figure>
   );
 }
@@ -231,24 +243,23 @@ function CodeExcerpt({ block }: { block: Extract<CaseBlock, { kind: 'code' }> })
 function Figure({ block }: { block: Extract<CaseBlock, { kind: 'figure' }> }) {
   return (
     <figure className="my-2">
-      <img src={block.src} alt={block.alt} loading="lazy" decoding="async" className="w-full border border-border" />
-      {block.caption && (
-        <figcaption className="mt-3 text-[13px] text-muted-foreground leading-relaxed max-w-[68ch]">{block.caption}</figcaption>
-      )}
+      {/* Natural height: a screenshot is cropped by nothing. */}
+      <Plate src={block.src} alt={block.alt} aspect="auto" className="border border-border" imgClassName="!h-auto" />
+      {block.caption && <figcaption className="mt-4 t-caption max-w-[68ch]">{block.caption}</figcaption>}
     </figure>
   );
 }
 
 function Callout({ text }: { text: string }) {
   return (
-    <p className="border-l-2 border-primary/60 pl-4 text-[15px] text-foreground leading-relaxed max-w-[68ch]">{text}</p>
+    <p className="border-l border-foreground pl-5 t-lede max-w-[60ch]">{text}</p>
   );
 }
 
 export function CaseBlocks({ blocks }: { blocks?: CaseBlock[] }) {
   if (!blocks?.length) return null;
   return (
-    <div className="mt-8 flex flex-col gap-8">
+    <div className="mt-12 flex flex-col gap-12">
       {blocks.map((block, i) => {
         switch (block.kind) {
           case 'architecture':

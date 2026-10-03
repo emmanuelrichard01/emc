@@ -3,7 +3,6 @@ import { motion, useReducedMotion } from 'framer-motion';
 
 import TransitionLink from '@/components/ui/TransitionLink';
 import type { Project } from '@/types';
-import { TIER_RANK } from './tiers';
 import type { Result } from './workModel';
 
 /* ==========================================================================
@@ -26,6 +25,9 @@ import type { Result } from './workModel';
    Columns are technologies used by at least two projects, ranked by use —
    one-offs are counted in the last column rather than given a column each,
    which would make the matrix mostly empty.
+
+   Marks are ink. The accent appears only on a column that is filtering the
+   section, because that is the one cell of state here.
    ========================================================================== */
 
 const MAX_COLUMNS = 14;
@@ -57,17 +59,17 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
   const colTotals = columns.map((c) => projects.filter((p) => p.stack.includes(c)).length);
 
   return (
-    <div className="border border-border bg-card/20">
-      <div className="overflow-x-auto overscroll-x-contain" onMouseLeave={() => {
+    <div className="border-y border-border">
+      <div className="overflow-x-auto overscroll-x-contain" data-lenis-prevent onMouseLeave={() => {
           setRow(null);
           setCol(null);
         }}>
         <table className="w-full border-collapse min-w-[760px]">
-          <caption className="sr-only">Technologies used by each project</caption>
+          <caption className="sr-only">Tools used by each project</caption>
           <thead>
             <tr>
-              <th scope="col" className="sticky left-0 z-10 bg-card text-left align-bottom w-[140px] sm:w-[260px] px-3 sm:px-4 pb-3 pt-4 font-mono text-[10px] font-normal uppercase tracking-[0.18em] text-muted-foreground">
-                system
+              <th scope="col" className="sticky left-0 z-10 bg-background text-left align-bottom w-[140px] sm:w-[260px] pr-3 sm:pr-4 pb-3 pt-5 t-caption font-normal">
+                Project
               </th>
               {columns.map((tech) => {
                 const selected = selectedStack.includes(tech);
@@ -80,7 +82,7 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
                       onFocus={() => setCol(tech)}
                       aria-pressed={selected}
                       aria-label={`Filter by ${tech}`}
-                      className={`mx-auto flex flex-col items-center gap-2 px-1.5 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors ${
+                      className={`mx-auto flex flex-col items-center gap-2 px-1.5 text-[12px] transition-colors ${
                         selected ? 'text-primary' : col === tech ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -90,8 +92,8 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
                   </th>
                 );
               })}
-              <th scope="col" className="align-bottom px-3 pb-3 font-mono text-[10px] font-normal uppercase tracking-[0.14em] text-muted-foreground text-right whitespace-nowrap">
-                + other
+              <th scope="col" className="align-bottom pl-3 pb-3 t-caption font-normal text-right whitespace-nowrap">
+                Other
               </th>
             </tr>
           </thead>
@@ -106,20 +108,19 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.25, delay: Math.min(i * 0.02, 0.2) }}
                   onMouseEnter={() => setRow(project.id)}
-                  className={`border-t border-border/60 transition-colors ${active ? 'bg-primary/[0.05]' : ''}`}
+                  className={`border-t border-border transition-colors ${active ? 'bg-foreground/[0.03]' : ''}`}
                 >
-                  <th scope="row" className={`sticky left-0 z-10 text-left font-normal px-4 py-2.5 transition-colors ${active ? 'bg-[hsl(var(--card))]' : 'bg-card'}`}>
+                  <th scope="row" className={`sticky left-0 z-10 text-left font-normal pr-4 py-3 transition-colors ${active ? 'bg-card' : 'bg-background'}`}>
                     <TransitionLink
                       to={`/projects/${project.id}`}
                       onFocus={() => setRow(project.id)}
                       className="group flex items-center gap-2.5 min-w-0"
                     >
-                      <span className="hidden sm:inline font-mono text-[10px] sm:text-[9px] text-primary/80 w-6 shrink-0 tracking-[0.1em]" aria-hidden="true">
-                        {TIER_RANK[project.tier]}
-                      </span>
                       {/* 140px on a phone, not 260: the pinned name column was eating the
                           screen, leaving room for two technology columns. */}
-                      <span className={`font-mono text-[12px] truncate max-w-[112px] sm:max-w-[210px] transition-colors ${active ? 'text-primary' : 'text-foreground group-hover:text-primary'}`}>
+                      <span className={`text-[13px] truncate max-w-[124px] sm:max-w-[230px] transition-colors ${
+                        project.tier === 'design' ? 'text-muted-foreground group-hover:text-foreground' : 'text-foreground'
+                      } ${active ? 'underline underline-offset-4 decoration-rule-strong' : ''}`}>
                         {project.title}
                       </span>
                     </TransitionLink>
@@ -130,26 +131,25 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
                     return (
                       <td
                         key={tech}
-                        className={`text-center px-0 py-2.5 transition-colors ${col === tech ? 'bg-primary/[0.05]' : ''}`}
+                        className={`text-center px-0 py-3 transition-colors ${col === tech ? 'bg-foreground/[0.03]' : ''}`}
                         onMouseEnter={() => setCol(tech)}
                         aria-label={uses ? `${tech}, used` : `${tech}, not used`}
                       >
                         {uses ? (
                           <span
-                            className={`inline-block w-2.5 h-2.5 transition-all duration-200 ${
-                              active && col === tech ? 'bg-primary scale-125' : cross ? 'bg-primary' : 'bg-primary/70'
+                            className={`inline-block w-2 h-2 transition-all duration-200 ${
+                              selectedStack.includes(tech) ? 'bg-primary' : active && col === tech ? 'bg-foreground scale-150' : cross ? 'bg-foreground' : 'bg-foreground/70'
                             }`}
-                            style={active && col === tech ? { boxShadow: '0 0 10px hsl(var(--primary) / 0.7)' } : undefined}
                             aria-hidden="true"
                           />
                         ) : (
-                          <span className={`inline-block w-[3px] h-[3px] ${cross ? 'bg-muted-foreground/60' : 'bg-border'}`} aria-hidden="true" />
+                          <span className={`inline-block w-[3px] h-[3px] ${cross ? 'bg-muted-foreground' : 'bg-rule-strong'}`} aria-hidden="true" />
                         )}
                       </td>
                     );
                   })}
-                  <td className="px-3 py-2.5 text-right font-mono text-[10px] text-muted-foreground tabular-nums">
-                    {others ? `+${others}` : '—'}
+                  <td className="pl-3 py-3 text-right text-[12px] text-muted-foreground tabular-nums">
+                    {others ? `+${others}` : '0'}
                   </td>
                 </motion.tr>
               );
@@ -157,13 +157,13 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
           </tbody>
           <tfoot>
             <tr className="border-t border-border">
-              <th scope="row" className="sticky left-0 z-10 bg-card text-left px-4 py-3 font-mono text-[10px] font-normal uppercase tracking-[0.18em] text-muted-foreground">
-                used by
+              <th scope="row" className="sticky left-0 z-10 bg-background text-left pr-4 py-3 t-caption font-normal">
+                Used by
               </th>
               {colTotals.map((n, i) => (
                 <td
                   key={columns[i]}
-                  className={`text-center py-3 font-mono text-[10px] tabular-nums transition-colors ${
+                  className={`text-center py-3 text-[12px] tabular-nums transition-colors ${
                     col === columns[i] ? 'text-primary' : n ? 'text-foreground' : 'text-muted-foreground'
                   }`}
                 >
@@ -175,8 +175,8 @@ export default function StackMatrix({ results, all, selectedStack, onToggleStack
           </tfoot>
         </table>
       </div>
-      <p className="px-4 py-3 border-t border-border font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        click a technology to filter · technologies in one project only are counted under + other
+      <p className="py-4 border-t border-border t-caption">
+        Click a tool to show only the projects that use it. Tools used by just one project are counted under Other.
       </p>
     </div>
   );

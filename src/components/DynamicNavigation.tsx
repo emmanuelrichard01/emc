@@ -1,50 +1,46 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, type MotionValue } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Command, Palette, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 import { SECTIONS } from '@/data/sections';
 import { MODIFIER_KEY } from '@/lib/platform';
 import { scrollToSection } from '@/lib/scrollToSection';
 import { useSectionObserver } from '../hooks/useSectionObserver';
-import { PUBLIC_THEMES, useTheme } from './ThemeProvider';
 import { LOGO_PATHS } from './ui/LogoMark';
 import { useAsk } from './ai/AskProvider';
 
-/* Scroll distance in one direction before the bar reacts.
+/* ==========================================================================
+   NAVIGATION — the running head
 
-   Without it, a single pixel of downward movement — a trackpad tremor, a
-   focus jump, the address bar collapsing on mobile — was enough to hide the
-   whole navigation. */
+   A monograph carries its title and section along the top of every page in
+   small type; this is that line. Mark and name on the left, the sections on
+   the right, then the two doors that are not places — ask, and go (⌘K).
+
+   It is absent over the hero, whose own top edge already carries the mark
+   and shortcuts, and arrives with the first section. It steps out of the
+   way while reading down and returns on the first scroll up.
+
+   The accent toggle moved to the command palette (Theme). A colour switch
+   is the least-used control a visitor could be offered in the most
+   prominent place on the page.
+   ========================================================================== */
+
+/* Scroll distance in one direction before the bar reacts — a trackpad
+   tremor or the mobile address bar collapsing must not hide it. */
 const DIRECTION_THRESHOLD = 12;
 /** Below this, the bar is always shown regardless of direction. */
 const ALWAYS_VISIBLE_ABOVE = 300;
 
 /* How much of the viewport the hero must have left before the navigation
-   exists at all on the landing page.
-
-   The hero is a full-screen terminal, and navigating it is the point — you
-   type, or you press a chip. A floating nav pill hovering over that undercuts
-   the idea and repeats the logo a third time before anyone has done anything.
-   So the site opens as a terminal and *becomes* a website on scroll: the nav
-   arrives with the first real section, and from then on behaves normally.
-
-   Measured from where the hero actually ends, not a fixed scroll distance:
-   the hero is a pinned scroll scene now (the dive into the event horizon),
-   so it occupies more than one screen of scroll — and exactly one under
-   reduced motion. A fixed threshold would bring the pill in over the dive
-   in one case and late in the other.
-
-   Only the landing route is affected. A case study is an ordinary page and
-   needs its navigation immediately. */
+   exists at all on the landing page. Measured from where the hero actually
+   ends (the hero is a pinned scroll scene), not from a fixed distance. Only
+   the landing route is affected; a case study needs its navigation at once. */
 const NAV_REVEAL_FRACTION = 0.55;
 
 /* After the dive, the next section is pinned on its own stage while it
-   grows in (Hero.tsx, #hero-stage). The pill arrives once that reveal is
-   nearly done — the stage has scrolled 80% of its pin — so it never lands
-   on top of the section's entrance. Under reduced motion there is no stage,
-   and the hero's own end is the measure; the scrollY floor keeps a
-   one-screen hero from counting as passed at the very top. */
+   grows in (Hero.tsx, #hero-stage). The bar arrives once that reveal is
+   nearly done, so it never lands on top of the section's entrance. */
 const REVEAL_PIN_FRACTION = 0.45; // mirrors REVEAL_LENGTH in Hero.tsx
 
 function heroHasPassed(): boolean {
@@ -59,66 +55,28 @@ function heroHasPassed(): boolean {
   );
 }
 
+const EASE = [0.16, 1, 0.3, 1] as const;
+
 /* -------------------------------------------------------------------------- */
-/* LOGO                                                                       */
+/* MARK                                                                       */
 /* -------------------------------------------------------------------------- */
 
-const Logo = () => {
-  const hasDrawn = useRef(false);
-  const [drawn, setDrawn] = useState(false);
-
-  useEffect(() => {
-    if (hasDrawn.current) return;
-    hasDrawn.current = true;
-    const timer = setTimeout(() => setDrawn(true), 1200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    // Purely decorative: the surrounding control carries the accessible name,
-    // so labelling the mark as well made screen readers announce it twice.
-    <motion.div
-      className="relative w-6 h-6 text-primary flex items-center justify-center"
-      aria-hidden="true"
-      whileHover={{ scale: 1.1 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-    >
-      <motion.svg viewBox="0 0 200 120" className="w-full h-full">
-        <motion.g
-          fill="currentColor"
-          initial={{ fillOpacity: drawn ? 1 : 0 }}
-          animate={{ fillOpacity: 1 }}
-          transition={{ duration: 0.5, delay: drawn ? 0 : 1.0 }}
-        >
-          {LOGO_PATHS.map((d, i) => (
-            <motion.path
-              key={i}
-              d={d}
-              stroke="currentColor"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: drawn ? 1 : 0, opacity: drawn ? 1 : 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={drawn ? { duration: 0 } : { duration: 1, ease: 'easeInOut', delay: i * 0.15 }}
-            />
-          ))}
-        </motion.g>
-      </motion.svg>
-    </motion.div>
-  );
-};
+/** The E·MC mark, in ink. Decorative: the link around it carries the name. */
+export const Mark = ({ className = 'w-[22px] h-[13px]' }: { className?: string }) => (
+  <svg viewBox="0 0 200 120" className={className} aria-hidden="true">
+    {LOGO_PATHS.map((d, i) => (
+      <path key={i} d={d} fill="currentColor" />
+    ))}
+  </svg>
+);
 
 /* -------------------------------------------------------------------------- */
 /* NAV LINK                                                                   */
 /* -------------------------------------------------------------------------- */
 
-/* A real anchor, not a button.
-
-   These point at real fragments, so middle-click, ⌘-click and "copy link
-   address" all behave the way a visitor expects, and the URL is shareable.
-   The click handler only intercepts plain left-clicks to smooth-scroll —
-   modified clicks fall through to the browser. */
+/* A real anchor, not a button: middle-click, ⌘-click and "copy link address"
+   all behave as a visitor expects. Only plain left-clicks are intercepted to
+   smooth-scroll. */
 const NavLink = ({
   section,
   isActive,
@@ -142,26 +100,21 @@ const NavLink = ({
       e.preventDefault();
       onNavigate(section.id);
     }}
-    className={`relative px-4 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors duration-200 ${
+    className={`relative py-2 text-[13px] tracking-[-0.003em] transition-colors duration-300 ${
       isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
     }`}
   >
-    <span className="relative z-10">{section.short}</span>
-    {/* The indicator is a meter as well as a marker: its dim track slides
-        to the current section, and the bright fill inside it is how far
-        through that section the reader is. The document-wide bar along the
-        pill's edge says "how much page is left"; this says "how much of
-        this part". */}
+    {section.label}
+    {/* The marker is also a meter: a hairline under the current section
+        that fills, in the accent, with how far through it the reader is. */}
     {isActive && (
       <motion.span
         layoutId="nav-indicator-desktop"
-        className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary/30 z-0 overflow-hidden"
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        className="absolute left-0 right-0 bottom-0.5 h-px bg-rule-strong overflow-hidden"
+        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        aria-hidden="true"
       >
-        <motion.span
-          className="absolute inset-0 bg-primary origin-left"
-          style={{ scaleX: progress, boxShadow: '0 1px 6px hsl(var(--primary) / 0.4)' }}
-        />
+        <motion.span className="absolute inset-0 bg-primary origin-left" style={{ scaleX: progress }} />
       </motion.span>
     )}
   </a>
@@ -172,12 +125,11 @@ const NavLink = ({
 /* -------------------------------------------------------------------------- */
 
 const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => void }) => {
-  const { theme, setTheme } = useTheme();
   const { toggleAsk, open: askOpen } = useAsk();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
 
-  const { scrollY, scrollYProgress } = useScroll();
+  const { scrollY } = useScroll();
   const lastScrollY = useRef(0);
   const travel = useRef(0);
   const focusWithin = useRef(false);
@@ -188,29 +140,11 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
   const isLanding = pathname === '/';
   const navigate = useNavigate();
 
-  /* ── Going to a section ────────────────────────────────────────────────────
-     On the landing page a section is somewhere to scroll. On a case study it
-     is a different page, and treating it as a scroll target is why every
-     link in this component was dead there.
-
-     Both navs pointed at bare fragments — `#projects`, `#about` — and then
-     called preventDefault() unconditionally before handing off to
-     scrollToSection, which returns false when the element does not exist.
-     None of those sections exist on /projects/:id, so the preventDefault
-     suppressed the browser's own fragment handling and nothing replaced it:
-     clicking Work on a case study changed neither the URL nor the scroll
-     position. Six controls on desktop, five on the mobile island, all inert
-     — including the logo, which is the one thing a visitor reaches for to
-     get back out.
-
-     The href carries the real destination now, so middle-click and "copy
-     link address" give a URL that works, and the router handles the plain
-     click. Index already scrolls to an inbound hash on arrival, so landing
-     on /#projects from here behaves exactly like clicking it from home. */
-  const sectionHref = useCallback(
-    (id: string) => (isLanding ? `#${id}` : `/#${id}`),
-    [isLanding]
-  );
+  /* On the landing page a section is somewhere to scroll; on a case study it
+     is a different page. The href carries the real destination, so modified
+     clicks and copied links work, and Index scrolls to an inbound hash on
+     arrival. */
+  const sectionHref = useCallback((id: string) => (isLanding ? `#${id}` : `/#${id}`), [isLanding]);
 
   const goToSection = useCallback(
     (id: string) => {
@@ -223,22 +157,12 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
     [isLanding, navigate]
   );
 
-  /* Seeded from the live scroll position, then maintained by the same
-     scroll subscription the hide-on-scroll behaviour already uses — rather
-     than a second listener and an effect that would have to setState on
-     mount to catch up. Only the landing route consults it; everywhere else
-     the nav is unconditional. */
   const [scrolledPastHero, setScrolledPastHero] = useState(heroHasPassed);
   const pastHero = !isLanding || scrolledPastHero;
 
-  // Reading progress across the document, smoothed so it glides rather than
-  // snapping on every wheel tick.
-  const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, restDelta: 0.001 });
-
-  /* Progress through the current section, written straight to a motion
-     value from the scroll subscription below — it changes every frame of a
-     scroll, and routing it through React state would re-render the whole
-     bar sixty times a second to move one 2px line. */
+  /* Progress through the current section, written straight to a motion value
+     from the scroll subscription: it changes every frame of a scroll, and
+     routing it through React state would re-render the bar to move a 1px line. */
   const rawSectionProgress = useMotionValue(0);
   const sectionProgress = useSpring(rawSectionProgress, { stiffness: 200, damping: 34, restDelta: 0.001 });
   const activeRef = useRef<string | null>(null);
@@ -246,7 +170,6 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     const current = activeRef.current && document.getElementById(activeRef.current);
     if (current) {
-      // Measured against the same reading line the section observer uses.
       const rect = current.getBoundingClientRect();
       const line = window.innerHeight * 0.3;
       rawSectionProgress.set(Math.min(1, Math.max(0, (line - rect.top) / rect.height)));
@@ -255,7 +178,7 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
     const delta = latest - lastScrollY.current;
     lastScrollY.current = latest;
 
-    setIsScrolled(latest > 100);
+    setIsScrolled(latest > 40);
     setScrolledPastHero(heroHasPassed());
 
     if (latest <= ALWAYS_VISIBLE_ABOVE) {
@@ -264,31 +187,19 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
       return;
     }
 
-    // Accumulate movement in one direction, resetting whenever it reverses.
     travel.current = Math.sign(delta) === Math.sign(travel.current) ? travel.current + delta : delta;
 
     if (travel.current > DIRECTION_THRESHOLD) {
-      // Never retract the bar out from under a keyboard user who is tabbing
-      // through it — the focused control would scroll off screen.
+      // Never retract the bar from under a keyboard user tabbing through it.
       if (!focusWithin.current) setIsHidden(true);
     } else if (travel.current < -DIRECTION_THRESHOLD) {
       setIsHidden(false);
     }
   });
 
-  /* Cycles the visible themes only. A theme outside the public list yields
-     index -1, so the next step lands on the first public theme — the toggle
-     always returns you somewhere you could have reached without it. */
-  const cycleTheme = useCallback(() => {
-    const index = PUBLIC_THEMES.indexOf(theme);
-    setTheme(PUBLIC_THEMES[(index + 1) % PUBLIC_THEMES.length]);
-  }, [theme, setTheme]);
-
   const observedSection = useSectionObserver();
 
-  // Sections only exist on the landing route. Without this guard a case study
-  // page keeps whatever section was last current and renders Home as active,
-  // which reads as "you are on the home page" when you demonstrably are not.
+  // Sections only exist on the landing route.
   const activeSection = pathname === '/' ? observedSection : null;
   useEffect(() => {
     activeRef.current = activeSection;
@@ -302,12 +213,9 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
     focusWithin.current = false;
   }, []);
 
-  const shortcutLabel = `${MODIFIER_KEY}+K`;
-
-  /* Hidden either because the visitor is scrolling down, or because they have
-     not yet left the hero. Pointer events and tab order are dropped too — an
-     invisible bar that still swallows clicks and takes focus is worse than a
-     visible one. */
+  /* Hidden while reading down, or before the hero has been left. Pointer
+     events and tab order go with it — an invisible bar that still takes
+     clicks and focus is worse than a visible one. */
   const concealed = isHidden || !pastHero;
   const concealedProps = {
     style: { pointerEvents: concealed ? ('none' as const) : ('auto' as const) },
@@ -315,138 +223,106 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
     inert: concealed,
   };
 
+  // The running head lists the sections a reader moves between; Home is the mark.
+  const headSections = SECTIONS.filter((section) => section.id !== 'home');
+
   return (
     <>
-      {/* --- DESKTOP: floating structural pill --- */}
+      {/* --- DESKTOP: the running head --- */}
       <motion.nav
-        initial={{ y: prefersReduced ? 0 : -100, opacity: 0 }}
-        animate={{ y: concealed && !prefersReduced ? -100 : 0, opacity: concealed ? 0 : 1 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed top-6 left-0 right-0 z-50 hidden md:flex justify-center px-4"
+        initial={{ y: prefersReduced ? 0 : -24, opacity: 0 }}
+        animate={{ y: concealed && !prefersReduced ? -24 : 0, opacity: concealed ? 0 : 1 }}
+        transition={{ duration: 0.5, ease: EASE }}
+        className="fixed top-0 left-0 right-0 z-50 hidden md:block"
         aria-label="Main"
         onFocusCapture={handleFocus}
         onBlurCapture={handleBlur}
         {...concealedProps}
       >
         <div
-          className={`relative flex items-center gap-4 px-3 py-2 border transition-all duration-500 ${
-            isScrolled
-              ? 'bg-card/95 backdrop-blur-xl border-border shadow-2xl'
-              : 'bg-card/70 backdrop-blur-md border-border/60'
+          className={`transition-[background-color,box-shadow] duration-500 ${
+            isScrolled ? 'bg-background/90 backdrop-blur-md shadow-[inset_0_-1px_0_hsl(var(--border))]' : 'bg-transparent'
           }`}
         >
-          {/* Reading progress along the pill's bottom edge. */}
-          <motion.div
-            className="absolute bottom-0 left-0 h-[1px] w-full bg-primary/50 origin-left"
-            style={{ scaleX: progress }}
-            aria-hidden="true"
-          />
+          <div className="page-max page-x h-16 flex items-center justify-between gap-8">
+            {/* "Back to top" on the landing page; home from anywhere else. */}
+            <a
+              href={isLanding ? '#home' : '/'}
+              aria-label={isLanding ? 'Emmanuel Moghalu, back to top' : 'Emmanuel Moghalu, home page'}
+              className="group flex items-center gap-3 text-foreground"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                if (isLanding) scrollToSection('home');
+                else navigate('/');
+              }}
+            >
+              <Mark className="w-[22px] h-[13px] transition-transform duration-500 ease-out-expo group-hover:-translate-y-px" />
+              <span className="font-display text-[14px] font-[560] tracking-[-0.01em] [font-stretch:112%]">Emmanuel Moghalu</span>
+            </a>
 
-          {/* "Back to top" only where there is a top to go back to. From a
-              case study the mark is the way home, so it says so and goes
-              there — plain `/` rather than `/#home`, since the hash would
-              only name the place the page already opens at. */}
-          <a
-            href={isLanding ? '#home' : '/'}
-            aria-label={
-              isLanding ? 'Emmanuel Moghalu — back to top' : 'Emmanuel Moghalu — home'
-            }
-            className="flex items-center pl-1"
-            onClick={(e) => {
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-              e.preventDefault();
-              if (isLanding) scrollToSection('home');
-              else navigate('/');
-            }}
-          >
-            <Logo />
-          </a>
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-7">
+                {headSections.map((section) => (
+                  <NavLink
+                    key={section.id}
+                    section={section}
+                    isActive={activeSection === section.id}
+                    href={sectionHref(section.id)}
+                    onNavigate={goToSection}
+                    progress={sectionProgress}
+                  />
+                ))}
+              </div>
 
-          <div className="w-[1px] h-4 bg-border" aria-hidden="true" />
+              <span className="w-px h-4 bg-border" aria-hidden="true" />
 
-          <div className="flex items-center gap-1">
-            {SECTIONS.map((section) => (
-              <NavLink
-                key={section.id}
-                section={section}
-                isActive={activeSection === section.id}
-                href={sectionHref(section.id)}
-                onNavigate={goToSection}
-                progress={sectionProgress}
-              />
-            ))}
+              <div className="flex items-center gap-2">
+                {/* The assistant: the one control here that answers rather
+                    than goes somewhere, so the one that may carry the accent. */}
+                <button
+                  type="button"
+                  onClick={toggleAsk}
+                  aria-label={`${askOpen ? 'Close' : 'Open'} the assistant (${MODIFIER_KEY}+J)`}
+                  aria-expanded={askOpen}
+                  className={`group flex items-center gap-2 h-8 px-3 text-[13px] transition-colors ${
+                    askOpen ? 'text-primary' : 'text-foreground hover:text-primary'
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary transition-transform duration-500 ease-out-expo group-hover:rotate-12" aria-hidden="true" />
+                  Ask
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenCommandPalette}
+                  aria-label={`Open the command palette (${MODIFIER_KEY}+K)`}
+                  className="flex items-center gap-1 h-8 pl-1 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <kbd className="kbd">{MODIFIER_KEY}</kbd>
+                  <kbd className="kbd">K</kbd>
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div className="w-[1px] h-4 bg-border" aria-hidden="true" />
-
-          <button
-            type="button"
-            onClick={cycleTheme}
-            aria-label={`Accent colour: ${theme}. Switch to next.`}
-            className="flex items-center justify-center w-7 h-7 border border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
-          >
-            <Palette className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-
-          {/* The assistant, from anywhere on the page. Styled as the one
-              control in the bar that is not navigation — it answers rather
-              than goes somewhere. */}
-          <button
-            type="button"
-            onClick={toggleAsk}
-            aria-label={`${askOpen ? 'Close' : 'Open'} the assistant (${MODIFIER_KEY}+J)`}
-            aria-expanded={askOpen}
-            className={`group relative flex items-center gap-1.5 px-2.5 py-1 border overflow-hidden transition-colors ${
-              askOpen
-                ? 'border-primary bg-primary/15 text-primary'
-                : 'border-primary/40 bg-primary/5 text-foreground hover:border-primary hover:text-primary'
-            }`}
-          >
-            <span
-              className="absolute inset-y-0 -left-full w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent group-hover:left-full transition-[left] duration-700 ease-out"
-              aria-hidden="true"
-            />
-            <Sparkles className="h-3 w-3 text-primary relative" aria-hidden="true" />
-            <span className="relative font-mono text-[10px] uppercase tracking-widest">Ask</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenCommandPalette}
-            aria-label={`Open command palette (${shortcutLabel})`}
-            className="flex items-center gap-2 px-2.5 py-1 border border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
-          >
-            <Command className="h-3 w-3" aria-hidden="true" />
-            {/* Reflects the actual platform rather than always claiming ⌘. */}
-            <kbd className="font-mono text-[10px] uppercase tracking-widest">{shortcutLabel}</kbd>
-          </button>
         </div>
       </motion.nav>
 
-      {/* --- MOBILE: floating bottom island --- */}
+      {/* --- MOBILE: a quiet island at the thumb --- */}
       <motion.nav
-        initial={{ y: prefersReduced ? 0 : 100, opacity: 0 }}
-        animate={{ y: concealed && !prefersReduced ? 100 : 0, opacity: concealed ? 0 : 1 }}
-        transition={{ type: 'tween', ease: 'easeOut', duration: 0.3 }}
-        className="fixed bottom-6 left-0 right-0 z-50 md:hidden flex justify-center px-4 pointer-events-none"
+        initial={{ y: prefersReduced ? 0 : 24, opacity: 0 }}
+        animate={{ y: concealed && !prefersReduced ? 24 : 0, opacity: concealed ? 0 : 1 }}
+        transition={{ duration: 0.4, ease: EASE }}
+        className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-0 right-0 z-50 md:hidden flex justify-center px-4 pointer-events-none"
         aria-label="Sections"
         onFocusCapture={handleFocus}
         onBlurCapture={handleBlur}
         aria-hidden={concealed || undefined}
         inert={concealed}
       >
-        {/* Fluid, not fixed.
-
-            Five 52px tabs plus two 40px controls and their gaps came to about
-            377px of rigid width, which fits a 390px phone and nothing
-            narrower — on a 320px screen the island ran ~34px past the edge,
-            clipping the command-palette button entirely. It is `fixed`, so it
-            never widened the document and no overflow check caught it.
-
-            The tabs now share the available width instead of claiming a fixed
-            slice of it, and the island is capped so it does not stretch into
-            a full-width bar on a large phone. */}
-        <div className="pointer-events-auto w-full max-w-[380px] flex items-stretch gap-0.5 p-1.5 bg-card/95 backdrop-blur-xl border border-border shadow-2xl">
+        {/* Fluid: the tabs share the available width, capped so the island
+            does not become a full-width bar on a large phone, and fitting a
+            320px screen. */}
+        <div className="pointer-events-auto w-full max-w-[400px] flex items-stretch bg-background/95 backdrop-blur-md shadow-[0_0_0_1px_hsl(var(--border)),0_18px_48px_-16px_rgba(0,0,0,0.8)]">
           {SECTIONS.map((section) => {
             const isActive = activeSection === section.id;
             return (
@@ -459,43 +335,34 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
                   e.preventDefault();
                   goToSection(section.id);
                 }}
-                className={`relative flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 min-h-[48px] px-0.5 py-1.5 transition-colors active:scale-95 ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`}
+                /* Home steps aside below 360px so the other four names fit
+                   whole; the top of the page is still one tap on the mark
+                   in the hero, or the footer's back-to-top. */
+                className={`relative flex-1 min-w-0 items-center justify-center min-h-[48px] px-0.5 text-[11px] min-[360px]:text-[12px] tracking-[-0.01em] transition-colors ${
+                  section.id === 'home' ? 'hidden min-[360px]:flex' : 'flex'
+                } ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
               >
                 {isActive && (
                   <motion.span
                     layoutId="mobile-indicator"
-                    className="absolute inset-0 bg-primary/10 border border-primary/30 z-0"
-                    transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+                    className="absolute top-0 left-3 right-3 h-px bg-primary"
+                    transition={{ type: 'spring', bounce: 0, duration: 0.35 }}
+                    aria-hidden="true"
                   />
                 )}
-                <section.icon className="h-[17px] w-[17px] relative z-10" aria-hidden="true" />
-                {/* Icon-only navigation asks every visitor to decode a
-                    pictogram. The label costs 9px and removes the guess. */}
-                {/* tracking-normal, not wider: at 390px the extra spacing
-                    cut "CONTACT" to "CONTA…", the one label that has to be
-                    read to be useful. */}
-                <span className="relative z-10 max-w-full truncate font-mono text-[10px] uppercase tracking-normal leading-none">
-                  {section.short}
-                </span>
+                <span className="truncate">{section.short}</span>
               </a>
             );
           })}
 
-          <div className="w-px shrink-0 self-stretch bg-border mx-0.5" aria-hidden="true" />
+          <span className="w-px shrink-0 my-3 bg-border" aria-hidden="true" />
 
-          {/* Ask takes the slot the accent toggle had. On a phone the island
-              is the only persistent control, and a question is worth more
-              than a colour — which is still one tap away in the palette. */}
           <button
             type="button"
             onClick={toggleAsk}
             aria-label={askOpen ? 'Close the assistant' : 'Ask the assistant'}
             aria-expanded={askOpen}
-            className={`shrink-0 w-10 flex items-center justify-center active:scale-95 transition-transform ${
-              askOpen ? 'text-primary' : 'text-primary/80'
-            }`}
+            className="shrink-0 w-10 min-[360px]:w-11 flex items-center justify-center text-primary active:scale-95 transition-transform"
           >
             <Sparkles className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -503,10 +370,12 @@ const NavbarContent = ({ onOpenCommandPalette }: { onOpenCommandPalette?: () => 
           <button
             type="button"
             onClick={onOpenCommandPalette}
-            aria-label="Open command palette"
-            className="shrink-0 w-10 flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
+            aria-label="Open the command palette"
+            className="shrink-0 w-10 min-[360px]:w-11 flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
           >
-            <Command className="h-4 w-4" aria-hidden="true" />
+            <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
+              <path d="M2 4h12M2 8h12M2 12h7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" fill="none" />
+            </svg>
           </button>
         </div>
       </motion.nav>

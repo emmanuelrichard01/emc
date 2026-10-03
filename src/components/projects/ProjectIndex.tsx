@@ -4,45 +4,46 @@ import { ArrowRight, Check, ExternalLink, Github } from 'lucide-react';
 
 import TransitionLink from '@/components/ui/TransitionLink';
 import { transitionName } from '@/lib/viewTransition';
-import { STATUS_CLASS, STATUS_LABEL, projectStatus } from '@/lib/project';
+import { projectStatus } from '@/lib/project';
 import type { Project } from '@/types';
-import { TierRule, groupByTier } from './tiers';
+import { DESIGN_OUTLINE_MD, StatusText, TierRule, describeDepth, groupByTier, plural } from './tiers';
 import ProjectArt from './ProjectArt';
 import { depthOf, yearLabel, type Result } from './workModel';
 
 /* ==========================================================================
    PROJECT INDEX
 
-   The scannable view, in the terminal's language — close to what `ls`
-   prints in the hero, so the section and the shell above it read as one
-   site. A list of links rather than a <table>: every row navigates, so the
-   row *is* the control, and a screen reader hears destinations rather than
-   a grid to traverse cell by cell.
+   The monograph's index: every system on one typographic table — number,
+   name, status, stack, how deeply it is documented, and year — rows
+   divided by hairlines. A list of links rather than a <table>: every row
+   navigates, so the row *is* the control, and a screen reader hears
+   destinations rather than a grid to traverse cell by cell.
 
-   What this pass added, each for a reader who is scanning:
+   For a reader who is scanning:
 
      · Search snippets. A row found by something its case study says shows
-       where — "trade-offs: …chose Redpanda over Kafka…" — with the words
+       where — "in trade-offs: …chose Redpanda over Kafka…" — with the words
        marked, instead of appearing in the list unexplained.
-     · A depth column: how many trade-offs and field notes the write-up
-       carries. The fastest honest signal of which case studies go deep.
+     · Depth: trade-offs · field notes. The fastest honest signal of which
+       write-ups go deep.
      · A preview that follows the pointer (desktop only): the screenshot or
-       spec sheet, so the row can stay one line and the picture is still one
-       glance away.
-     · Compare toggles, sitting beside the row rather than inside it — a
-       control inside a link is two targets pretending to be one.
+       spec plate, so the row stays one line and the picture is a glance away.
+     · Compare: pointing at a row turns its number into a tick box. The tick
+       sits beside the link, not inside it — a control inside a link is two
+       targets pretending to be one.
 
-   CONTRAST
-   Every piece of text here is at full token opacity; quiet is done with
-   size and tracking, never with alpha (muted at 40% measures 1.76:1).
+   Filtering re-ranks the rows in place — each keeps its identity and moves
+   to its new position — rather than the list being redrawn.
+
+   Built work is set solid; design-stage work sits under a dashed rule with
+   its name in grey, so "not built" reads before the status does.
    ========================================================================== */
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-/* Declared once and reused by the header — the only way the two can be
-   guaranteed to line up. */
+/* Declared once and reused by the header — the only way the two line up. */
 const COLUMNS =
-  'grid grid-cols-[1fr_auto] md:grid-cols-[minmax(0,1.8fr)_6.5rem_minmax(0,1fr)_3.5rem_3.5rem_1rem] gap-x-5 items-baseline';
+  'grid grid-cols-[2rem_minmax(0,1fr)_auto] md:grid-cols-[2.75rem_minmax(0,1.7fr)_9.5rem_minmax(0,1fr)_6.5rem_4rem_1rem] gap-x-4 md:gap-x-6 items-baseline';
 
 /** Marks each query word inside a snippet. */
 function Highlighted({ text, query }: { text: string; query: string }) {
@@ -53,7 +54,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
     <>
       {text.split(pattern).map((part, i) =>
         i % 2 === 1 ? (
-          <mark key={i} className="bg-primary/15 text-foreground px-px">
+          <mark key={i} className="bg-primary/20 text-foreground px-px">
             {part}
           </mark>
         ) : (
@@ -65,15 +66,15 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 }
 
 const IndexHeader = () => (
-  <div
-    className={`${COLUMNS} pl-4 md:pl-11 pr-4 pt-4 pb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground`}
-    aria-hidden="true"
-  >
-    <span>system</span>
-    <span className="hidden md:block">status</span>
-    <span className="hidden md:block">stack</span>
-    <span className="hidden md:block text-right" title="trade-offs · field notes documented">depth</span>
-    <span className="hidden md:block text-right">year</span>
+  <div className={`${COLUMNS} pb-3 t-caption`} aria-hidden="true">
+    <span>No.</span>
+    <span>Project</span>
+    <span className="hidden md:block">Status</span>
+    <span className="hidden md:block">Built with</span>
+    <span className="hidden md:block text-right" title="Trade-offs and debugging stories in the write-up">
+      Write-up
+    </span>
+    <span className="hidden md:block text-right">Year</span>
     <span className="hidden md:block" />
   </div>
 );
@@ -82,104 +83,101 @@ const IndexHeader = () => (
 
 interface RowProps {
   result: Result;
-  index: number;
+  folio: number;
   query: string;
   compared: boolean;
   compareFull: boolean;
   onCompare: (id: string) => void;
 }
 
-const IndexRow = ({ result, index, query, compared, compareFull, onCompare }: RowProps) => {
+const IndexRow = ({ result, folio, query, compared, compareFull, onCompare }: RowProps) => {
   const { project, hit } = result;
   const status = projectStatus(project);
   const depth = depthOf(project);
   const prefersReduced = useReducedMotion();
-  // The flagship stage above owns the shared-element names for flagships; a
+  const isDesign = project.tier === 'design';
+  // The flagship plates above own the shared-element names for flagships; a
   // name used twice on one page cancels the transition for both.
   const named = project.tier !== 'flagship';
 
   return (
     <motion.li
       layout={prefersReduced ? false : 'position'}
-      initial={prefersReduced ? false : { opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, transition: { duration: 0.12 } }}
-      transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.18), ease: EASE }}
-      className="group/row relative border-b border-border/60 last:border-b-0"
+      initial={prefersReduced ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={prefersReduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, transition: { duration: 0.15 } }}
+      transition={{ layout: { duration: 0.55, ease: EASE }, opacity: { duration: 0.35 } }}
+      className={`group/row relative border-t ${isDesign ? 'border-dashed border-rule-strong' : 'border-border'}`}
       data-preview={project.id}
     >
-      <TransitionLink
-        to={`/projects/${project.id}`}
-        className={`${COLUMNS} group relative pl-4 md:pl-11 pr-4 py-3.5 hover:bg-primary/[0.045] focus-visible:bg-primary/[0.07] transition-colors ${
-          compared ? 'bg-primary/[0.04]' : ''
-        }`}
-      >
-        {/* Lit edge — the same affordance the terminal rows use. */}
+      <TransitionLink to={`/projects/${project.id}`} className={`${COLUMNS} group relative py-5 md:py-6`}>
         <span
-          className={`absolute left-0 top-0 bottom-0 w-[2px] bg-primary origin-center transition-transform duration-200 ${
-            compared ? 'scale-y-100' : 'scale-y-0 group-hover:scale-y-100 group-focus-visible:scale-y-100'
-          }`}
+          className={`t-folio transition-opacity duration-300 ${compared ? 'md:opacity-0' : 'md:group-hover/row:opacity-0'}`}
           aria-hidden="true"
-        />
+        >
+          {String(folio).padStart(2, '0')}
+        </span>
 
         <span className="min-w-0">
           <span
-            className="block w-fit max-w-full font-mono text-[13px] text-foreground group-hover:text-primary transition-colors truncate"
+            /* Titles wrap on a phone rather than being cut; a design study's
+               title is drawn in outline and inks in when pointed at. */
+            className={`block w-fit max-w-full t-subhead md:truncate transition-[transform,color] duration-500 ease-out-expo group-hover:translate-x-1 ${
+              isDesign ? `${DESIGN_OUTLINE_MD} group-hover:text-foreground md:group-hover:text-foreground md:group-hover:[-webkit-text-stroke:0]` : 'text-foreground'
+            }`}
             style={named ? { viewTransitionName: transitionName('title', project.id) } : undefined}
           >
             {project.title}
           </span>
           {hit?.snippet ? (
-            <span className="block text-[11px] text-muted-foreground mt-1 leading-snug line-clamp-2">
-              <span className="font-mono text-[10px] sm:text-[9px] uppercase tracking-[0.18em] text-primary/80 mr-1.5">{hit.field}</span>
+            <span className="block t-caption mt-1.5 line-clamp-2">
+              <span className="text-foreground mr-1.5">in {hit.field}:</span>
               <Highlighted text={hit.snippet} query={query} />
             </span>
           ) : (
-            <span className="block text-[11px] text-muted-foreground truncate mt-0.5">{project.subtitle}</span>
+            <span className="block t-caption md:truncate mt-1 group-hover:text-foreground transition-colors duration-300">
+              {project.subtitle}
+            </span>
           )}
         </span>
 
-        <span className={`font-mono text-[10px] uppercase tracking-wider justify-self-end md:justify-self-start ${STATUS_CLASS[status]}`}>
-          {STATUS_LABEL[status]}
+        <span className="text-[13px] justify-self-end md:justify-self-start whitespace-nowrap">
+          <StatusText status={status} className={status === 'design' ? '' : 'group-hover:text-foreground transition-colors duration-300'} />
         </span>
 
-        <span className="hidden md:block font-mono text-[10px] text-muted-foreground truncate">
-          {project.stack.length ? project.stack.slice(0, 3).join(' · ') : '—'}
+        <span className="hidden md:block text-[13px] text-muted-foreground truncate group-hover:text-foreground transition-colors duration-300">
+          {project.stack.length ? project.stack.slice(0, 3).join(' · ') : 'Not built yet'}
         </span>
 
-        {/* Depth as two tiny bars: trade-offs and field notes. */}
         <span
-          className="hidden md:flex justify-end items-center gap-1.5 font-mono text-[10px] text-muted-foreground tabular-nums"
-          title={`${depth.tradeoffs} trade-offs · ${depth.fieldNotes} field notes`}
+          className="hidden md:block text-right text-[13px] text-muted-foreground tabular-nums group-hover:text-foreground transition-colors duration-300"
+          title={describeDepth(depth.tradeoffs, depth.fieldNotes)}
         >
+          {/* Spelled out, two short lines, so the column needs no legend. */}
           {depth.tradeoffs || depth.fieldNotes ? (
             <>
-              <span className="flex items-end gap-px h-3" aria-hidden="true">
-                <span className="w-[3px] bg-primary/70" style={{ height: `${Math.min(100, 20 + depth.tradeoffs * 12)}%` }} />
-                <span
-                  className={`w-[3px] ${depth.fieldNotes ? 'bg-status-ok/80' : 'bg-border'}`}
-                  style={{ height: `${Math.min(100, 20 + depth.fieldNotes * 20)}%` }}
-                />
+              <span className="sr-only">{describeDepth(depth.tradeoffs, depth.fieldNotes)}</span>
+              <span aria-hidden="true" className="flex flex-col leading-[1.45]">
+                {depth.tradeoffs > 0 && <span>{plural(depth.tradeoffs, 'trade-off')}</span>}
+                {depth.fieldNotes > 0 && <span>{plural(depth.fieldNotes, 'bug')}</span>}
               </span>
-              {depth.tradeoffs}
-              {depth.fieldNotes ? `·${depth.fieldNotes}` : ''}
             </>
           ) : (
-            '—'
+            <span className="text-muted-quiet">Summary only</span>
           )}
         </span>
 
-        <span className="hidden md:block font-mono text-[10px] text-muted-foreground text-right tabular-nums whitespace-nowrap">
+        <span className="hidden md:block text-right text-[13px] text-muted-foreground tabular-nums whitespace-nowrap group-hover:text-foreground transition-colors duration-300">
           {yearLabel(project.timeline)}
         </span>
 
         <ArrowRight
-          className="hidden md:block w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all"
+          className="nudge hidden md:block w-4 h-4 self-center text-muted-quiet group-hover:text-foreground transition-colors"
           aria-hidden="true"
         />
       </TransitionLink>
 
-      {/* Compare, beside the link rather than inside it. */}
+      {/* Compare: takes the number's place while the row is pointed at. */}
       <button
         type="button"
         role="checkbox"
@@ -187,11 +185,11 @@ const IndexRow = ({ result, index, query, compared, compareFull, onCompare }: Ro
         aria-label={`Compare ${project.title}`}
         disabled={!compared && compareFull}
         onClick={() => onCompare(project.id)}
-        title={!compared && compareFull ? 'Three at a time' : 'Add to compare'}
-        className={`hidden md:flex absolute left-3 top-[18px] w-4 h-4 items-center justify-center border transition-all duration-200 disabled:cursor-not-allowed ${
+        title={!compared && compareFull ? 'You can compare three at a time' : 'Add to compare'}
+        className={`hidden md:flex absolute left-0 top-[1.85rem] w-4 h-4 items-center justify-center transition-all duration-300 disabled:cursor-not-allowed ${
           compared
-            ? 'opacity-100 bg-primary border-primary text-primary-foreground scale-100'
-            : 'opacity-0 scale-90 group-hover/row:opacity-100 group-hover/row:scale-100 focus-visible:opacity-100 focus-visible:scale-100 border-muted-foreground/60 hover:border-primary disabled:opacity-0'
+            ? 'opacity-100 bg-primary text-primary-foreground'
+            : 'opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 shadow-[inset_0_0_0_1px_hsl(var(--muted-foreground))] hover:shadow-[inset_0_0_0_1px_hsl(var(--foreground))] disabled:opacity-0'
         }`}
       >
         {compared && <Check className="w-3 h-3" strokeWidth={3} aria-hidden="true" />}
@@ -318,14 +316,12 @@ function CursorPreview({ rootRef, projects }: { rootRef: RefObject<HTMLElement |
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.1 } }}
             transition={{ duration: 0.2, ease: EASE }}
-            className="absolute left-0 top-0 w-full border border-border bg-card shadow-2xl"
+            className="absolute left-0 top-0 w-full bg-card shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]"
           >
             <ProjectArt project={project} compact className="aspect-[16/10]" />
-            <div className="flex items-center justify-between gap-3 px-3 py-2 border-t border-border">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground truncate">
-                {project.category}
-              </span>
-              <span className="font-mono text-[10px] text-primary shrink-0">open →</span>
+            <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+              <span className="t-caption truncate">{project.category}</span>
+              <span className="t-caption text-foreground shrink-0">Open →</span>
             </div>
           </motion.div>
         )}
@@ -349,23 +345,32 @@ interface ProjectIndexProps {
 export default function ProjectIndex({ results, query, grouped = true, compare, onCompare, compareMax }: ProjectIndexProps) {
   const fine = useFinePointer();
   const rootRef = useRef<HTMLDivElement>(null);
+  const prefersReduced = useReducedMotion();
   // Stable between renders unless the list itself changes — the preview
   // re-checks what is under the pointer whenever it does.
   const projectsById = useMemo(() => new Map(results.map((r) => [r.project.id, r.project])), [results]);
 
   if (!results.length) return null;
 
-  /* One flat, keyed list of rules and rows. AnimatePresence only sees its
-     direct children, and a Fragment per group hid every row inside it — so
-     rows filtered out simply vanished instead of leaving. */
+  /* One flat, keyed list of sub-heads and rows. AnimatePresence only sees
+     its direct children, and a Fragment per group hid every row inside it —
+     so rows filtered out simply vanished instead of leaving. */
   const byId = new Map(results.map((r) => [r.project.id, r]));
   const items: React.ReactNode[] = [];
-  let row = 0;
+  let folio = 0;
   for (const group of grouped ? groupByTier(results.map((r) => r.project)) : [{ tier: '', items: results.map((r) => r.project) }]) {
     if (grouped && group.tier) {
       items.push(
-        <motion.li layout="position" key={`rule-${group.tier}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <TierRule tier={group.tier} count={group.items.length} className="pl-4 md:pl-11 pr-4 pt-5 pb-2.5" />
+        <motion.li
+          layout={prefersReduced ? false : 'position'}
+          key={`rule-${group.tier}`}
+          initial={prefersReduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ layout: { duration: 0.55, ease: EASE } }}
+          className="pt-12 first:pt-2 pb-4"
+        >
+          <TierRule tier={group.tier} count={group.items.length} />
         </motion.li>
       );
     }
@@ -374,7 +379,7 @@ export default function ProjectIndex({ results, query, grouped = true, compare, 
         <IndexRow
           key={project.id}
           result={byId.get(project.id)!}
-          index={row++}
+          folio={++folio}
           query={query}
           compared={compare.includes(project.id)}
           compareFull={compare.length >= compareMax}
@@ -385,26 +390,29 @@ export default function ProjectIndex({ results, query, grouped = true, compare, 
   }
 
   return (
-    <div ref={rootRef} className="border border-border bg-card/20">
+    <div ref={rootRef}>
       <IndexHeader />
-      <ul className="border-t border-border">
+      {/* No closing rule: the totals line under the last row closes the
+          table, and the next section opens on its own rule. Two hairlines a
+          section apart read as a missing row. */}
+      <ul>
         <AnimatePresence initial={false}>{items}</AnimatePresence>
       </ul>
 
       {/* External links deliberately stay out of the rows: a row's job is to
           open the case study. The totals are here instead. */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 py-3 border-t border-border font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 pt-5 t-caption">
         <span className="tabular-nums">{results.length} shown</span>
         <span className="flex items-center gap-1.5">
-          <Github className="w-3 h-3" aria-hidden="true" />
-          <span className="tabular-nums">{results.filter((r) => r.project.github).length}</span> with source
+          <Github className="w-3.5 h-3.5" aria-hidden="true" />
+          <span className="tabular-nums">{results.filter((r) => r.project.github).length}</span> with public code
         </span>
         <span className="flex items-center gap-1.5">
-          <ExternalLink className="w-3 h-3" aria-hidden="true" />
+          <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
           <span className="tabular-nums">{results.filter((r) => r.project.liveUrl).length}</span> live
         </span>
-        <span className="hidden md:inline ml-auto normal-case tracking-normal text-[11px]">
-          tick a row to compare up to {compareMax}
+        <span className="hidden md:inline ml-auto">
+          Hover a row's number to compare up to {plural(compareMax, 'project')}
         </span>
       </div>
 

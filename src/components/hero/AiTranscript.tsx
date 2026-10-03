@@ -408,7 +408,7 @@ export default function AiTranscript({
           <TerminalIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
           <span className="font-mono text-[11px]">
             {phase}
-            {onCancel && <span className="text-muted-foreground group-hover:text-primary"> — tap or ^C to stop</span>}
+            {onCancel && <span className="text-muted-foreground group-hover:text-primary">, tap or press ^C to stop</span>}
           </span>
           <span className="flex gap-0.5 shrink-0" aria-hidden="true">
             {[0, 1, 2].map((i) => (

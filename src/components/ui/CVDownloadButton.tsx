@@ -128,16 +128,17 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
 
   const statusLabel = {
     idle: 'Download CV',
-    preparing: 'Preparing...',
-    downloading: 'Downloading...',
+    preparing: 'Preparing…',
+    downloading: 'Downloading…',
     success: 'Downloaded',
   };
 
   const statusIcon = {
-    idle: <Download className="w-4 h-4" />,
-    preparing: <Loader2 className="w-4 h-4 animate-spin text-primary" />,
-    downloading: <FileDown className="w-4 h-4 text-primary" />,
-    success: <CheckCircle2 className="w-4 h-4 text-status-ok" />,
+    idle: <Download className="w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5" />,
+    preparing: <Loader2 className="w-4 h-4 animate-spin" />,
+    downloading: <FileDown className="w-4 h-4" />,
+    // Green reads on the stock, not on the ink button, where the icon keeps the text colour.
+    success: <CheckCircle2 className={`w-4 h-4 ${variant === 'structural' ? '' : 'text-status-ok'}`} />,
   };
 
   const inFlight = status === 'downloading' || status === 'preparing';
@@ -145,16 +146,20 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
      than filling to a figure that was never measured. */
   const indeterminate = progress === null;
 
+  /* On the ink button the fill is a shade of the stock; on a hairline
+     variant it is a shade of the ink. Either way it is the real byte count. */
+  const fillTone = variant === 'structural' ? 'bg-background/15' : 'bg-foreground/[0.07]';
+
   const ProgressFill = () =>
     indeterminate ? (
       <motion.div
-        className="absolute inset-y-0 w-1/3 bg-primary/10"
+        className={`absolute inset-y-0 w-1/3 ${fillTone}`}
         animate={{ x: ['-120%', '320%'] }}
         transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
       />
     ) : (
       <motion.div
-        className="absolute inset-y-0 left-0 bg-primary/10"
+        className={`absolute inset-y-0 left-0 ${fillTone}`}
         initial={{ width: '0%' }}
         animate={{ width: `${progress}%` }}
         transition={{ duration: 0.1 }}
@@ -165,16 +170,13 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
   if (variant === 'card') {
     return (
       <div>
-        <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-4">
-          // Résumé
-        </div>
         <button
           type="button"
           onClick={handleDownload}
           disabled={status !== 'idle'}
           aria-label="Download Emmanuel Moghalu's CV as PDF"
           aria-describedby="cv-file-info"
-          className={`group relative flex items-center justify-between border border-border bg-card px-4 py-3 hover:border-primary transition-all disabled:opacity-70 disabled:cursor-not-allowed w-full overflow-hidden cursor-pointer ${className}`}
+          className={`group relative flex items-center justify-between border-y border-border px-0 py-4 hover:border-rule-strong transition-colors disabled:opacity-70 disabled:cursor-not-allowed w-full overflow-hidden cursor-pointer ${className}`}
         >
           {/* Progress bar background */}
           {inFlight && (
@@ -187,23 +189,19 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
             <AnimatePresence mode="wait">
               <motion.div
                 key={status}
-                initial={{ scale: 0, rotate: -90 }}
-                animate={{ scale: 1, rotate: 0 }}
-                exit={{ scale: 0, rotate: 90 }}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.2 }}
               >
                 {statusIcon[status]}
               </motion.div>
             </AnimatePresence>
             <div className="flex flex-col items-start">
-              <span
-                className={`text-[13px] uppercase tracking-wider font-mono ${
-                  status === 'downloading' || status === 'preparing' ? 'text-primary' : ''
-                }`}
-              >
+              <span className="text-[15px] text-foreground">
                 {statusLabel[status]}
               </span>
-              <span id="cv-file-info" className="text-[11px] font-mono text-muted-foreground mt-0.5">
+              <span id="cv-file-info" className="t-caption mt-0.5">
                 {FILE_NAME} · {FILE_SIZE}
               </span>
             </div>
@@ -211,9 +209,9 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
 
           <div className="flex items-center gap-2 relative z-10">
             {status === 'downloading' && !indeterminate && (
-              <span className="text-[11px] font-mono text-primary">{Math.round(progress)}%</span>
+              <span className="t-figure text-[12px] text-foreground">{Math.round(progress)}%</span>
             )}
-            <span className="text-[11px] font-mono text-muted-foreground">[PDF]</span>
+            <span className="t-caption">PDF</span>
           </div>
         </button>
       </div>
@@ -227,9 +225,9 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
       onClick={handleDownload}
       disabled={status !== 'idle'}
       aria-label="Download Emmanuel Moghalu's CV as PDF"
-      className={`${
+      className={`group ${
         variant === 'structural' ? 'btn-structural' : 'btn-ghost-structural'
-      } relative flex items-center justify-center gap-3 w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden cursor-pointer ${className}`}
+      } relative w-full sm:w-auto disabled:cursor-wait overflow-hidden cursor-pointer ${className}`}
     >
       {/* Progress bar background */}
       {inFlight && (
@@ -238,7 +236,7 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
         </div>
       )}
 
-      <span className="min-w-[110px] text-center relative z-10">
+      <span className="min-w-[104px] text-left relative z-10">
         {statusLabel[status]}
       </span>
 
@@ -246,9 +244,9 @@ export const CVDownloadButton = ({ className = '', variant = 'structural' }: Pro
         <motion.div
           key={status}
           className="relative z-10"
-          initial={{ scale: 0, rotate: -90 }}
-          animate={{ scale: 1, rotate: 0 }}
-          exit={{ scale: 0, rotate: 90 }}
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 4 }}
           transition={{ duration: 0.2 }}
         >
           {statusIcon[status]}

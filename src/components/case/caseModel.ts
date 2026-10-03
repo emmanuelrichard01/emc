@@ -1,3 +1,4 @@
+import { projectStatus } from '@/lib/project';
 import type { Project } from '@/types';
 
 /* ==========================================================================
@@ -24,20 +25,36 @@ export function sectionsFor(project: Project): CaseSection[] {
   if (!study) {
     return [
       { id: 'overview', num: '01', label: 'Overview' },
-      ...(project.decisions.length ? [{ id: 'decisions', num: '02', label: 'Architecture Decisions' }] : []),
-      { id: 'ask', num: '→', label: 'Ask About It' },
+      ...(project.decisions.length ? [{ id: 'decisions', num: '02', label: 'Key decisions' }] : []),
+      { id: 'ask', num: '→', label: 'Ask a question' },
     ];
   }
   const out: CaseSection[] = [
-    { id: 'problem', num: '01', label: 'The Problem' },
-    { id: 'approach', num: '02', label: 'The Approach' },
-    { id: 'outcome', num: '03', label: 'The Outcome' },
+    { id: 'problem', num: '01', label: 'The problem' },
+    { id: 'approach', num: '02', label: 'How it works' },
+    { id: 'outcome', num: '03', label: 'The result' },
   ];
-  if (study.tradeoffs?.length) out.push({ id: 'tradeoffs', num: '04', label: 'Trade-offs' });
-  else if (project.decisions.length) out.push({ id: 'decisions', num: '04', label: 'Architecture Decisions' });
-  if (study.fieldNotes?.length) out.push({ id: 'field-notes', num: String(out.length + 1).padStart(2, '0'), label: 'Field Notes' });
-  out.push({ id: 'ask', num: '→', label: 'Ask About It' });
+  if (study.tradeoffs?.length) out.push({ id: 'tradeoffs', num: '04', label: 'Choices and trade-offs' });
+  else if (project.decisions.length) out.push({ id: 'decisions', num: '04', label: 'Key decisions' });
+  if (study.fieldNotes?.length) out.push({ id: 'field-notes', num: String(out.length + 1).padStart(2, '0'), label: 'Lessons from debugging' });
+  out.push({ id: 'ask', num: '→', label: 'Ask a question' });
   return out;
+}
+
+/* ── Status, in words ───────────────────────────────────────────────────
+   What a reader needs to know about whether a project runs, said plainly. */
+
+export function statusInWords(project: Project): string {
+  switch (projectStatus(project)) {
+    case 'live':
+      return 'Live';
+    case 'source-available':
+      return 'Code on GitHub';
+    case 'private':
+      return 'Private code';
+    case 'design':
+      return 'Design only, not built';
+  }
 }
 
 /* ── Reading time ────────────────────────────────────────────────────────
@@ -125,4 +142,27 @@ export function relatedProjects(project: Project, all: Project[], limit = 3): { 
     .sort((a, b) => b.score - a.score || a.project.title.localeCompare(b.project.title))
     .slice(0, limit)
     .map(({ project: p, shared }) => ({ project: p, shared }));
+}
+
+/* Long write-ups arrive as one string. Set as one block they ran to 16 lines
+   at desktop and 25 on a phone, which nobody reads. Split at sentence ends
+   into short paragraphs of two or three sentences (a paragraph also closes
+   once it passes ~360 characters), so the page reads in steps. The words
+   are untouched: this only decides where the breaks go, and a sentence is
+   never split (a decimal like 0.75 or "v1.0.0" is not a sentence end,
+   because the next character after the space must start a sentence). */
+export function toParagraphs(text: string): string[] {
+  const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z0-9"‘“(])/);
+  const paragraphs: string[] = [];
+  let current: string[] = [];
+  for (const sentence of sentences) {
+    current.push(sentence);
+    const length = current.join(" ").length;
+    if (current.length >= 3 || (current.length >= 2 && length > 360) || length > 520) {
+      paragraphs.push(current.join(" "));
+      current = [];
+    }
+  }
+  if (current.length) paragraphs.push(current.join(" "));
+  return paragraphs;
 }

@@ -1,17 +1,21 @@
 import { useEffect, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AlertTriangle, Bug, ExternalLink, GitBranch, Github, Info, Layers, MessageSquare, Target } from "lucide-react";
+import { ArrowUpRight, Info } from "lucide-react";
 
 import { PROJECTS } from "@/data/projects";
 import SEOHead from "@/components/SEOHead";
 import { CaseBlocks } from "@/components/projects/CaseBlocks";
 import ProjectAsk from "@/components/projects/ProjectAsk";
 import { CaseContents, MobileContents, ReadingProgress } from "@/components/case/CaseContents";
-import { CaseHero, CaseSummary } from "@/components/case/CaseHero";
+import { CaseHero } from "@/components/case/CaseHero";
+import { toParagraphs } from "@/components/case/caseModel";
 import { CaseSection, FieldNotesList, Highlights, Tradeoffs } from "@/components/case/CaseSections";
 import { CaseFooter } from "@/components/case/CaseFooter";
 import { readingMinutes, sectionsFor, type CaseSection as Section } from "@/components/case/caseModel";
+import { MissingPage } from "@/pages/NotFound";
+import { Reveal } from "@/components/ui/Reveal";
+import { scrollToY } from "@/lib/smoothScroll";
 import { VIEW_TRANSITIONS } from "@/lib/viewTransition";
 import type { Project, SEOMetadata } from "@/types";
 
@@ -25,11 +29,11 @@ import type { Project, SEOMetadata } from "@/types";
    their own first words; the trade-offs are visually the heaviest thing on
    the page, because they are the most convincing.
 
-   Read: prose set for reading (16–17px, regular weight, 68ch), a contents
-   rail that fills as each section is read with an estimate of the time
-   left, headings that link to themselves, debugging stories folded to their
-   symptoms, and at the end the assistant — told which page it is on — then
-   where to go next.
+   Read: a book layout — a contents rail on the left that fills as each
+   section is read, with an estimate of the time left, and the reading
+   column on the right set for sentences (17px, 68ch). Headings link to
+   themselves, debugging stories fold to their symptoms, and at the end the
+   assistant — told which page it is on — then the next chapter.
 
    Nothing on the page is written for the page. Every figure, sentence and
    count comes from the project's data (caseModel derives the rest), so the
@@ -49,70 +53,75 @@ function truncate(text: string, max = 155): string {
 }
 
 /* Reading mode for the case-study prose: a size, weight and contrast meant
-   for sentences. The instrument styling stays on labels and figures. */
-const PROSE = "text-[16px] md:text-[17px] text-foreground/80 leading-[1.75] max-w-[68ch]";
+   for sentences, at a book's measure. */
+/* 60ch, not 68: Inter's average letter is narrower than the "0" a ch is
+   measured on, and 68ch set about 90 characters to a line. 60ch lands near
+   70, inside the comfortable 65 to 75. */
+const PROSE = "text-[16px] md:text-[17px] text-foreground/85 leading-[1.75] tracking-[-0.006em] max-w-[60ch]";
 
-/* ── Sidebar ── */
+function Prose({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col gap-5">
+      {toParagraphs(text).map((paragraph, i) => (
+        <p key={i} className={PROSE}>
+          {paragraph}
+        </p>
+      ))}
+    </div>
+  );
+}
 
-const Sidebar = ({ project, minutes, sections }: { project: Project; minutes: number; sections: Section[] }) => (
+/* ── Rail ──
+   The left margin of the book: where you are, what it is made of, where the
+   source lives, and the two keys that turn the page. */
+
+const Rail = ({ project, minutes, sections }: { project: Project; minutes: number; sections: Section[] }) => (
   /* h-full is load-bearing: a sticky child can only travel inside its
      parent's box, and the aside must claim the stretched grid cell. */
   <aside className="hidden lg:block h-full">
-    <div className="sticky top-28 flex flex-col gap-8">
+    <div className="sticky top-28 flex flex-col gap-10">
       <CaseContents sections={sections} minutes={minutes} />
 
       <div>
-        <span className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-3 block">// Stack</span>
-        <ul className="flex flex-wrap gap-1.5">
-          {project.stack.map((tech) => (
-            <li
-              key={tech}
-              className="px-2 py-1 border border-border bg-card/50 text-muted-foreground text-[10px] font-mono uppercase tracking-wider"
-            >
-              {tech}
-            </li>
-          ))}
-          {!project.stack.length && <li className="font-mono text-[11px] text-muted-foreground">not built</li>}
-        </ul>
+        <p className="t-caption text-foreground mb-2">Built with</p>
+        <p className="t-caption leading-[1.7]">{project.stack.length ? project.stack.join(", ") : "Not built yet"}</p>
       </div>
 
       {(project.github || project.liveUrl) && (
-        <div className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-2 text-[13px]">
           {project.github && (
-            <a
-              href={project.github}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center justify-between border border-border bg-card px-3 py-2.5 hover:border-primary/40 transition-colors"
-            >
-              <span className="flex items-center gap-2.5 text-muted-foreground group-hover:text-foreground transition-colors">
-                <Github className="w-3.5 h-3.5" aria-hidden="true" />
-                <span className="text-[11px] font-mono uppercase tracking-wider">Source</span>
-              </span>
-              <span className="text-muted-foreground group-hover:text-primary transition-colors" aria-hidden="true">↗</span>
-            </a>
+            <li>
+              <a
+                href={project.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span className="link-draw">Code on GitHub</span>
+                <ArrowUpRight className="nudge-up w-3.5 h-3.5" aria-hidden="true" />
+              </a>
+            </li>
           )}
           {project.liveUrl && (
-            <a
-              href={project.liveUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center justify-between border border-border bg-card px-3 py-2.5 hover:border-primary/40 transition-colors"
-            >
-              <span className="flex items-center gap-2.5 text-muted-foreground group-hover:text-foreground transition-colors">
-                <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-                <span className="text-[11px] font-mono uppercase tracking-wider">Live</span>
-              </span>
-              <span className="text-muted-foreground group-hover:text-primary transition-colors" aria-hidden="true">↗</span>
-            </a>
+            <li>
+              <a
+                href={project.liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span className="link-draw">Live site</span>
+                <ArrowUpRight className="nudge-up w-3.5 h-3.5" aria-hidden="true" />
+              </a>
+            </li>
           )}
-        </div>
+        </ul>
       )}
 
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground leading-relaxed">
-        <kbd className="border border-border px-1">[</kbd> <kbd className="border border-border px-1">]</kbd> previous · next
+      <p className="t-caption leading-[1.9]">
+        Press <kbd className="kbd">[</kbd> or <kbd className="kbd">]</kbd> for the previous or next project.
         <br />
-        select any sentence to ask about it
+        Highlight any sentence to ask about it.
       </p>
     </div>
   </aside>
@@ -122,7 +131,6 @@ const Sidebar = ({ project, minutes, sections }: { project: Project; minutes: nu
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const project = PROJECTS.find((p) => p.id === id);
   /* Memoised: the contents rail and the mobile bar subscribe to scroll per
      section list, and a fresh array each render would resubscribe both. */
@@ -133,10 +141,13 @@ const ProjectDetail = () => {
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash) {
-      const frame = requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView());
+      const frame = requestAnimationFrame(() => {
+        const el = document.getElementById(hash);
+        if (el) scrollToY(Math.max(0, el.getBoundingClientRect().top + window.scrollY - 96), { immediate: true });
+      });
       return () => cancelAnimationFrame(frame);
     }
-    window.scrollTo(0, 0);
+    scrollToY(0, { immediate: true });
   }, [id]);
 
   const seo = useMemo(() => {
@@ -177,27 +188,18 @@ const ProjectDetail = () => {
 
   if (!project || !seo) {
     return (
-      <div className="min-h-dvh flex items-center justify-center flex-col gap-4 bg-background noise-overlay">
-        <SEOHead
-          metadata={{
-            title: "Project not found | Emmanuel Moghalu",
-            description: "This project does not exist. Browse the systems on the portfolio index instead.",
-            robots: "noindex, follow",
-          }}
-        />
-        <h1 className="text-2xl text-foreground font-bold font-mono tracking-tighter">404 // NOT_FOUND</h1>
-        <button type="button" onClick={() => navigate("/")} className="text-primary hover:underline font-mono text-sm">
-          Return to root
-        </button>
-      </div>
+      <MissingPage
+        title="This project isn’t here."
+        lede="There is no project at this address. It may have been renamed. You can find every project on the home page."
+        seoTitle="Project not found | Emmanuel Moghalu"
+        seoDescription="This project does not exist. See every project on the home page instead."
+      />
     );
   }
 
   const { caseStudy } = project;
-  const headline = `${project.title} — ${project.subtitle}`;
+  const headline = `${project.title}: ${project.subtitle}`;
   const minutes = readingMinutes(project);
-  const decisionsNum = sections.find((s) => s.id === "decisions")?.num ?? "02";
-  const fieldNotesNum = sections.find((s) => s.id === "field-notes")?.num ?? "05";
 
   const metadata: SEOMetadata = {
     title: `${headline} | Emmanuel Moghalu`,
@@ -215,7 +217,7 @@ const ProjectDetail = () => {
   };
 
   return (
-    <div className="pt-28 md:pt-32 pb-24 min-h-dvh bg-background relative selection:bg-primary/20 selection:text-primary">
+    <div className="pt-28 md:pt-36 pb-28 min-h-dvh bg-background relative">
       <SEOHead metadata={metadata}>
         <script type="application/ld+json">{JSON.stringify(seo.projectSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(seo.breadcrumbSchema)}</script>
@@ -223,91 +225,60 @@ const ProjectDetail = () => {
 
       <ReadingProgress />
 
-      {/* Background: the drafting grid, fading out below the hero. */}
-      <div className="absolute inset-0 z-0 pointer-events-none noise-overlay" />
-      <div
-        className="absolute inset-x-0 top-0 h-[900px] z-0 pointer-events-none opacity-[0.05]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-          maskImage: "radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 90%)",
-          WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 90%)",
-        }}
-      />
-
-      <div className="container px-6 md:px-12 max-w-6xl mx-auto relative z-10">
+      <div className="page-max page-x relative">
         <CaseHero project={project} minutes={minutes} />
-        <CaseSummary project={project} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_240px] gap-12 lg:gap-16">
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)] gap-12 lg:gap-16 xl:gap-24">
+          <Rail project={project} minutes={minutes} sections={sections} />
           <motion.article
             initial={VIEW_TRANSITIONS ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col gap-16 min-w-0"
+            className="flex flex-col gap-24 md:gap-32 min-w-0 max-w-[880px]"
           >
             <MobileContents sections={sections} />
 
             {/* Scope notice — stated up front, not buried. */}
             {caseStudy?.notice && (
-              <div className="flex gap-4 border border-status-warn/25 bg-status-warn/5 p-5 -mt-6">
-                <Info className="w-4 h-4 text-status-warn shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <span className="block text-[10px] font-mono uppercase tracking-[0.2em] text-status-warn mb-2">Scope notice</span>
-                  <p className="text-[14px] text-foreground/75 leading-relaxed">{caseStudy.notice}</p>
-                </div>
-              </div>
+              <Reveal as="div" className="-mt-8 md:-mt-16 border-t border-border pt-5 md:pt-6 max-w-[60ch]">
+                <p className="flex items-center gap-2 mb-2.5 t-caption">
+                  <Info className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  Before you read: what this project does not do
+                </p>
+                <p className="text-[15px] text-foreground/85 leading-[1.7]">{caseStudy.notice}</p>
+              </Reveal>
             )}
 
             {caseStudy ? (
               <>
-                <CaseSection id="problem" num="01" label="The Problem" icon={AlertTriangle}>
-                  <p className={PROSE}>{caseStudy.problem}</p>
+                <CaseSection id="problem" label="The problem">
+                  <Prose text={caseStudy.problem} />
                   <CaseBlocks blocks={caseStudy.blocks?.problem} />
                 </CaseSection>
 
-                <CaseSection id="approach" num="02" label="The Approach" icon={Layers}>
-                  <p className={PROSE}>{caseStudy.approach}</p>
+                <CaseSection id="approach" label="How it works">
+                  <Prose text={caseStudy.approach} />
                   <CaseBlocks blocks={caseStudy.blocks?.approach} />
                 </CaseSection>
 
                 <CaseSection
                   id="outcome"
-                  num="03"
-                  label="The Outcome"
-                  icon={Target}
-                  aside={
-                    caseStudy.highlights?.length ? (
-                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground tabular-nums">
-                        {caseStudy.highlights.length} highlights
-                      </span>
-                    ) : undefined
-                  }
+                  label="The result"
+                  aside={caseStudy.highlights?.length ? `${caseStudy.highlights.length} key facts` : undefined}
                 >
-                  <p className={PROSE}>{caseStudy.outcome}</p>
+                  <Prose text={caseStudy.outcome} />
                   <CaseBlocks blocks={caseStudy.blocks?.outcome} />
                   {caseStudy.highlights?.length ? <Highlights items={caseStudy.highlights} /> : null}
                 </CaseSection>
 
                 {caseStudy.tradeoffs?.length ? (
-                  <CaseSection
-                    id="tradeoffs"
-                    num="04"
-                    label="Trade-offs"
-                    icon={GitBranch}
-                    aside={
-                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground tabular-nums">
-                        {caseStudy.tradeoffs.length} decisions
-                      </span>
-                    }
-                  >
+                  <CaseSection id="tradeoffs" label="Choices and trade-offs" aside={`${caseStudy.tradeoffs.length} choices`}>
                     <Tradeoffs project={project} tradeoffs={caseStudy.tradeoffs} />
                   </CaseSection>
                 ) : null}
 
                 {caseStudy.fieldNotes?.length ? (
-                  <CaseSection id="field-notes" num={fieldNotesNum} label="Field Notes" icon={Bug}>
+                  <CaseSection id="field-notes" label="Lessons from debugging" aside={`${caseStudy.fieldNotes.length} bugs`}>
                     <FieldNotesList notes={caseStudy.fieldNotes} />
                   </CaseSection>
                 ) : null}
@@ -315,22 +286,22 @@ const ProjectDetail = () => {
             ) : (
               /* No verified long-form source for this project — the short
                  form, rather than a template padded with invention. */
-              <CaseSection id="overview" num="01" label="Overview" icon={Layers}>
-                <p className={PROSE}>{project.description}</p>
+              <CaseSection id="overview" label="Overview">
+                <Prose text={project.description} />
               </CaseSection>
             )}
 
             {/* Decisions only where no trade-offs supersede them: both
                 describe the same choices, and a trade-off names what lost. */}
             {project.decisions.length > 0 && !caseStudy?.tradeoffs?.length && (
-              <CaseSection id="decisions" num={decisionsNum} label="Architecture Decisions" icon={GitBranch}>
-                <ol className="flex flex-col gap-px bg-border border border-border">
+              <CaseSection id="decisions" label="Key decisions">
+                <ol className="border-b border-border">
                   {project.decisions.map((decision, i) => (
-                    <li key={decision.title} className="bg-card p-5 md:p-6 flex gap-4">
-                      <span className="font-mono text-[10px] tabular-nums text-primary pt-1">{String(i + 1).padStart(2, "0")}</span>
+                    <li key={decision.title} className="grid grid-cols-[2.25rem_1fr] gap-x-3 border-t border-border py-6">
+                      <span className="t-folio pt-[0.35em]">{String(i + 1).padStart(2, "0")}</span>
                       <div>
-                        <h3 className="text-[14px] font-semibold text-foreground mb-2">{decision.title}</h3>
-                        <p className="text-[14px] text-foreground/75 leading-[1.75]">{decision.detail}</p>
+                        <h3 className="t-subhead text-foreground mb-2">{decision.title}</h3>
+                        <p className="text-[15px] text-foreground/80 leading-[1.7] max-w-[68ch]">{decision.detail}</p>
                       </div>
                     </li>
                   ))}
@@ -339,12 +310,10 @@ const ProjectDetail = () => {
             )}
 
             {/* Last, because it is where a question occurs to someone. */}
-            <CaseSection id="ask" num="→" label="Ask About It" icon={MessageSquare}>
+            <CaseSection id="ask" label="Ask a question">
               <ProjectAsk key={project.id} project={project} />
             </CaseSection>
           </motion.article>
-
-          <Sidebar project={project} minutes={minutes} sections={sections} />
         </div>
 
         <CaseFooter project={project} all={PROJECTS} />

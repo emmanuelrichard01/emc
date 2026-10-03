@@ -1,33 +1,44 @@
-import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Github, Linkedin, Copy, CheckCircle2, Terminal, Mail } from "lucide-react";
-import { XLogo } from "@/components/ui/XLogo";
+import React, { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
+
 import { CVDownloadButton } from "@/components/ui/CVDownloadButton";
 import ContactForm from "@/components/contact/ContactForm";
+import { requestIntent } from "@/components/contact/contactModel";
+import { scrollToSection } from "@/lib/scrollToSection";
+import { Reveal, RevealText, Rule } from "@/components/ui/Reveal";
 import { relativeZone } from "@/lib/lagosClock";
 import { useLagosClock } from "@/lib/useLagosClock";
 
-/* -------------------------------------------------------------------------- */
-/* DATA                                                                       */
-/* -------------------------------------------------------------------------- */
+/* ==========================================================================
+   CONTACT — the closing invitation
+
+   The monograph ends on one large line and two doors of equal weight,
+   because the page is read by two kinds of visitor with two different next
+   steps:
+
+     hiring     the CV, and a message about a role
+     building   a message about a project
+
+   Neither door is the "main" one. Both lead to the same form; the door only
+   chooses what the message is about, so the prompt in the message box asks
+   for the details that make a first reply useful.
+
+   Below them: the address itself, set large enough to read and copy, the
+   profiles as plain links, the local time in Abuja (the honest answer to
+   "when will I hear back"), and the form.
+   ========================================================================== */
 
 const SOCIAL_LINKS = [
-  { id: "github", label: "GitHub", href: "https://github.com/emmanuelrichard01", icon: Github },
-  { id: "linkedin", label: "LinkedIn", href: "https://www.linkedin.com/in/e-mc/", icon: Linkedin },
-  { id: "twitter", label: "X", href: "https://x.com/mrebr", icon: XLogo },
+  { id: "github", label: "GitHub", href: "https://github.com/emmanuelrichard01" },
+  { id: "linkedin", label: "LinkedIn", href: "https://www.linkedin.com/in/e-mc/" },
+  { id: "twitter", label: "X", href: "https://x.com/mrebr" },
 ];
 
 const EMAIL = "emma.moghalu@gmail.com";
 
-/* -------------------------------------------------------------------------- */
-/* MAIN                                                                       */
-/* -------------------------------------------------------------------------- */
-
 const Contact: React.FC = () => {
   const [copied, setCopied] = useState(false);
-  /* The first practical question anyone writing has is when they will hear
-     back. Rather than promise a turnaround, say what time it is where the
-     reply will be written, and whether that is a working hour. */
   const clock = useLagosClock();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -48,141 +59,171 @@ const Contact: React.FC = () => {
     };
   }, []);
 
+  const status = clock.working ? "working hours" : clock.weekend ? "the weekend" : "after hours";
+  const statusSentence = clock.working
+    ? "That's within working hours."
+    : clock.weekend
+      ? "It's the weekend there."
+      : "It's outside working hours there.";
+
   return (
-    <section id="contact" data-section="contact" className="py-24 relative overflow-hidden" aria-label="Contact information">
-      <div className="container px-6 md:px-12 lg:px-24 max-w-7xl mx-auto">
-        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-
-          {/* Header */}
-          <div className="mb-16 border-b border-border pb-8">
-            <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px] tracking-[0.2em] uppercase mb-4">
-              <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
-              <span>Module 04 // Connect</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">
-              Let's <span className="text-muted-foreground font-mono font-normal">Talk</span>
-            </h2>
-            <p className="text-[15px] md:text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
-              Open to discussing data engineering challenges, architectural scaling, or new opportunities.
-            </p>
-            {/* Timezone up front — the first practical question anyone
-                scheduling a call has — and now the time itself, live, with
-                whether it is a working hour there. */}
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-mono text-muted-foreground uppercase tracking-widest mt-4">
-              <span>Abuja, Nigeria</span>
-              <span aria-hidden="true">·</span>
+    <section
+      id="contact"
+      data-section="contact"
+      className="relative section-y page-x"
+      aria-labelledby="contact-title"
+    >
+      <div className="page-max">
+        {/* ── The line ── */}
+        <div className="flex items-center justify-between gap-6 mb-12 md:mb-16">
+          <Rule className="flex-1" />
+          <Reveal y={0} delay={0.3} className="shrink-0 t-caption tabular-nums">
+            <span className="inline-flex items-center gap-2">
+              <span
+                className={`w-1.5 h-1.5 ${clock.working ? "bg-status-ok status-live" : "bg-muted-quiet"}`}
+                aria-hidden="true"
+              />
               <span>
-                <time className="text-foreground tabular-nums" aria-label={`${clock.time} in Abuja`}>{clock.time}</time> UTC+1
+                Abuja <time className="text-foreground">{clock.time}</time>
+                <span className="hidden sm:inline"> · {status}</span>
               </span>
-              <span aria-hidden="true">·</span>
-              <span className="normal-case tracking-normal text-[11px]">{relativeZone(clock.ahead)}</span>
-              <span aria-hidden="true">·</span>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className={`w-1.5 h-1.5 ${clock.working ? "bg-status-ok status-live" : "bg-muted-foreground"}`}
-                  aria-hidden="true"
-                />
-                {clock.working ? "working hours" : clock.weekend ? "the weekend" : "after hours"}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>Remote &amp; hybrid</span>
+            </span>
+          </Reveal>
+        </div>
+
+        <RevealText as="h2" id="contact-title" className="t-display text-foreground max-w-[14ch]">
+          Let&rsquo;s build something that stays correct.
+        </RevealText>
+
+        <Reveal delay={0.2} className="mt-8 md:mt-10 max-w-[38rem] t-lede text-muted-foreground">
+          Hiring for a data or backend role, or have a system that needs building? Either way, a few lines are
+          enough to start.
+        </Reveal>
+
+        {/* ── Two doors, equal weight ── */}
+        <div className="mt-16 md:mt-24 grid grid-cols-1 md:grid-cols-2 border-y border-border">
+          <Reveal className="py-10 md:py-12 md:pr-12">
+            <h3 className="t-heading text-foreground">Hiring for a role?</h3>
+            <p className="mt-4 t-body max-w-[30rem]">
+              The CV has the roles, the stack and the dates. The case studies above have the reasoning behind
+              the work.
             </p>
-          </div>
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <CVDownloadButton variant="structural" />
+              <button
+                type="button"
+                onClick={() => requestIntent("role")}
+                className="tap group inline-flex items-center gap-2 text-[15px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span className="link-draw">Write about a role</span>
+                <ArrowRight className="nudge w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+          </Reveal>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+          <Reveal delay={0.12} className="py-10 md:py-12 md:pl-12 border-t md:border-t-0 md:border-l border-border">
+            <h3 className="t-heading text-foreground">Have a project in mind?</h3>
+            <p className="mt-4 t-body max-w-[30rem]">
+              Data pipelines, payment reconciliation, analytics platforms and the backends behind them. Tell me
+              where it stands today and when you need it.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+              {/* Same weight as the hiring door: one ink action, one quiet one. */}
+              <button type="button" onClick={() => requestIntent("project")} className="btn-ink tap group">
+                Describe your project
+                <ArrowRight className="nudge w-4 h-4" aria-hidden="true" />
+              </button>
+              <a
+                href="#projects"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                  e.preventDefault();
+                  scrollToSection("projects");
+                }}
+                className="tap group inline-flex items-center gap-2 text-[15px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span className="link-draw">See what I have built</span>
+                <ArrowRight className="nudge w-4 h-4" aria-hidden="true" />
+              </a>
+            </div>
+          </Reveal>
+        </div>
 
-            {/* Left: Info */}
-            <div className="lg:col-span-4 space-y-10">
-
-              {/* Email */}
-              <div>
-                <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-4">
-                  // Email
-                </div>
-                <div
-                  className={`flex items-center justify-between border bg-card px-4 py-3 group overflow-hidden gap-2 transition-all ${
-                    copied ? 'border-status-ok/50' : 'border-border hover:border-muted-foreground'
-                  }`}
-                >
-                  <span className="text-[13px] sm:text-sm font-mono text-foreground truncate">{EMAIL}</span>
-                  <span className="flex items-center gap-3 shrink-0">
-                  <a
-                    href={`mailto:${EMAIL}`}
-                    className="text-muted-foreground hover:text-primary transition-colors p-2.5 -m-2.5"
-                    aria-label="Write from your mail app"
-                    title="Write from your mail app"
-                  >
-                    <Mail className="w-4 h-4" aria-hidden="true" />
-                  </a>
-                  <button
-                    onClick={handleCopy}
-                    // A 16px icon, given a 36px target without moving it.
-                    className="text-muted-foreground hover:text-primary transition-colors shrink-0 p-2.5 -m-2.5"
-                    aria-label="Copy email address"
-                  >
-                    <AnimatePresence mode="wait">
-                      {copied ? (
-                        <motion.div key="c" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }}>
-                          <CheckCircle2 className="w-4 h-4 text-status-ok" />
-                        </motion.div>
-                      ) : (
-                        <motion.div key="p" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                          <Copy className="w-4 h-4" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </button>
-                  </span>
-                </div>
-              </div>
-
-              {/* Socials */}
-              <div>
-                <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-4">
-                  // Socials
-                </div>
-                {/* Three tiles rather than three full-width rows.
-
-                    Stacked, the socials made five near-identical bordered
-                    boxes down this column — email, three links, CV — so the
-                    two blocks that are actually actions read with exactly the
-                    same weight as the three that are just links. Sitting them
-                    side by side subordinates them and returns about ninety
-                    vertical pixels to the column. */}
-                <div className="grid grid-cols-3 gap-2">
-                  {SOCIAL_LINKS.map((link) => (
-                    <a
-                      key={link.id}
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex flex-col items-center justify-center gap-2 border border-border bg-card py-4 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all"
+        {/* ── Address, profiles, and the form ── */}
+        <div className="mt-16 md:mt-24 grid grid-cols-12 gap-x-6 gap-y-14">
+          <Reveal className="col-span-12 lg:col-span-5">
+            <p className="t-caption">Email</p>
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-3">
+              <a
+                href={`mailto:${EMAIL}`}
+                className="link-ink max-w-full font-display text-[1.125rem] min-[400px]:text-[1.375rem] sm:text-[1.625rem] font-[540] tracking-[-0.02em] [font-stretch:110%]"
+              >
+                {EMAIL}
+              </a>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="tap inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={copied ? "Email address copied" : "Copy email address"}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  {copied ? (
+                    <motion.span
+                      key="done"
+                      className="inline-flex items-center gap-1.5 text-status-ok"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      <link.icon className="w-4 h-4" />
-                      <span className="text-[10px] uppercase tracking-wider font-mono">{link.label}</span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-
-              {/* Download CV */}
-              <CVDownloadButton variant="card" />
+                      <Check className="w-3.5 h-3.5" aria-hidden="true" /> Copied
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="copy"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      Copy
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
             </div>
 
-            {/* Right: Form */}
-            <div className="lg:col-span-8">
-              {/* The form is two thirds of the section and was the only block
-                  in it without a heading, so the column that matters most
-                  opened on an unlabelled input while every smaller block
-                  beside it announced itself. */}
-              <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em] mb-4">
-                // Message
-              </div>
-              <ContactForm email={EMAIL} />
-            </div>
+            <p className="mt-12 t-caption">Find me on</p>
+            <ul className="mt-3 flex flex-wrap gap-x-7 gap-y-2">
+              {SOCIAL_LINKS.map((link) => (
+                <li key={link.id}>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${link.label} (opens in a new tab)`}
+                    className="tap group inline-flex items-center gap-1 text-[15px] text-foreground"
+                  >
+                    <span className="link-draw">{link.label}</span>
+                    <ArrowUpRight className="nudge-up w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+                  </a>
+                </li>
+              ))}
+            </ul>
 
-          </div>
-        </motion.div>
+            {/* The first practical question anyone writing has is when they
+                will hear back. Rather than promise a turnaround, say what
+                time it is where the reply will be written. */}
+            <p className="mt-12 t-caption max-w-[24rem]">
+              It&rsquo;s <time className="text-foreground tabular-nums">{clock.time}</time> in Abuja (UTC+1),{" "}
+              {relativeZone(clock.ahead)}. {statusSentence} Open to remote and hybrid work.
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.1} className="col-span-12 lg:col-span-7">
+            <ContactForm email={EMAIL} />
+          </Reveal>
+        </div>
       </div>
     </section>
   );

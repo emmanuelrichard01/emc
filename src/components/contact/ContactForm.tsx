@@ -1,8 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AlertCircle, ArrowRight, CheckCircle2, CornerDownLeft, Mail, RotateCcw, Send } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, CornerDownLeft, Mail, RotateCcw } from 'lucide-react';
 
-import { INTENTS, mailtoHref, subjectFor, suggestEmail, type Intent } from './contactModel';
+import { INTENT_EVENT, INTENTS, mailtoHref, subjectFor, suggestEmail, type Intent } from './contactModel';
+import { scrollToY } from '@/lib/smoothScroll';
 
 /* ==========================================================================
    CONTACT FORM
@@ -73,10 +74,10 @@ function clearDraft() {
 
 function validate(f: Fields): Errors {
   const e: Errors = {};
-  if (!f.name.trim()) e.name = 'Needed, so the reply can use it.';
-  if (!f.email.trim()) e.email = 'Needed — it is where the reply goes.';
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = 'That does not look like an address yet.';
-  if (!f.message.trim()) e.message = 'A line or two is enough.';
+  if (!f.name.trim()) e.name = 'Please add your name.';
+  if (!f.email.trim()) e.email = 'Please add your email, so I can reply.';
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = "That doesn't look like a full email address yet.";
+  if (!f.message.trim()) e.message = 'Please write a line or two.';
   return e;
 }
 
@@ -101,10 +102,33 @@ export default function ContactForm({ email: to }: { email: string }) {
     message: useRef<HTMLTextAreaElement>(null),
   };
   const intentRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     mountedAt.current = Date.now();
   }, []);
+
+  /* A door was chosen: switch the topic, bring the form up, and put the
+     cursor where the writing happens. Focus waits for the scroll to land so
+     the browser does not jump the page to the field first. */
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const onIntent = (event: Event) => {
+      const next = INTENTS.find((i) => i.id === (event as CustomEvent<Intent['id']>).detail);
+      if (!next) return;
+      setIntent(next);
+      setStatus((current) => (current === 'sent' ? 'idle' : current));
+      const el = rootRef.current;
+      if (el) scrollToY(Math.max(0, el.getBoundingClientRect().top + window.scrollY - 120));
+      clearTimeout(timer);
+      timer = setTimeout(() => refs.message.current?.focus({ preventScroll: true }), 700);
+    };
+    window.addEventListener(INTENT_EVENT, onIntent);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener(INTENT_EVENT, onIntent);
+    };
+  }, [refs.message]);
 
   /* The draft, kept as it is typed. Debounced so a fast typist is not
      writing to storage on every keystroke. */
@@ -204,20 +228,21 @@ export default function ContactForm({ email: to }: { email: string }) {
   };
 
   const invalid = (name: FieldName) => Boolean(touched[name] && errors[name]);
+  /* A field is a line, not a box: a hairline at rest, ink when it has focus,
+     the error colour when it is wrong. 16px below `md`, not a whim: iOS
+     Safari zooms the page whenever a focused input renders under 16px. */
   const fieldClass = (name: FieldName) =>
-    /* 16px below `md`, not a whim: iOS Safari zooms the page whenever a
-       focused input renders under 16px, and it does not zoom back out. */
-    `w-full bg-card text-foreground text-base md:text-[13px] placeholder:text-muted-quiet outline-none border p-3 transition-[border-color,box-shadow] duration-200 ${
+    `w-full bg-transparent text-foreground text-base md:text-[1.0625rem] placeholder:text-muted-quiet outline-none focus-visible:outline-none border-0 border-b px-0 py-3 transition-[border-color] duration-300 ${
       invalid(name)
-        ? 'border-destructive focus:border-destructive'
-        : 'border-border hover:border-muted-foreground focus:border-primary focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.12)]'
+        ? 'border-status-error focus:border-status-error'
+        : 'border-rule-strong hover:border-muted-foreground focus:border-foreground'
     }`;
   const label = (name: FieldName, children: React.ReactNode, extra?: React.ReactNode) => (
-    <label htmlFor={`contact-${name}`} className="mb-2 flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+    <label htmlFor={`contact-${name}`} className="flex items-baseline justify-between gap-3 t-caption">
       <span>{children}</span>
-      <span className="flex items-center gap-3 normal-case tracking-normal">
+      <span className="flex items-baseline gap-3">
         {invalid(name) && (
-          <span id={`contact-${name}-error`} className="text-destructive">
+          <span id={`contact-${name}-error`} className="text-status-error">
             {errors[name]}
           </span>
         )}
@@ -229,274 +254,282 @@ export default function ContactForm({ email: to }: { email: string }) {
   const fade = prefersReduced ? {} : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -4 } };
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      {status === 'sent' && receipt ? (
-        /* ── The receipt ── */
-        <motion.div key="receipt" {...fade} transition={{ duration: 0.3 }} className="border border-border bg-card/40 p-6 md:p-8" role="status">
-          <div className="flex items-center gap-3 text-status-ok">
-            <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-            <span className="font-mono text-[11px] uppercase tracking-[0.2em]">Sent</span>
-          </div>
-          <p className="mt-4 text-xl text-foreground font-semibold tracking-tight">
-            Thanks, {receipt.fields.name.trim().split(/\s+/)[0]}. It is in the inbox.
-          </p>
-          <p className="mt-2 text-[15px] md:text-[13px] text-muted-foreground font-light leading-relaxed max-w-prose">
-            The reply will go to <span className="font-mono text-foreground">{receipt.fields.email}</span>. If that address
-            is wrong, send again with the right one — nothing is lost by writing twice.
-          </p>
-          <dl className="mt-6 grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 border-t border-border pt-5 font-mono text-[11px]">
-            <dt className="text-muted-foreground uppercase tracking-widest text-[10px]">about</dt>
-            <dd className="text-foreground">{receipt.intent.label}</dd>
-            <dt className="text-muted-foreground uppercase tracking-widest text-[10px]">sent</dt>
-            <dd className="text-foreground tabular-nums">
-              {receipt.at.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
-            </dd>
-            <dt className="text-muted-foreground uppercase tracking-widest text-[10px]">message</dt>
-            <dd className="text-muted-foreground line-clamp-3 whitespace-pre-wrap break-words">{receipt.fields.message}</dd>
-          </dl>
-          <button
-            type="button"
-            onClick={() => setStatus('idle')}
-            className="tap mt-6 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-primary hover:text-foreground transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Write another
-          </button>
-        </motion.div>
-      ) : (
-        /* ── The form ── */
-        <motion.form key="form" {...fade} transition={{ duration: 0.3 }} onSubmit={submit} className="space-y-6" noValidate>
-          {/* Honeypot — invisible to real users, catnip for bots. */}
-          <div className="absolute left-[-9999px] w-px h-px overflow-hidden" aria-hidden="true">
-            <label htmlFor="contact-company">Company</label>
-            <input id="contact-company" name="company" type="text" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
-          </div>
-
-          {showRestored && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border border-primary/30 bg-primary/5 px-3 py-2 font-mono text-[11px] text-muted-foreground">
-              <span>
-                <span className="text-foreground">Draft restored</span> — kept on this device from your last visit.
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setFields(EMPTY);
-                  setShowRestored(false);
-                  clearDraft();
-                }}
-                className="tap px-1 text-primary hover:text-foreground transition-colors"
-              >
-                discard
-              </button>
-            </div>
-          )}
-
-          {/* What it is about */}
-          <fieldset>
-            <legend className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">About</legend>
-            <div role="radiogroup" aria-label="What the message is about" className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border">
-              {INTENTS.map((option, i) => {
-                const on = option.id === intent.id;
-                return (
-                  <button
-                    key={option.id}
-                    ref={(el) => {
-                      intentRefs.current[i] = el;
-                    }}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    tabIndex={on ? 0 : -1}
-                    onClick={() => setIntent(option)}
-                    onKeyDown={(e) => onIntentKey(e, i)}
-                    className={`tap relative px-3 py-2.5 font-mono text-[11px] text-left transition-colors ${
-                      on ? 'bg-primary/10 text-foreground' : 'bg-card text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {on && (
-                      <motion.span
-                        layoutId={prefersReduced ? undefined : 'intent-edge'}
-                        className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary"
-                        transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                        aria-hidden="true"
-                      />
-                    )}
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              {label('name', 'Name')}
-              <input
-                ref={refs.name}
-                id="contact-name"
-                name="name"
-                type="text"
-                placeholder="Ada Okafor"
-                autoComplete="name"
-                required
-                aria-invalid={invalid('name') || undefined}
-                aria-describedby={invalid('name') ? 'contact-name-error' : undefined}
-                value={fields.name}
-                onChange={(e) => set('name', e.target.value)}
-                onBlur={() => blur('name')}
-                className={fieldClass('name')}
-              />
-            </div>
-            <div>
-              {label('email', 'Email')}
-              <input
-                ref={refs.email}
-                id="contact-email"
-                name="email"
-                type="email"
-                inputMode="email"
-                placeholder="ada@company.com"
-                autoComplete="email"
-                spellCheck={false}
-                required
-                aria-invalid={invalid('email') || undefined}
-                aria-describedby={[invalid('email') && 'contact-email-error', suggestion && 'contact-email-suggestion'].filter(Boolean).join(' ') || undefined}
-                value={fields.email}
-                onChange={(e) => set('email', e.target.value)}
-                onBlur={() => blur('email')}
-                className={fieldClass('email')}
-              />
-              {/* A near miss of a big provider, offered — never applied. */}
-              <AnimatePresence initial={false}>
-                {suggestion && (
-                  <motion.p
-                    id="contact-email-suggestion"
-                    initial={prefersReduced ? false : { opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden font-mono text-[11px] text-muted-foreground"
-                  >
-                    <span className="block pt-2">
-                      Did you mean{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          set('email', suggestion);
-                          refs.email.current?.focus();
-                        }}
-                        className="text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary"
-                      >
-                        {suggestion}
-                      </button>
-                      ?
-                    </span>
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          <div>
-            {label(
-              'message',
-              'Message',
-              <span
-                id="contact-message-count"
-                className={`tabular-nums ${fields.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-status-warn' : 'text-muted-foreground'}`}
-              >
-                {fields.message.length}/{MAX_MESSAGE_LENGTH}
-              </span>,
-            )}
-            <textarea
-              ref={refs.message}
-              id="contact-message"
-              name="message"
-              placeholder={intent.prompt}
-              rows={5}
-              required
-              maxLength={MAX_MESSAGE_LENGTH}
-              aria-invalid={invalid('message') || undefined}
-              // The character budget is described too, not just the error —
-              // it is information a sighted user gets for free.
-              aria-describedby={invalid('message') ? 'contact-message-error contact-message-count' : 'contact-message-count'}
-              value={fields.message}
-              onChange={(e) => set('message', e.target.value)}
-              onBlur={() => blur('message')}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                  e.preventDefault();
-                  void submit();
-                }
-              }}
-              className={`${fieldClass('message')} resize-none min-h-[132px]`}
-            />
-          </div>
-
-          {/* A failure keeps everything where it is, and offers the one route
-              that does not depend on this form working. */}
-          <AnimatePresence initial={false}>
-            {status === 'failed' && (
-              <motion.div
-                role="alert"
-                initial={prefersReduced ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 border border-destructive/50 bg-destructive/10 px-4 py-3"
-              >
-                <AlertCircle className="w-4 h-4 text-status-error shrink-0" aria-hidden="true" />
-                <p className="flex-1 text-[13px] text-foreground/90 leading-snug">
-                  The message did not go through — it is still here. Try again, or send it from your own mail app.
-                </p>
-                <a
-                  href={mailtoHref(to, subjectFor(intent, fields.name), `${fields.message}\n\n— ${fields.name}`)}
-                  className="tap inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-primary hover:text-foreground transition-colors shrink-0"
-                >
-                  <Mail className="w-3.5 h-3.5" aria-hidden="true" /> Open in mail
-                </a>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div aria-live="polite" className="sr-only">
-            {status === 'sending' && 'Sending message…'}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+    <div ref={rootRef}>
+      <AnimatePresence mode="wait" initial={false}>
+        {status === 'sent' && receipt ? (
+          /* ── The receipt ── */
+          <motion.div key="receipt" {...fade} transition={{ duration: 0.35 }} className="border-t border-border pt-8" role="status">
+            <p className="inline-flex items-center gap-2 t-caption text-status-ok">
+              <Check className="w-4 h-4" aria-hidden="true" /> Sent
+            </p>
+            <p className="mt-4 t-heading text-foreground">
+              Thanks, {receipt.fields.name.trim().split(/\s+/)[0]}. Your message has been sent.
+            </p>
+            <p className="mt-4 t-body max-w-prose">
+              I&rsquo;ll reply to <span className="text-foreground">{receipt.fields.email}</span>. If that address is
+              wrong, just send it again with the right one. Writing twice does no harm.
+            </p>
+            <dl className="mt-8 border-t border-border text-[14px]">
+              <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-6 py-3 border-b border-border">
+                <dt className="t-caption">About</dt>
+                <dd className="text-foreground">{receipt.intent.label}</dd>
+              </div>
+              <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-6 py-3 border-b border-border">
+                <dt className="t-caption">Sent</dt>
+                <dd className="text-foreground tabular-nums">
+                  {receipt.at.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+                </dd>
+              </div>
+              <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-6 py-3 border-b border-border">
+                <dt className="t-caption">Message</dt>
+                <dd className="text-muted-foreground line-clamp-3 whitespace-pre-wrap break-words">{receipt.fields.message}</dd>
+              </div>
+            </dl>
             <button
-              type="submit"
-              disabled={status === 'sending'}
-              className="btn-structural w-full sm:w-auto min-w-[168px] flex items-center justify-center gap-3 active:translate-y-px disabled:opacity-60 disabled:cursor-wait"
+              type="button"
+              onClick={() => setStatus('idle')}
+              className="tap group mt-8 inline-flex items-center gap-2 text-[15px] text-foreground"
             >
-              {status === 'sending' ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-background/20 border-t-background rounded-full animate-spin" aria-hidden="true" />
-                  <span>Sending</span>
-                </>
-              ) : status === 'failed' ? (
-                <>
-                  <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>Try again</span>
-                </>
-              ) : (
-                <span className="group flex items-center gap-3">
-                  <span>Send message</span>
-                  <Send className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
-                </span>
-              )}
+              <RotateCcw className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+              <span className="link-draw">Write another</span>
             </button>
-            <span className="hidden md:inline-flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
-              <kbd className="border border-border px-1 py-px text-foreground/85">{MOD}</kbd>
-              <kbd className="border border-border px-1 py-px text-foreground/85">
-                <CornerDownLeft className="w-2.5 h-2.5 inline" aria-label="Enter" />
-              </kbd>
-              to send from the message
-            </span>
-            <span className="w-full font-mono text-[10px] text-muted-foreground flex items-center gap-1.5">
-              <ArrowRight className="w-3 h-3 text-primary/80" aria-hidden="true" />
-              Arrives as “{subjectFor(intent, fields.name)}”
-            </span>
-          </div>
-        </motion.form>
-      )}
-    </AnimatePresence>
+          </motion.div>
+        ) : (
+          /* ── The form ── */
+          <motion.form key="form" {...fade} transition={{ duration: 0.35 }} onSubmit={submit} className="space-y-10" noValidate>
+            {/* Honeypot — invisible to real users, catnip for bots. */}
+            <div className="absolute left-[-9999px] w-px h-px overflow-hidden" aria-hidden="true">
+              <label htmlFor="contact-company">Company</label>
+              <input id="contact-company" name="company" type="text" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+            </div>
+
+            {showRestored && (
+              <p className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 t-caption border-b border-border pb-3">
+                <span>
+                  <span className="text-foreground">Your unsent message is back.</span> It was saved on this device only.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFields(EMPTY);
+                    setShowRestored(false);
+                    clearDraft();
+                  }}
+                  className="tap text-foreground underline decoration-rule-strong underline-offset-4 hover:decoration-foreground transition-colors"
+                >
+                  Clear it
+                </button>
+              </p>
+            )}
+
+            {/* What it is about */}
+            <fieldset>
+              <legend className="t-caption mb-4">What&rsquo;s this about?</legend>
+              <div role="radiogroup" aria-label="What the message is about" className="flex flex-wrap gap-x-7 gap-y-1">
+                {INTENTS.map((option, i) => {
+                  const on = option.id === intent.id;
+                  return (
+                    <button
+                      key={option.id}
+                      ref={(el) => {
+                        intentRefs.current[i] = el;
+                      }}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      tabIndex={on ? 0 : -1}
+                      onClick={() => setIntent(option)}
+                      onKeyDown={(e) => onIntentKey(e, i)}
+                      className={`tap relative py-2 text-[15px] transition-colors duration-300 ${
+                        on ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {option.label}
+                      {on && (
+                        <motion.span
+                          layoutId={prefersReduced ? undefined : 'intent-underline'}
+                          className="absolute left-0 right-0 bottom-0.5 h-px bg-foreground"
+                          transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-10">
+              <div>
+                {label('name', 'Name')}
+                <input
+                  ref={refs.name}
+                  id="contact-name"
+                  name="name"
+                  type="text"
+                  placeholder="Ada Okafor"
+                  autoComplete="name"
+                  required
+                  aria-invalid={invalid('name') || undefined}
+                  aria-describedby={invalid('name') ? 'contact-name-error' : undefined}
+                  value={fields.name}
+                  onChange={(e) => set('name', e.target.value)}
+                  onBlur={() => blur('name')}
+                  className={fieldClass('name')}
+                />
+              </div>
+              <div>
+                {label('email', 'Email')}
+                <input
+                  ref={refs.email}
+                  id="contact-email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  placeholder="ada@company.com"
+                  autoComplete="email"
+                  spellCheck={false}
+                  required
+                  aria-invalid={invalid('email') || undefined}
+                  aria-describedby={[invalid('email') && 'contact-email-error', suggestion && 'contact-email-suggestion'].filter(Boolean).join(' ') || undefined}
+                  value={fields.email}
+                  onChange={(e) => set('email', e.target.value)}
+                  onBlur={() => blur('email')}
+                  className={fieldClass('email')}
+                />
+                {/* A near miss of a big provider, offered — never applied. */}
+                <AnimatePresence initial={false}>
+                  {suggestion && (
+                    <motion.p
+                      id="contact-email-suggestion"
+                      initial={prefersReduced ? false : { opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden t-caption"
+                    >
+                      <span className="block pt-2.5">
+                        Did you mean{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            set('email', suggestion);
+                            refs.email.current?.focus();
+                          }}
+                          className="text-foreground underline decoration-primary underline-offset-4 hover:decoration-foreground"
+                        >
+                          {suggestion}
+                        </button>
+                        ?
+                      </span>
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            <div>
+              {label(
+                'message',
+                'Message',
+                <span
+                  id="contact-message-count"
+                  className={`tabular-nums ${fields.message.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-status-warn' : 'text-muted-quiet'}`}
+                >
+                  {fields.message.length}/{MAX_MESSAGE_LENGTH}
+                </span>,
+              )}
+              <textarea
+                ref={refs.message}
+                id="contact-message"
+                name="message"
+                placeholder={intent.prompt}
+                rows={4}
+                required
+                maxLength={MAX_MESSAGE_LENGTH}
+                aria-invalid={invalid('message') || undefined}
+                // The character budget is described too, not just the error —
+                // it is information a sighted user gets for free.
+                aria-describedby={invalid('message') ? 'contact-message-error contact-message-count' : 'contact-message-count'}
+                value={fields.message}
+                onChange={(e) => set('message', e.target.value)}
+                onBlur={() => blur('message')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    void submit();
+                  }
+                }}
+                className={`${fieldClass('message')} resize-none min-h-[120px] leading-relaxed`}
+              />
+            </div>
+
+            {/* A failure keeps everything where it is, and offers the one route
+                that does not depend on this form working. */}
+            <AnimatePresence initial={false}>
+              {status === 'failed' && (
+                <motion.div
+                  role="alert"
+                  initial={prefersReduced ? false : { opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 border-t border-status-error/60 pt-4"
+                >
+                  <AlertCircle className="w-4 h-4 text-status-error shrink-0" aria-hidden="true" />
+                  <p className="flex-1 text-[14px] text-foreground leading-snug">
+                    Your message didn&rsquo;t send, but it&rsquo;s still here. Try again, or send it from your own email app.
+                  </p>
+                  <a
+                    href={mailtoHref(to, subjectFor(intent, fields.name), `${fields.message}\n\n${fields.name}`)}
+                    className="tap group inline-flex items-center gap-2 text-[14px] text-foreground shrink-0"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+                    <span className="link-draw">Send from my email app</span>
+                  </a>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div aria-live="polite" className="sr-only">
+              {status === 'sending' && 'Sending message…'}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+              <button
+                type="submit"
+                disabled={status === 'sending'}
+                className="btn-ink group w-full sm:w-auto min-w-[176px] disabled:cursor-wait"
+              >
+                {status === 'sending' ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-[1.5px] border-background/25 border-t-background rounded-full animate-spin" aria-hidden="true" />
+                    <span>Sending</span>
+                  </>
+                ) : status === 'failed' ? (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Try again</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send message</span>
+                    <ArrowRight className="nudge w-4 h-4" aria-hidden="true" />
+                  </>
+                )}
+              </button>
+              <span className="hidden md:inline-flex items-center gap-1.5 t-caption">
+                <kbd className="kbd">{MOD}</kbd>
+                <kbd className="kbd">
+                  <CornerDownLeft className="w-3 h-3" aria-label="Enter" />
+                </kbd>
+                <span className="ml-1">to send</span>
+              </span>
+              <span className="w-full t-caption">
+                Subject line: <span className="text-foreground">&ldquo;{subjectFor(intent, fields.name)}&rdquo;</span>
+              </span>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

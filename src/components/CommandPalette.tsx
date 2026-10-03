@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search, ArrowRight, Boxes, CornerDownLeft,
@@ -37,7 +37,19 @@ interface CommandItem {
 
 /* Section order for an empty query. With a query, groups follow their best
    match instead, so the thing the visitor meant is first wherever it lives. */
-const CATEGORY_ORDER = ["Ask", "Navigate", "Case studies", "Actions", "Links", "Preferences", "Hidden"];
+const CATEGORY_ORDER = ["Ask", "Navigate", "Case studies", "Actions", "Links", "Theme", "Hidden"];
+
+/* What each group is called on screen. The keys above stay stable because
+   the rows test them; these are the words a visitor reads. */
+const CATEGORY_LABEL: Record<string, string> = {
+  Ask: "Ask",
+  Navigate: "Go to a section",
+  "Case studies": "Projects",
+  Actions: "Quick actions",
+  Links: "Find him elsewhere",
+  Theme: "Colour",
+  Hidden: "Something hidden",
+};
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -48,11 +60,11 @@ interface CommandPaletteProps {
    pushed into SECTIONS itself, since the nav pill and footer have no use for
    a subtitle and shouldn't carry the field. */
 const SECTION_SUBTITLES: Record<string, string> = {
-  home: "Back to top",
-  about: "Philosophy & stack",
-  projects: "Case studies & systems",
-  experience: "Career timeline",
-  contact: "Get in touch",
+  home: "Back to the top of the page",
+  about: "Who he is and how he works",
+  projects: "Projects, with the full story behind each",
+  experience: "Where he has worked, and when",
+  contact: "Send him a message",
 };
 
 const SECTION_KEYWORDS: Record<string, string[]> = {
@@ -112,7 +124,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
 
   const copyEmail = useCallback(() => {
     navigator.clipboard.writeText("emma.moghalu@gmail.com");
-    toast.success("Email copied to clipboard", {
+    toast.success("Email address copied", {
       description: "emma.moghalu@gmail.com",
     });
     onClose();
@@ -143,8 +155,8 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       // The assistant — the palette's answer to anything that is not a place.
       {
         id: "ask-open",
-        title: "Ask AI",
-        subtitle: "Grounded answers about the work, with the queries behind them",
+        title: "Ask the assistant",
+        subtitle: "Get answers about his work, checked against this site",
         icon: Sparkles,
         action: () => askAbout(),
         category: "Ask",
@@ -167,7 +179,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       // Actions
       {
         id: "copy-email",
-        title: "Copy Email",
+        title: "Copy email address",
         subtitle: "emma.moghalu@gmail.com",
         icon: Copy,
         action: copyEmail,
@@ -204,7 +216,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       },
       {
         id: "twitter",
-        title: "X / Twitter",
+        title: "X (Twitter)",
         subtitle: "x.com/mrebr",
         icon: XLogo,
         action: () => { window.open("https://x.com/mrebr", "_blank"); onClose(); },
@@ -214,21 +226,21 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       // Theme
       {
         id: "theme-amber",
-        title: "Telemetry Amber",
-        subtitle: "Switch to default monochrome & amber theme",
+        title: "Amber",
+        subtitle: "Use amber as the highlight colour. This is the default.",
         icon: Palette,
         action: () => { setTheme("amber"); onClose(); },
-        category: "Preferences",
-        keywords: ["theme", "color", "amber", "orange", "dark"],
+        category: "Theme",
+        keywords: ["theme", "accent", "colour", "color", "amber", "orange", "dark"],
       },
       {
         id: "theme-purple",
-        title: "Tech Purple",
-        subtitle: "Switch to monochrome & purple theme",
+        title: "Purple",
+        subtitle: "Use purple as the highlight colour",
         icon: Palette,
         action: () => { setTheme("purple"); onClose(); },
-        category: "Preferences",
-        keywords: ["theme", "color", "purple", "violet", "dark"],
+        category: "Theme",
+        keywords: ["theme", "accent", "colour", "color", "purple", "violet", "dark"],
       },
       // The hidden accent only becomes a real palette entry once clearance is
       // held — listing it while locked would give away that it exists.
@@ -236,12 +248,12 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         ? [
             {
               id: "theme-phosphor",
-              title: "Phosphor Green",
-              subtitle: "Classified accent — Level Ω",
+              title: "Phosphor green",
+              subtitle: "The secret highlight colour, now unlocked",
               icon: Palette,
               action: () => { setTheme("phosphor"); onClose(); },
-              category: "Preferences",
-              keywords: ["theme", "color", "phosphor", "green", "crt", "classified"],
+              category: "Theme",
+              keywords: ["theme", "accent", "colour", "color", "phosphor", "green", "crt", "classified"],
             } satisfies CommandItem,
           ]
         : []),
@@ -250,8 +262,8 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         id: "easter-egg",
         title: "???",
         subtitle: unlocked
-          ? "Query layer already online. Run `schema` in the terminal."
-          : "Secret payload detected. Enter the KONAMI sequence.",
+          ? "Already unlocked. Type schema in the terminal to explore the data."
+          : "There is a secret here. Try the Konami code.",
         icon: Sparkles,
         action: () => {
           onClose();
@@ -285,7 +297,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     const askItem: CommandItem = {
       id: "ask-query",
       title: `Ask: ${query}`,
-      subtitle: "Send this to the assistant",
+      subtitle: "Ask the assistant this question",
       icon: CornerDownLeft,
       action: () => askAbout(query),
       category: "Ask",
@@ -393,6 +405,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     return () => document.removeEventListener("keydown", handleTab);
   }, [isOpen]);
 
+  const reduced = useReducedMotion();
   let flatIndex = -1;
 
   /* `isOpen` is gated inside AnimatePresence, not before it.
@@ -406,58 +419,65 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.15 }}
-        className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4"
+        transition={{ duration: reduced ? 0 : 0.2, ease: "easeOut" }}
+        className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] md:pt-[14vh] px-3 md:px-4"
       >
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-          onClick={onClose}
-        />
+        {/* Backdrop: the page dimmed, not blurred — the stock shows through. */}
+        <div className="absolute inset-0 bg-background/75" onClick={onClose} aria-hidden="true" />
 
-        {/* Modal */}
+        {/* The index card */}
         <motion.div
           ref={modalRef}
-          initial={{ scale: 0.98, opacity: 0, y: -10 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.98, opacity: 0, y: -10 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          className="relative w-full max-w-[520px] bg-card border border-border shadow-2xl rounded-none flex flex-col max-h-[60vh]"
+          initial={reduced ? false : { opacity: 0, y: 8, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={reduced ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.99, transition: { duration: 0.14 } }}
+          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full max-w-[640px] bg-popover flex flex-col max-h-[72vh] md:max-h-[64vh] shadow-[0_0_0_1px_hsl(var(--border)),0_32px_80px_-24px_rgba(0,0,0,0.85)]"
           role="dialog"
           aria-modal="true"
           aria-label="Command palette"
         >
-          {/* Search input */}
-          <div className="flex items-center px-5 py-4 border-b border-border gap-3 bg-muted/30">
-            <Search className="w-4 h-4 text-primary shrink-0" />
+          {/* Search: a bare field on a hairline, set large. */}
+          <div className="flex items-center gap-4 px-5 md:px-7 pt-5 md:pt-6 pb-4 border-b border-border">
+            <Search className="w-[18px] h-[18px] text-muted-foreground shrink-0" aria-hidden="true" />
             <input
               ref={inputRef}
               type="text"
-              placeholder="Jump to a section or project — or ask a question…"
-              // 16px below `md` so focusing it does not make iOS Safari zoom
-              // the page out from under a search that is already open.
-              className="flex-1 bg-transparent border-none outline-none text-base md:text-[13px] font-mono text-foreground placeholder:text-muted-foreground"
+              placeholder="Search the site, or ask a question"
+              aria-label="Search the site, or ask a question"
+              // 16px floor below `md` so focusing it does not make iOS Safari
+              // zoom the page out from under a search that is already open.
+              className="flex-1 min-w-0 bg-transparent border-none outline-none focus-visible:outline-none font-display [font-stretch:112%] text-[17px] md:text-[22px] font-[460] tracking-[-0.015em] text-foreground placeholder:text-muted-quiet"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <kbd className="hidden sm:inline-flex px-2 py-0.5 text-[11px] font-mono text-muted-foreground border border-border uppercase tracking-widest">
-              ESC
-            </kbd>
+            <button
+              type="button"
+              onClick={onClose}
+              className="tap shrink-0 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Close the command palette"
+            >
+              <kbd className="kbd">Esc</kbd>
+            </button>
           </div>
 
           {/* Results */}
-          <div ref={listRef} className="overflow-y-auto p-2 flex-1" role="listbox" aria-label="Command results">
+          <div
+            ref={listRef}
+            className="overflow-y-auto overscroll-contain px-2 md:px-3 py-3 flex-1"
+            role="listbox"
+            aria-label="Command results"
+            data-lenis-prevent
+          >
             {filtered.length === 0 ? (
-              <div className="py-12 text-center font-mono">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-widest">No results found.</p>
+              <div className="py-14 text-center">
+                <p className="t-caption">Nothing matches that. Try a different word.</p>
               </div>
             ) : (
               Array.from(grouped.entries()).map(([category, items]) => (
-                <div key={category} className="mb-2">
-                  <div className="px-3 pt-2 pb-1 text-[11px] font-mono text-primary uppercase tracking-[0.2em]" role="presentation">
-                    // {category}
+                <div key={category} className="mb-3 last:mb-0" role="group" aria-label={CATEGORY_LABEL[category] ?? category}>
+                  <div className="px-3 md:px-4 pt-2 pb-1.5 t-caption text-muted-quiet" role="presentation">
+                    {CATEGORY_LABEL[category] ?? category}
                   </div>
                   {items.map((cmd) => {
                     flatIndex++;
@@ -471,45 +491,50 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                         onMouseEnter={() => setSelectedIndex(idx)}
                         role="option"
                         aria-selected={selected}
-                        className={`w-full flex items-center justify-between px-3 py-2.5 transition-colors duration-0 group border-l-2 ${
-                          selected ? "bg-muted/50 border-primary" : "border-transparent hover:bg-muted/30"
+                        className={`tap relative w-full flex items-center justify-between gap-4 px-3 md:px-4 py-2.5 text-left transition-colors duration-150 ${
+                          selected ? "bg-foreground/[0.04]" : ""
                         }`}
                       >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <div
-                            className={`p-1.5 border transition-colors ${
-                              selected
-                                ? "border-primary text-primary bg-primary/10"
-                                : "border-border text-muted-foreground"
-                            }`}
-                          >
-                            <cmd.icon className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="text-left min-w-0">
+                        {/* The selection mark: a 1px tick at the card's edge, in
+                            the accent, sliding from row to row. */}
+                        {selected && (
+                          <motion.span
+                            layoutId="palette-tick"
+                            className="absolute left-0 top-2 bottom-2 w-px bg-primary"
+                            transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
+                            aria-hidden="true"
+                          />
+                        )}
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <cmd.icon
+                            className={`w-4 h-4 shrink-0 transition-colors ${selected ? "text-foreground" : "text-muted-quiet"}`}
+                            aria-hidden="true"
+                          />
+                          <div className="min-w-0">
                             <div
-                              className={`text-[13px] font-mono tracking-wide uppercase truncate transition-colors ${
-                                selected ? "text-foreground" : "text-muted-foreground"
+                              className={`text-[14.5px] leading-snug truncate transition-colors ${
+                                selected ? "text-foreground" : "text-foreground/85"
                               }`}
                             >
                               {cmd.title}
                             </div>
-                            <div className="text-[10px] text-muted-quiet mt-0.5 truncate">
+                            <div className="text-[12.5px] leading-snug text-muted-foreground mt-0.5 truncate">
                               {cmd.subtitle}
                             </div>
                           </div>
                         </div>
-                        {cmd.meta && !selected && (
-                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-quiet pr-2 shrink-0">
-                            {cmd.meta}
-                          </span>
-                        )}
-                        {selected && (
-                          <div className="text-primary pr-2 flex items-center gap-2 shrink-0">
-                            {cmd.meta && (
-                              <span className="font-mono text-[10px] uppercase tracking-widest text-primary/80">{cmd.meta}</span>
-                            )}
+                        <div className="flex items-center gap-3 shrink-0 text-muted-foreground">
+                          {cmd.meta && (
+                            <span className="hidden sm:inline-block text-[12px] tabular-nums lowercase first-letter:uppercase">{cmd.meta}</span>
+                          )}
+                          <span
+                            className={`flex items-center transition-[opacity,transform] duration-200 ${
+                              selected ? "opacity-100 translate-x-0 text-foreground" : "opacity-0 -translate-x-1"
+                            }`}
+                            aria-hidden="true"
+                          >
                             {cmd.category === "Ask" ? (
-                              <Sparkles className="w-3.5 h-3.5" />
+                              <Sparkles className="w-3.5 h-3.5 text-primary" />
                             ) : cmd.category === "Links" ? (
                               <ExternalLink className="w-3.5 h-3.5" />
                             ) : cmd.id === "download-cv" ? (
@@ -517,8 +542,8 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                             ) : (
                               <ArrowRight className="w-3.5 h-3.5" />
                             )}
-                          </div>
-                        )}
+                          </span>
+                        </div>
                       </button>
                     );
                   })}
@@ -527,19 +552,25 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
             )}
           </div>
 
-          {/* Footer hints */}
-          <div className="px-5 py-3 border-t border-border bg-muted/30 flex items-center gap-6 text-[11px] text-muted-foreground font-mono uppercase tracking-widest">
+          {/* Footer: the keys, named. */}
+          <div className="hidden sm:flex items-center gap-5 px-5 md:px-7 py-3 border-t border-border text-[12px] text-muted-foreground">
             <span className="flex items-center gap-2">
-              <kbd className="border border-border px-1.5 py-0.5">↑↓</kbd>
-              navigate
+              <kbd className="kbd">↑</kbd>
+              <kbd className="kbd -ml-1">↓</kbd>
+              Move
             </span>
             <span className="flex items-center gap-2">
-              <kbd className="border border-border px-1.5 py-0.5">↵</kbd>
-              select
+              <kbd className="kbd">↵</kbd>
+              Open
             </span>
-            <span className="hidden sm:flex items-center gap-2 ml-auto">
-              <kbd className="border border-border px-1.5 py-0.5">{MODIFIER_KEY}+J</kbd>
-              ask
+            <span className="flex items-center gap-2">
+              <kbd className="kbd">Esc</kbd>
+              Close
+            </span>
+            <span className="flex items-center gap-2 ml-auto">
+              <kbd className="kbd">{MODIFIER_KEY}</kbd>
+              <kbd className="kbd -ml-1">J</kbd>
+              Ask
             </span>
           </div>
         </motion.div>

@@ -94,7 +94,7 @@ export const QUERY_EXAMPLES = [
 ];
 
 export const UNLOCK_BANNER = [
-  'ACCESS GRANTED — QUERY LAYER ONLINE',
+  'ACCESS GRANTED: QUERY LAYER ONLINE',
   '',
   'This site keeps its projects and roles in two tables. You can now read them',
   'directly, with SQL, against the same arrays that render the page.',
@@ -182,7 +182,7 @@ const ProjectListing = ({ onOpen }: { onOpen: (id: string) => void }) => {
       })}
 
       <div className="text-muted-quiet mt-1">
-        {PROJECTS.length} systems — select an id to open its case study
+        {PROJECTS.length} systems. Pick one to open its case study.
       </div>
     </Pre>
   );
@@ -282,7 +282,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
             output: (
               <Pre>
                 {[
-                  `NAME    ${spec.name} — ${spec.summary}`,
+                  `NAME    ${spec.name}: ${spec.summary}`,
                   `USAGE   ${spec.usage ?? spec.name}`,
                   ...(spec.detail ? ['', spec.detail] : []),
                 ].join('\n')}
@@ -295,7 +295,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         name: 'whoami',
         summary: 'who runs this terminal',
         run: () => ({
-          output: 'emmanuel — data & backend engineer. builds systems that hold up, and the tests that prove it.',
+          output: 'emmanuel moghalu, data and backend engineer. he builds systems that keep working when things go wrong, and writes the tests that prove it.',
         }),
       },
       {
@@ -311,7 +311,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         detail: "Metrics, stack and problem statement for one project. Run 'ls' for ids.",
         run: ({ arg }) => {
           const id = arg.toLowerCase();
-          if (!id) return { output: "usage: cat <id> — run 'ls' for ids" };
+          if (!id) return { output: "usage: cat <id>. run 'ls' to see the ids." };
 
           const project = PROJECTS.find((p) => p.id === id);
           if (!project) return { output: `no such system: ${id}` };
@@ -350,7 +350,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         usage: 'open <id>',
         run: ({ arg }) => {
           const id = arg.toLowerCase();
-          if (!id) return { output: "usage: open <id> — run 'ls' for ids" };
+          if (!id) return { output: "usage: open <id>. run 'ls' to see the ids." };
           const project = PROJECTS.find((p) => p.id === id);
           if (!project) return { output: `no such system: ${id}. run 'ls' for ids.` };
           return {
@@ -396,7 +396,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           'lets you write your own.',
           '',
           'For a question that is not on this list, `ai` answers in plain',
-          'english against the same data — slower, and it can be unavailable.',
+          'english against the same data. it is slower, and sometimes unavailable.',
         ].join('\n'),
         run: ({ arg }) => {
           if (!arg) {
@@ -404,7 +404,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
               output: (
                 <div className="flex flex-col gap-0.5">
                   <div className="text-muted-quiet mb-1">
-                    {CURATED_QUESTIONS.length} questions — select one, or run `queries &lt;n&gt;`
+                    {CURATED_QUESTIONS.length} questions. Pick one, or run `queries &lt;n&gt;`.
                   </div>
                   {CURATED_QUESTIONS.map((entry, i) => (
                     <button
@@ -469,7 +469,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         detail: [
           'Switches the prompt into a grounded question-answering mode.',
           '',
-          'The model does not recall facts about this work — it queries for them.',
+          'The model does not answer from memory. It looks the facts up on this site.',
           'Every count, metric and status in an answer comes from the same SQL',
           'engine `sql` uses, over the same arrays this page renders, and each',
           'answer can show the query and rows it was built from.',
@@ -485,7 +485,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           '`queries` answers a prepared set instantly, and always works.',
         ].join('\n'),
         run: () => ({
-          output: 'entering ai mode — esc to leave.',
+          output: 'now talking to the assistant. press esc to go back.',
           // The registry has no reference to the hero's state, so entry is
           // signalled rather than called. Keeps the command list a pure data
           // structure that `help`, `man` and completion can read.
@@ -501,7 +501,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           'Issues four real same-origin requests for a small static asset and reports each round trip. Actual network measurement, not a simulation.',
         run: async ({ emit, signal }) => {
           const host = window.location.host;
-          emit(`PING ${host} — 4 × GET /favicon.svg`);
+          emit(`PING ${host}: 4 × GET /favicon.svg`);
 
           const times: number[] = [];
           for (let seq = 1; seq <= 4 && !signal.aborted; seq++) {
@@ -515,7 +515,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
               emit(`reply from ${host}: seq=${seq} time=${ms.toFixed(1)}ms`);
             } catch {
               if (signal.aborted) break;
-              emit(`seq=${seq} — no reply`);
+              emit(`seq=${seq}: no reply`);
             }
             await delay(280, signal);
           }
@@ -525,7 +525,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           const max = Math.max(...times);
           const avg = times.reduce((a, b) => a + b, 0) / times.length;
           return {
-            output: `— ${times.length} received — min/avg/max = ${min.toFixed(1)}/${avg.toFixed(1)}/${max.toFixed(1)} ms`,
+            output: `${times.length} received. min/avg/max = ${min.toFixed(1)}/${avg.toFixed(1)}/${max.toFixed(1)} ms`,
           };
         },
       },
@@ -536,7 +536,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         streaming: true,
         detail: 'Samples the render loop once a second and prints it as it happens. Runs until cancelled.',
         run: async ({ emit, signal }) => {
-          emit('sampling once per second — Ctrl+C to stop');
+          emit('sampling once per second. press Ctrl+C to stop.');
 
           let samples = 0;
           while (!signal.aborted) {
@@ -547,7 +547,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
             const heap = readHeapMB();
             emit(
               `${clockNow()}   fps ${String(fps).padStart(3)}   heap ${
-                heap === null ? '   —  ' : `${heap.toFixed(1).padStart(5)}mb`
+                heap === null ? '   n/a' : `${heap.toFixed(1).padStart(5)}mb`
               }   nodes ${readDomNodes()}`
             );
           }
@@ -588,7 +588,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
             navigator.clipboard
               ?.writeText(EMAIL)
               .then(() => emit('copied to clipboard.'))
-              .catch(() => emit('clipboard unavailable — select the address above to copy.'));
+              .catch(() => emit('could not copy. select the address above to copy it.'));
           },
         }),
       },
@@ -650,7 +650,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
           'Runs against the same arrays that render the page, so a result can never',
           'disagree with what you see.',
           '',
-          'The `sql` prefix is optional — type SELECT straight at the prompt.',
+          'The `sql` prefix is optional. You can type SELECT straight at the prompt.',
           'Table and column names are case-insensitive.',
           '',
           'Operators: =  !=  <>  >  <  >=  <=  LIKE  NOT LIKE  IN  NOT IN',
@@ -694,7 +694,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         hidden: true,
         run: () =>
           unlocked
-            ? { output: "already unlocked — try 'schema' or 'sql'." }
+            ? { output: "already unlocked. try 'schema' or 'sql'." }
             : {
                 output: UNLOCK_BANNER,
                 sideEffect: () => {

@@ -1,4 +1,5 @@
 import type { Project } from '@/types';
+import { usesTech } from '@/lib/techFamily';
 
 /* ==========================================================================
    WORK MODEL
@@ -68,7 +69,7 @@ export function yearLabel(timeline: string): string {
   const years = [...new Set((timeline.match(/\d{4}/g) ?? []))];
   if (/present/i.test(timeline)) return `${years[0] ?? ''}→`;
   if (years.length > 1) return `${years[0]}–${years[years.length - 1]}`;
-  return years[0] ?? '—';
+  return years[0] ?? 'Undated';
 }
 
 /* ── Search ──────────────────────────────────────────────────────────────
@@ -190,7 +191,7 @@ export function applyWork(projects: Project[], state: Pick<WorkState, 'query' | 
     if (state.tier && project.tier !== state.tier) return;
     // Any of the chosen technologies — "Python or Redis", which is what a
     // reader scanning for either one means.
-    if (state.stack.length && !project.stack.some((t) => state.stack.includes(t))) return;
+    if (state.stack.length && !state.stack.some((t) => usesTech(project.stack, t))) return;
     const hit = searching ? searchProject(project, state.query) : null;
     if (searching && !hit) return;
     results.push({ project, hit });
