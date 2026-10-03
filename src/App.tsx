@@ -15,6 +15,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Navbar from "./components/DynamicNavigation";
 import Footer from "./components/Footer";
 import CommandPalette from "./components/CommandPalette";
+import SmoothScroll from "./components/SmoothScroll";
 import { BootProvider, RouteReadyBeacon } from "./components/hero/BootOverlay";
 import { AskProvider } from "./components/ai/AskProvider";
 
@@ -68,39 +69,36 @@ if (typeof window !== "undefined" && window.location.pathname === "/") {
    the same fabricated theatre we removed from the console telemetry. The
    hero already runs a real boot animation seconds later, so a second one
    here was redundant as well as untrue. */
-const BootLoader = () => (
-  <div
-    className="h-[100svh] w-full flex items-center justify-center bg-background relative overflow-hidden"
-    role="status"
-    aria-label="Loading"
-  >
-    <div className="absolute inset-0 z-0 pointer-events-none noise-overlay" />
-
-    <div className="relative z-10 flex flex-col items-center gap-7 w-full max-w-[180px] px-6">
-      <div
-        className="flex items-center justify-center w-12 h-12 border border-border bg-card/50 relative"
-        style={{ boxShadow: 'var(--shadow-md)' }}
-      >
-        <div className="absolute top-0 left-0 w-full h-[2px] bg-primary" />
-        <svg viewBox="0 0 200 200" className="w-6 h-6 text-primary" aria-hidden="true">
+const BootLoader = () => {
+  const prefersReduced = useReducedMotion();
+  return (
+    <div
+      className="h-[100svh] w-full flex items-center justify-center bg-background"
+      role="status"
+      aria-label="Loading the page"
+    >
+      <div className="flex flex-col items-center gap-6 w-[120px]">
+        <svg viewBox="0 0 200 120" className="w-9 h-[22px] text-foreground" aria-hidden="true">
           {LOGO_PATHS.map((d, i) => (
             <path key={i} d={d} fill="currentColor" />
           ))}
         </svg>
-      </div>
 
-      {/* Indeterminate by necessity: a dynamic import emits no progress
-          events, so any percentage shown here would be made up. */}
-      <div className="w-full h-px bg-border relative overflow-hidden">
-        <motion.div
-          className="absolute inset-y-0 w-1/3 bg-primary"
-          animate={{ x: ['-120%', '320%'] }}
-          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-        />
+        {/* Indeterminate by necessity: a dynamic import emits no progress
+            events, so any percentage shown here would be made up. */}
+        <div className="w-full h-px bg-border relative overflow-hidden">
+          {!prefersReduced && (
+            <motion.div
+              className="absolute inset-y-0 w-2/5 bg-foreground"
+              animate={{ x: ['-110%', '260%'] }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: [0.65, 0, 0.35, 1] }}
+            />
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* Held back briefly so a fast load never sees it.
 
@@ -205,6 +203,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
         Skip to main content
       </a>
 
+      <SmoothScroll />
       <Navbar onOpenCommandPalette={open} />
       <CommandPalette isOpen={isOpen} onClose={close} />
 

@@ -6,7 +6,7 @@ const getOrigin = () => typeof window !== 'undefined' ? window.location.origin :
 
 // Bump this when profile/project content actually changes — not on every
 // deploy — so dateModified stays a meaningful signal rather than noise.
-const CONTENT_LAST_UPDATED = "2026-07-31";
+const CONTENT_LAST_UPDATED = "2026-10-03";
 
 const StructuredData = () => {
   const origin = getOrigin();
@@ -24,7 +24,7 @@ const StructuredData = () => {
     "jobTitle": "Data Engineer & Backend Systems Engineer",
     "url": origin,
     "image": `${origin}/profile.webp`,
-    "description": "Data and backend engineer building production APIs, event-driven data pipelines, and analytics platforms since 2018 — validated with automated test suites. Deep working knowledge of the Nigerian and broader African fintech ecosystem, including multi-PSP integration, CBN regulatory requirements, and NDPR compliance.",
+    "description": "Data and backend engineer who has been building live APIs, data pipelines and analytics systems since 2018, each backed by automated tests. Knows the Nigerian and wider African fintech world well, including working with several payment providers at once, CBN rules and NDPR data protection.",
     "knowsAbout": [
       "Data Engineering",
       "Backend Engineering",
@@ -116,9 +116,9 @@ const StructuredData = () => {
   const profilePageSchema = {
     "@context": "https://schema.org",
     "@type": "ProfilePage",
-    "name": "Emmanuel Moghalu — Engineering Portfolio",
+    "name": "Emmanuel Moghalu, engineering portfolio",
     "url": origin,
-    "description": "Portfolio and technical case studies of Emmanuel Moghalu, Data Engineer & System Architect.",
+    "description": "The work and case studies of Emmanuel Moghalu, data and backend engineer.",
     "mainEntity": {
       "@type": "Person",
       "name": "Emmanuel Moghalu",
@@ -146,9 +146,9 @@ const StructuredData = () => {
   const websiteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Emmanuel Moghalu — Engineering Logs",
+    "name": "Emmanuel Moghalu, data and backend engineer",
     "url": origin,
-    "description": "Portfolio and technical case studies of Emmanuel Moghalu — Data Engineer & System Architect.",
+    "description": "The work and case studies of Emmanuel Moghalu, data and backend engineer.",
     "author": {
       "@type": "Person",
       "name": "Emmanuel Moghalu"
@@ -166,7 +166,7 @@ const StructuredData = () => {
         "name": "What does Emmanuel Moghalu specialize in?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Emmanuel Moghalu specializes in data engineering and backend systems: event-driven data pipelines, payment reconciliation, stream processing, and analytics warehouses. He works extensively in the Nigerian and broader African fintech ecosystem, including multi-PSP integration (Paystack, Flutterwave, M-Pesa), CBN regulatory requirements, and NDPR compliance. His systems ship with automated test suites — a reconciliation engine with 160+ tests across 9 suites, and a distributed rate limiter verified by a concurrency test proving exactly 50 of 300 concurrent requests are admitted."
+          "text": "Emmanuel Moghalu works on data engineering and backend systems: data pipelines that react to events as they happen, payment reconciliation (checking that payment records agree), live data streams and analytics warehouses. Much of his work is in Nigerian and African fintech, including working with several payment providers at once (Paystack, Flutterwave), CBN rules and NDPR data protection. His systems come with automated tests. One example is a payment reconciliation engine with 276 tests, 23 of them against a real PostgreSQL database. Another is a shared rate limiter, where a test fires 300 requests at once and proves exactly 50 get through."
         }
       },
       {
@@ -174,7 +174,7 @@ const StructuredData = () => {
         "name": "What tech stack does Emmanuel Moghalu use?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Emmanuel's primary stack is Python and TypeScript across FastAPI, Django, Django Ninja, NestJS, React and Next.js. For data he uses dbt, Dagster, Prefect, DuckDB and PostgreSQL, including pgvector for semantic search; for streaming, Redpanda with Celery and Redis. Infrastructure runs on Docker and Terraform, with Prometheus and Grafana for observability. Every technology listed here appears in a shipped project or a recorded role."
+          "text": "Emmanuel mainly works in Python and TypeScript, with FastAPI, Django, Django Ninja, NestJS, React and Next.js. For data he uses dbt, Dagster, Prefect, DuckDB and PostgreSQL, including pgvector for search by meaning. For streaming he uses Redpanda, with Celery and Redis for background work. He runs things on Docker and Terraform, and watches them with Prometheus and Grafana. Every tool listed here appears in a finished project or a past role."
         }
       },
       {
@@ -182,7 +182,7 @@ const StructuredData = () => {
         "name": "How can I hire or contact Emmanuel Moghalu?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "You can reach Emmanuel Moghalu by email at emma.moghalu@gmail.com, through the contact form on his portfolio, or via LinkedIn at linkedin.com/in/e-mc. He is open to discussing data engineering challenges, architectural scaling, and new opportunities, and works remote or hybrid from Abuja, Nigeria."
+          "text": "You can reach Emmanuel Moghalu by email at emma.moghalu@gmail.com, through the contact form on his portfolio, or on LinkedIn at linkedin.com/in/e-mc. He is open to new roles and to projects, and works remotely or hybrid from Abuja, Nigeria."
         }
       },
       {
@@ -190,7 +190,7 @@ const StructuredData = () => {
         "name": "What projects has Emmanuel Moghalu built?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Notable projects include: MMR Engine (cross-border mobile money reconciliation across Nigerian PSPs, using a two-tier exact-then-probabilistic matching engine over a Medallion pipeline, with 160+ tests); Global Rate Limiter (a distributed, cluster-safe token bucket using an atomic Redis Lua script, verified by 8 simulated nodes racing 300 concurrent requests and admitting exactly 50); Logistics Watchtower (real-time cold chain fleet monitoring on Redpanda and Quix Streams, sub-200ms end to end); Modern Data Warehouse (the complete 1.5M+ record Olist dataset through Dagster, dbt and DuckDB with 21 schema tests); ULTRA-NEWS V3 (story-centric news aggregation clustering 41 feeds with pgvector and local embeddings, counting corroboration in independent publishers rather than articles, with an hourly cited Briefing, streamed question answering and 180 tests); and MedVax Health (production e-pharmacy and telemedicine platform). Separately, design-stage architecture work includes a CBN data residency migration reference architecture and a distributed smart meter telemetry blueprint — both clearly marked as not yet built."
+          "text": "Projects include: MMR Engine, which checks that Paystack and Flutterwave payment records agree, takes in each payment notification exactly once, matches records in two rounds with the database allowing only one match per payment, and has 276 tests. Global Rate Limiter keeps many servers inside one shared API quota using an atomic Redis Lua script, and a test with 8 instances firing 300 requests at once lets exactly 50 through. Logistics Watchtower monitors refrigerated trucks live on Redpanda and Quix Streams, with alerts in under 200ms. Modern Data Warehouse runs the full 1.5M+ record Olist dataset through Dagster, dbt and DuckDB, with 21 schema tests. ULTRA-NEWS V3 groups articles from 41 feeds into stories by meaning (pgvector and local embeddings), counts how many independent publishers confirmed each one, and adds an hourly cited Briefing, streamed answers to questions, and 180 tests. MedVax Health is a live online pharmacy and telemedicine platform. There are also two design studies, clearly marked as not yet built: a plan for moving payment data onto storage in Nigeria for the CBN, and a design for collecting live data from smart meters and solar inverters."
         }
       },
       {
@@ -198,7 +198,7 @@ const StructuredData = () => {
         "name": "Where is Emmanuel Moghalu based?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Emmanuel Moghalu is based in Abuja, Nigeria (UTC+1). He works with teams globally and is available for remote positions and contracts."
+          "text": "Emmanuel Moghalu is based in Abuja, Nigeria (UTC+1). He works with teams around the world and is available for remote roles and contracts."
         }
       }
     ]
@@ -211,7 +211,7 @@ const StructuredData = () => {
     "@context": "https://schema.org",
     "@type": "ItemList",
     "name": "Engineering Projects by Emmanuel Moghalu",
-    "description": "Portfolio of data engineering, full-stack, and cloud architecture projects.",
+    "description": "Data engineering, backend and full-stack projects, plus two design studies.",
     "numberOfItems": PROJECTS.length,
     "itemListElement": PROJECTS.map((project, index) => ({
       "@type": "ListItem",

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'framer-motion';
-import { ArrowUp, Link2, Mic, MicOff, RotateCcw, Sparkles, Square, X } from 'lucide-react';
+import { ArrowRight, ArrowUp, Link2, Mic, MicOff, RotateCcw, Sparkles, Square, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import AiTranscript from '@/components/hero/AiTranscript';
 import { MAX_QUESTION_CHARS } from '@/lib/aiHistory';
 import { AUDIENCES, permalinkFor } from '@/lib/aiStarters';
+import type { Audience } from '@/lib/aiStarters';
 import { MODIFIER_KEY } from '@/lib/platform';
 import { useAsk } from './AskProvider';
 import { useSpeechInput } from './useSpeechInput';
@@ -30,6 +31,14 @@ import { useSpeechInput } from './useSpeechInput';
    ========================================================================== */
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+
+/* How each answer style is named and explained here. The ids and the
+   prompts behind them live in aiStarters; this is only the wording. */
+const LENS_COPY: Record<Audience, { label: string; hint: string }> = {
+  general: { label: 'Anyone', hint: 'Balanced answers for any reader' },
+  hiring: { label: 'Hiring', hint: 'Focus on results and scope, in plain language' },
+  engineer: { label: 'Engineers', hint: 'Focus on how it works, what can fail, and what was ruled out' },
+};
 
 function useDesktop(): boolean {
   const query = '(min-width: 768px)';
@@ -156,11 +165,13 @@ export default function AskDock() {
     const url = permalinkFor(window.location.origin, window.location.pathname, lastQuestion);
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Link to this question copied', {
-        description: 'Whoever opens it gets the answer generated fresh against the site’s data.',
+      toast.success('Link copied', {
+        description: 'Anyone who opens it will get a fresh answer to the same question.',
       });
     } catch {
-      toast.error('Could not copy — the link is in the address bar format /?ask=…');
+      toast.error('Could not copy the link', {
+        description: 'You can share a question by adding /?ask= and the question to the site address.',
+      });
     }
   };
 
@@ -173,10 +184,10 @@ export default function AskDock() {
 
   const panelMotion = desktop
     ? {
-        initial: prefersReduced ? { opacity: 0 } : { opacity: 0, x: 28 },
+        initial: prefersReduced ? { opacity: 0 } : { opacity: 0, x: 24 },
         animate: { opacity: 1, x: 0 },
-        exit: prefersReduced ? { opacity: 0 } : { opacity: 0, x: 28 },
-        transition: { duration: 0.32, ease: EASE },
+        exit: prefersReduced ? { opacity: 0 } : { opacity: 0, x: 16, transition: { duration: 0.18, ease: EASE } },
+        transition: { duration: 0.36, ease: EASE },
       }
     : {
         initial: prefersReduced ? { opacity: 0 } : { y: '100%' },
@@ -192,7 +203,7 @@ export default function AskDock() {
           {!desktop && (
             <motion.div
               key="ask-backdrop"
-              className="fixed inset-0 z-[94] bg-background/70 backdrop-blur-[2px]"
+              className="fixed inset-0 z-[94] bg-background/75"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -215,15 +226,17 @@ export default function AskDock() {
             onDragEnd={(_, info) => {
               if (info.offset.y > 120 || info.velocity.y > 650) closeAsk();
             }}
-            className="fixed z-[95] flex flex-col bg-card/95 backdrop-blur-xl border border-border shadow-2xl
-                       inset-x-0 bottom-0 h-[88dvh] border-b-0
-                       md:inset-x-auto md:top-4 md:bottom-4 md:right-4 md:h-auto md:w-[min(440px,calc(100vw-2rem))] md:border-b"
+            /* A reading pane: the stock one step lighter, a hairline at its
+               inner edge, and the only shadow on the page — it floats. */
+            className="fixed z-[95] flex flex-col bg-popover
+                       inset-x-0 bottom-0 h-[88dvh] shadow-[0_-1px_0_hsl(var(--border)),0_-24px_64px_-24px_rgba(0,0,0,0.85)]
+                       md:inset-x-auto md:top-0 md:bottom-0 md:right-0 md:h-auto md:w-[min(460px,100vw)] md:shadow-[-1px_0_0_hsl(var(--border)),-32px_0_80px_-32px_rgba(0,0,0,0.85)]"
           >
-            {/* Top edge — the accent hairline the rest of the site uses to
-                mark a live surface. Brighter while an answer is in flight. */}
+            {/* Live edge: a hairline of the accent along the top while an
+                answer is being written, and nothing at rest. */}
             <div
-              className={`absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent transition-opacity duration-500 ${
-                busy ? 'opacity-100' : 'opacity-40'
+              className={`absolute top-0 inset-x-0 h-px bg-primary origin-left transition-[opacity,transform] duration-700 ease-out-expo ${
+                busy ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'
               }`}
               aria-hidden="true"
             />
@@ -232,58 +245,67 @@ export default function AskDock() {
                 scrolling the transcript never moves the sheet. */}
             {!desktop && (
               <div
-                className="flex justify-center pt-2.5 pb-1 touch-none cursor-grab active:cursor-grabbing"
+                className="flex justify-center pt-3 pb-1 touch-none cursor-grab active:cursor-grabbing"
                 onPointerDown={(e) => dragControls.start(e)}
                 aria-hidden="true"
               >
-                <span className="w-10 h-1 bg-muted-foreground/40" />
+                <span className="w-9 h-[3px] bg-rule-strong" />
               </div>
             )}
 
             {/* ── Header ── */}
-            <header className="shrink-0 px-4 md:px-5 pt-2 md:pt-4 pb-3 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
-                <h2 id="ask-dock-title" className="font-mono text-[12px] uppercase tracking-[0.2em] text-foreground">
-                  Ask
-                </h2>
-                <span
-                  className="ml-1 min-w-0 truncate font-mono text-[10px] uppercase tracking-widest text-muted-foreground border border-border px-1.5 py-0.5"
-                  title={project ? `"this" means ${project.title}` : 'answers draw on the whole site'}
-                >
-                  {project ? `reading · ${project.title}` : 'whole site'}
-                </span>
+            <header className="shrink-0 px-5 md:px-7 pt-3 md:pt-7 pb-4 border-b border-border">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0">
+                  <h2 id="ask-dock-title" className="t-subhead text-[19px] md:text-[21px] text-foreground flex items-center gap-2.5">
+                    <Sparkles className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
+                    Ask about the work
+                  </h2>
+                  <p
+                    className="mt-1.5 text-[12.5px] text-muted-foreground truncate"
+                    title={project ? `Questions about "this" mean ${project.title}` : 'Answers use everything on this site'}
+                  >
+                    {project ? (
+                      <>
+                        You&rsquo;re reading <span className="text-foreground">{project.title}</span>, so &ldquo;this&rdquo; means
+                        that project
+                      </>
+                    ) : (
+                      'Answers use everything on this site'
+                    )}
+                  </p>
+                </div>
 
-                <div className="ml-auto flex items-center gap-0.5 shrink-0">
+                <div className="ml-auto -mr-2 -mt-1 flex items-center shrink-0">
                   {lastQuestion && (
                     <button
                       type="button"
                       onClick={share}
-                      className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                      className="tap w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="Copy a link that asks the last question"
                       title="Copy a link that asks this question"
                     >
-                      <Link2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      <Link2 className="w-4 h-4" aria-hidden="true" />
                     </button>
                   )}
                   {turns.length > 0 && (
                     <button
                       type="button"
                       onClick={reset}
-                      className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                      className="tap w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="Start a new conversation"
                       title="New conversation"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                      <RotateCcw className="w-4 h-4" aria-hidden="true" />
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={closeAsk}
-                    className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                    className="tap w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="Close the assistant"
                   >
-                    <X className="w-4 h-4" aria-hidden="true" />
+                    <X className="w-[18px] h-[18px]" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -291,11 +313,9 @@ export default function AskDock() {
               {/* Lens. Changes how answers are pitched, never what they may
                   claim — said in the hint so nobody reads it as a filter on
                   the truth. */}
-              <div className="mt-3 flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-quiet shrink-0">
-                  pitch for
-                </span>
-                <div className="flex border border-border" role="radiogroup" aria-label="Who the answers are pitched for">
+              <div className="mt-5 flex items-center gap-4">
+                <span className="text-[12.5px] text-muted-quiet shrink-0">Written for</span>
+                <div className="flex items-center gap-4" role="radiogroup" aria-label="Who the answers are written for">
                   {AUDIENCES.map((option) => {
                     const selected = option.id === audience;
                     return (
@@ -304,20 +324,21 @@ export default function AskDock() {
                         type="button"
                         role="radio"
                         aria-checked={selected}
-                        title={option.hint}
+                        title={LENS_COPY[option.id]?.hint ?? option.hint}
                         onClick={() => setAudience(option.id)}
-                        className={`relative px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
-                          selected ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                        className={`tap relative py-1 text-[13px] transition-colors ${
+                          selected ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
+                        {LENS_COPY[option.id]?.label ?? option.label}
                         {selected && (
                           <motion.span
                             layoutId="ask-lens"
-                            className="absolute inset-0 bg-primary"
-                            transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                            className="absolute left-0 right-0 bottom-0 h-px bg-foreground"
+                            transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 40 }}
+                            aria-hidden="true"
                           />
                         )}
-                        <span className="relative">{option.label}</span>
                       </button>
                     );
                   })}
@@ -329,7 +350,8 @@ export default function AskDock() {
             <div
               ref={scrollRef}
               onScroll={onScroll}
-              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-5 py-4"
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 md:px-7 py-6"
+              data-lenis-prevent
             >
               {turns.length === 0 ? (
                 <EmptyState starters={starters} onAsk={submit} busy={busy} projectTitle={project?.title} />
@@ -349,11 +371,11 @@ export default function AskDock() {
             {/* ── Composer ── */}
             <form
               onSubmit={onSubmit}
-              className="shrink-0 border-t border-border px-3 md:px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+              className="shrink-0 border-t border-border px-5 md:px-7 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
             >
               <div
-                className={`flex items-end gap-1.5 border px-2.5 py-1.5 transition-colors ${
-                  busy ? 'ai-border ai-border--busy border-transparent' : 'border-border focus-within:border-primary/60'
+                className={`flex items-end gap-1.5 border pl-3.5 pr-1.5 py-1.5 transition-colors duration-300 ${
+                  busy ? 'ai-border ai-border--busy border-transparent' : 'border-border hover:border-rule-strong focus-within:border-rule-strong'
                 }`}
               >
                 <label htmlFor="ask-dock-input" className="sr-only">
@@ -369,20 +391,20 @@ export default function AskDock() {
                   maxLength={MAX_QUESTION_CHARS + 50}
                   placeholder={
                     speech.listening
-                      ? 'listening…'
+                      ? 'Listening…'
                       : project
-                        ? `ask about ${project.title.toLowerCase()}…`
-                        : 'ask anything about his work…'
+                        ? `Ask about ${project.title}…`
+                        : 'Ask anything about his work…'
                   }
                   // 16px on phones: anything smaller makes iOS zoom the page on focus.
-                  className="relative z-[2] flex-1 resize-none bg-transparent font-mono text-[16px] md:text-[13px] leading-relaxed text-foreground placeholder:text-muted-quiet focus:outline-none py-1"
+                  className="relative z-[2] flex-1 resize-none bg-transparent text-[16px] md:text-[14.5px] leading-relaxed text-foreground placeholder:text-muted-quiet focus:outline-none focus-visible:outline-none py-1.5"
                 />
 
                 {speech.supported && !busy && (
                   <button
                     type="button"
                     onClick={speech.listening ? speech.stop : speech.start}
-                    className={`relative z-[2] shrink-0 w-8 h-8 flex items-center justify-center transition-colors ${
+                    className={`tap relative z-[2] shrink-0 w-9 h-9 flex items-center justify-center transition-colors ${
                       speech.listening ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                     }`}
                     aria-label={speech.listening ? 'Stop listening' : 'Ask by voice'}
@@ -404,7 +426,7 @@ export default function AskDock() {
                     type="button"
                     onClick={cancel}
                     aria-label="Stop answering"
-                    className="relative z-[2] shrink-0 w-8 h-8 flex items-center justify-center border border-border text-muted-foreground hover:text-primary hover:border-primary/60 transition-colors"
+                    className="tap relative z-[2] shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground shadow-[inset_0_0_0_1px_hsl(var(--rule-strong))] transition-colors"
                   >
                     <Square className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
@@ -413,25 +435,34 @@ export default function AskDock() {
                     type="submit"
                     disabled={!question.trim()}
                     aria-label="Ask"
-                    className="relative z-[2] shrink-0 w-8 h-8 flex items-center justify-center bg-primary text-primary-foreground disabled:bg-transparent disabled:text-muted-quiet transition-colors"
+                    className="tap relative z-[2] shrink-0 w-9 h-9 flex items-center justify-center bg-foreground text-background hover:bg-white disabled:bg-transparent disabled:text-muted-quiet disabled:shadow-[inset_0_0_0_1px_hsl(var(--border))] transition-colors"
                   >
                     <ArrowUp className="w-4 h-4" aria-hidden="true" />
                   </button>
                 )}
               </div>
 
-              <div className="mt-2 flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-widest text-muted-quiet">
+              <div className="mt-2.5 flex items-center justify-between gap-3 text-[12px] text-muted-quiet">
                 {speech.error ? (
-                  <span className="text-status-warn/90 normal-case tracking-normal text-[11px]" role="status">
+                  <span className="text-status-warn" role="status">
                     {speech.error}
                   </span>
                 ) : (
-                  <span className="hidden md:inline">
-                    ↵ ask · ⇧↵ newline · esc {busy ? 'stop' : 'close'} · {MODIFIER_KEY}+J
+                  <span className="hidden md:flex items-center gap-3">
+                    <span className="flex items-center gap-1.5">
+                      <kbd className="kbd">↵</kbd> Ask
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <kbd className="kbd">⇧</kbd>
+                      <kbd className="kbd -ml-1">↵</kbd> New line
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <kbd className="kbd">Esc</kbd> {busy ? 'Stop' : 'Close'}
+                    </span>
                   </span>
                 )}
-                <span className={`ml-auto tabular-nums ${remaining < 60 ? 'text-status-warn/90' : ''}`}>
-                  {remaining < 100 ? `${remaining} left` : 'grounded'}
+                <span className={`ml-auto tabular-nums ${remaining < 100 ? '' : 'hidden md:inline'} ${remaining < 60 ? 'text-status-warn' : ''}`}>
+                  {remaining < 100 ? `${remaining} characters left` : `${MODIFIER_KEY}+J opens this from anywhere`}
                 </span>
               </div>
             </form>
@@ -458,20 +489,22 @@ function EmptyState({
   projectTitle?: string;
 }) {
   return (
-    <div className="font-mono">
-      <p className="text-[12px] text-muted-foreground leading-relaxed">
+    <div>
+      <p className="text-[15px] leading-[1.65] text-foreground/90">
         {projectTitle ? (
           <>
-            answers about <span className="text-foreground">{projectTitle}</span> and the rest of the site.
+            Ask about <span className="text-foreground">{projectTitle}</span>, or anything else on this site.
           </>
         ) : (
-          <>answers about emmanuel&rsquo;s work, from the site&rsquo;s own data.</>
+          <>Ask anything about Emmanuel&rsquo;s work. Answers come from what is on this site.</>
         )}{' '}
-        every figure is checked against that data, the queries behind an answer open under it, and anything it can&rsquo;t
-        find is marked.
+        <span className="text-muted-foreground">
+          Every number is checked against it, you can open the sources under each answer, and anything it
+          can&rsquo;t find is clearly marked.
+        </span>
       </p>
 
-      <p className="mt-5 mb-2 text-[10px] uppercase tracking-[0.2em] text-primary">// start with</p>
+      <p className="mt-8 mb-1 t-caption">Try one of these</p>
       <ul className="border-t border-border" aria-label="Suggested questions">
         {starters.map((starter, i) => (
           <li key={starter}>
@@ -479,25 +512,21 @@ function EmptyState({
               type="button"
               onClick={() => onAsk(starter)}
               disabled={busy}
-              className="group w-full flex items-baseline gap-3 py-2.5 border-b border-border text-left text-[12px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+              className="tap group w-full flex items-baseline gap-4 py-3.5 border-b border-border text-left text-[14px] leading-snug text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
             >
-              <span className="text-[10px] text-muted-quiet tabular-nums group-hover:text-primary transition-colors">
-                {String(i + 1).padStart(2, '0')}
-              </span>
+              <span className="t-folio w-5 shrink-0 group-hover:text-foreground transition-colors">{i + 1}</span>
               <span className="flex-1">{starter}</span>
-              <span
-                className="text-primary opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+              <ArrowRight
+                className="w-3.5 h-3.5 shrink-0 self-center opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"
                 aria-hidden="true"
-              >
-                →
-              </span>
+              />
             </button>
           </li>
         ))}
       </ul>
 
-      <p className="mt-5 text-[11px] text-muted-quiet leading-relaxed">
-        tip: select any sentence on the page to ask about it.
+      <p className="mt-6 text-[12.5px] text-muted-quiet leading-relaxed">
+        Tip: select any sentence on the page to ask about it.
       </p>
     </div>
   );

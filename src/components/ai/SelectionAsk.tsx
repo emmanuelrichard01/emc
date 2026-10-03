@@ -119,7 +119,7 @@ export default function SelectionAsk({ onAsk, disabled }: { onAsk: (question: st
             window.getSelection()?.removeAllRanges();
             setAnchor(null);
           }}
-          className="fixed z-[80] flex items-center gap-2 px-3 bg-card/95 backdrop-blur-md border border-primary/40 text-foreground font-mono text-[11px] uppercase tracking-[0.18em] shadow-2xl hover:border-primary hover:text-primary transition-colors"
+          className="group fixed z-[80] flex items-center gap-2 px-3.5 bg-foreground text-background text-[13px] font-medium tracking-[-0.005em] shadow-[0_18px_48px_-16px_rgba(0,0,0,0.8)] hover:bg-white transition-colors"
           aria-label="Ask the assistant about the selected text"
         >
           <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden="true" />

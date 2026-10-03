@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useScroll, useSpring } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 
+import { scrollToY } from '@/lib/smoothScroll';
 import type { CaseSection } from './caseModel';
 
 /* ==========================================================================
@@ -9,7 +10,7 @@ import type { CaseSection } from './caseModel';
 
    Three instruments, one scroll subscription each:
 
-     · ReadingProgress  a 2px bar across the top of the viewport
+     · ReadingProgress  a hairline across the top of the viewport
      · CaseContents     the desktop rail: each entry is a track that fills
                         as that section is read, plus an honest estimate of
                         the time left
@@ -73,10 +74,13 @@ function useSpy(sections: CaseSection[]) {
   return { active, progress };
 }
 
+/* Through the page's one scroll owner (Lenis, when it runs), so a jump
+   rides the same easing as the wheel instead of fighting it. 96px clears the
+   running head. */
 function jump(id: string) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  scrollToY(Math.max(0, el.getBoundingClientRect().top + window.scrollY - 96));
   history.replaceState(history.state, '', `#${id}`);
 }
 
@@ -87,8 +91,8 @@ export function ReadingProgress() {
   const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 30, restDelta: 0.001 });
   return (
     <motion.div
-      className="fixed top-0 left-0 right-0 h-[2px] bg-primary origin-left z-[55] pointer-events-none"
-      style={{ scaleX, boxShadow: '0 0 8px hsl(var(--primary) / 0.6)' }}
+      className="fixed top-0 left-0 right-0 h-px bg-primary origin-left z-[55] pointer-events-none"
+      style={{ scaleX }}
       aria-hidden="true"
     />
   );
@@ -122,11 +126,9 @@ export function CaseContents({ sections, minutes }: { sections: CaseSection[]; m
 
   return (
     <nav aria-label="On this page">
-      <div className="flex items-baseline justify-between mb-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary">// Contents</span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground tabular-nums">
-          {left > 0 ? `~${left} min left` : 'end'}
-        </span>
+      <div className="flex items-baseline justify-between gap-4 mb-4">
+        <span className="t-caption text-foreground">Contents</span>
+        <span className="t-caption tabular-nums">{left > 0 ? `About ${left} min left` : 'Done'}</span>
       </div>
       <ul className="flex flex-col">
         {sections.map((section, i) => {
@@ -134,9 +136,10 @@ export function CaseContents({ sections, minutes }: { sections: CaseSection[]; m
           const read = activeIndex > i;
           return (
             <li key={section.id} className="relative">
-              {/* Track: read sections full, the current one filling, the rest empty. */}
-              <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-border" aria-hidden="true">
-                {read && <span className="absolute inset-0 bg-primary/50" />}
+              {/* Track: read sections ink, the current one filling in the
+                  accent, the rest a hairline. */}
+              <span className="absolute left-0 top-0 bottom-0 w-px bg-border" aria-hidden="true">
+                {read && <span className="absolute inset-0 bg-rule-strong" />}
                 {isActive && <motion.span className="absolute inset-0 bg-primary origin-top" style={{ scaleY: fill }} />}
               </span>
               <a
@@ -147,12 +150,12 @@ export function CaseContents({ sections, minutes }: { sections: CaseSection[]; m
                   e.preventDefault();
                   jump(section.id);
                 }}
-                className={`flex items-baseline gap-2.5 py-1.5 pl-4 transition-colors ${
+                className={`flex items-baseline gap-3 py-2 pl-4 text-[13px] leading-snug transition-colors duration-300 ${
                   isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <span className={`font-mono text-[11px] tabular-nums ${isActive ? 'text-primary' : ''}`}>{section.num}</span>
-                <span className="font-mono text-[11px] leading-tight">{section.label}</span>
+                <span className="t-folio w-5 shrink-0">{section.num}</span>
+                <span>{section.label}</span>
               </a>
             </li>
           );
@@ -184,18 +187,18 @@ export function MobileContents({ sections }: { sections: CaseSection[] }) {
   if (sections.length < 2 || !current) return null;
 
   return (
-    <div ref={rootRef} className="lg:hidden sticky top-2 z-40 -mx-2 mb-8">
+    <div ref={rootRef} className="lg:hidden sticky top-3 z-40 mb-10">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label={`On this page: ${current.label}. Show all sections`}
-        className="relative w-full flex items-center gap-3 overflow-hidden bg-card/95 backdrop-blur-xl border border-border px-4 py-3 shadow-2xl"
+        aria-label={`You are reading: ${current.label}. Show all sections`}
+        className="relative w-full min-h-[48px] flex items-center gap-3 overflow-hidden bg-background/95 backdrop-blur-md border border-border px-4 py-3"
       >
-        <span className="font-mono text-[11px] text-primary tabular-nums">{current.num}</span>
-        <span className="flex-1 text-left font-mono text-[12px] uppercase tracking-wider text-foreground truncate">{current.label}</span>
-        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
-        <motion.span className="absolute left-0 bottom-0 h-[2px] w-full bg-primary origin-left" style={{ scaleX: fill }} aria-hidden="true" />
+        <span className="t-folio w-5 shrink-0">{current.num}</span>
+        <span className="flex-1 text-left text-[14px] text-foreground truncate">{current.label}</span>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+        <motion.span className="absolute left-0 bottom-0 h-px w-full bg-primary origin-left" style={{ scaleX: fill }} aria-hidden="true" />
       </button>
       <AnimatePresence>
         {open && (
@@ -204,7 +207,8 @@ export function MobileContents({ sections }: { sections: CaseSection[] }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, transition: { duration: 0.1 } }}
             transition={{ duration: 0.18 }}
-            className="absolute inset-x-0 top-[calc(100%+4px)] bg-card border border-border shadow-2xl py-1"
+            className="absolute inset-x-0 top-[calc(100%+4px)] bg-popover border border-border py-1"
+            style={{ boxShadow: 'var(--shadow-md)' }}
           >
             {sections.map((s) => (
               <li key={s.id}>
@@ -215,11 +219,11 @@ export function MobileContents({ sections }: { sections: CaseSection[] }) {
                     setOpen(false);
                     jump(s.id);
                   }}
-                  className={`flex items-baseline gap-3 px-4 py-3 font-mono text-[12px] ${
-                    s.id === active ? 'text-foreground bg-primary/[0.06]' : 'text-muted-foreground'
+                  className={`flex items-baseline gap-3 px-4 py-3 text-[14px] ${
+                    s.id === active ? 'text-foreground' : 'text-muted-foreground'
                   }`}
                 >
-                  <span className="tabular-nums text-primary/80 text-[11px]">{s.num}</span>
+                  <span className="t-folio w-5 shrink-0">{s.num}</span>
                   {s.label}
                 </a>
               </li>

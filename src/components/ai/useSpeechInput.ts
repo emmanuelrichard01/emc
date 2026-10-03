@@ -45,10 +45,10 @@ function recognitionCtor(): RecognitionCtor | null {
 }
 
 const ERROR_TEXT: Record<string, string> = {
-  'not-allowed': 'microphone blocked — allow it for this site in the browser, or type instead.',
-  'service-not-allowed': 'voice input is switched off in this browser — type instead.',
+  'not-allowed': 'The microphone is blocked. Allow it for this site in your browser, or type instead.',
+  'service-not-allowed': 'Voice input is switched off in this browser. Please type instead.',
   'audio-capture': 'no microphone found.',
-  'no-speech': "didn't catch that — try again, a little closer.",
+  'no-speech': "I didn't catch that. Try again, a little closer to the mic.",
   network: 'voice input needs a connection in this browser.',
 };
 

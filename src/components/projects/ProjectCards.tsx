@@ -3,24 +3,24 @@ import { ArrowRight, Check, ExternalLink, Github } from 'lucide-react';
 
 import TransitionLink from '@/components/ui/TransitionLink';
 import { transitionName } from '@/lib/viewTransition';
-import { trackPointer } from '@/lib/pointer';
-import { STATUS_CLASS, STATUS_LABEL, projectStatus } from '@/lib/project';
+import { projectStatus } from '@/lib/project';
 import type { Project } from '@/types';
-import { TierRule, groupByTier } from './tiers';
+import { StatusText, TierRule, describeDepth, groupByTier } from './tiers';
 import ProjectArt from './ProjectArt';
 import { depthOf, yearLabel, type Result } from './workModel';
 
 /* ==========================================================================
-   PROJECT CARDS
+   PROJECT PLATES
 
-   The browsing view. Every card now has the same anatomy — art, then text —
-   because every project now has art: a screenshot where there is a front
-   end, the spec sheet where there is not. The old grid had pictures on five
-   cards and a blank on eight, so row heights lurched and the pipelines
-   looked unfinished beside the web apps.
+   The browsing view: every project as a small plate with its caption under
+   it, like a contact sheet. Every entry has the same anatomy — art, then
+   text — because every project has art: a screenshot where there is a
+   front end, the spec plate where there is not.
 
-   Design-stage work keeps its dashed border: the one visual guarantee that
-   a blueprint is never mistaken for something running.
+   No boxes. The plates sit on the stock with space between them; the
+   caption is set under the picture the way a book sets it. Design-stage
+   work carries the dashed hairline frame on its plate (ProjectArt), the one
+   visual guarantee that a blueprint is never mistaken for something running.
    ========================================================================== */
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -42,29 +42,20 @@ function ProjectCard({ project, index, compared, compareFull, onCompare }: CardP
 
   return (
     <motion.article
-      layout={prefersReduced ? false : true}
-      initial={prefersReduced ? false : { opacity: 0, y: 12 }}
+      layout={prefersReduced ? false : 'position'}
+      initial={prefersReduced ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.14 } }}
-      transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.2), ease: EASE }}
-      onPointerMove={trackPointer}
-      className={`pointer-glow group flex flex-col bg-card/30 transition-colors ${
-        isDesign ? 'border border-dashed border-border' : 'border border-border/80'
-      } ${compared ? '!border-primary/70' : ''}`}
+      exit={{ opacity: 0, transition: { duration: 0.15 } }}
+      transition={{ duration: 0.6, delay: Math.min(index * 0.05, 0.25), ease: EASE }}
+      className="group relative flex flex-col"
     >
-      <div className="relative border-b border-border/70">
+      <div className="relative">
         <ProjectArt
           project={project}
           compact
-          className="aspect-[16/9]"
+          className={`aspect-[16/10] transition-shadow duration-300 ${compared ? 'shadow-[0_0_0_1px_hsl(var(--primary))]' : ''}`}
           transitionName={named ? transitionName('art', project.id) : undefined}
         />
-        {project.image && (
-          <span className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-background/80 backdrop-blur-sm border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest">
-            {status === 'live' && <span className="w-1.5 h-1.5 bg-status-ok status-live" aria-hidden="true" />}
-            <span className={STATUS_CLASS[status]}>{STATUS_LABEL[status]}</span>
-          </span>
-        )}
         {/* Compare — above the stretched link so it stays its own target. */}
         <button
           type="button"
@@ -73,69 +64,63 @@ function ProjectCard({ project, index, compared, compareFull, onCompare }: CardP
           aria-label={`Compare ${project.title}`}
           disabled={!compared && compareFull}
           onClick={() => onCompare(project.id)}
-          className={`absolute z-10 top-2 right-2 flex items-center gap-1.5 px-1.5 py-1 border font-mono text-[10px] sm:text-[9px] uppercase tracking-widest backdrop-blur-sm transition-all disabled:hidden ${
+          className={`tap absolute z-10 top-0 right-0 flex items-center gap-2 px-3 py-2 text-[12px] transition-all duration-300 disabled:hidden ${
             compared
-              ? 'bg-primary border-primary text-primary-foreground'
-              : 'bg-background/80 border-border text-muted-foreground md:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background/90 text-muted-foreground md:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground'
           }`}
         >
-          <span className={`w-2.5 h-2.5 flex items-center justify-center border ${compared ? 'border-primary-foreground' : 'border-current'}`}>
-            {compared && <Check className="w-2 h-2" strokeWidth={4} aria-hidden="true" />}
+          <span
+            className={`w-3 h-3 flex items-center justify-center ${
+              compared ? 'shadow-[inset_0_0_0_1px_hsl(var(--primary-foreground))]' : 'shadow-[inset_0_0_0_1px_currentColor]'
+            }`}
+          >
+            {compared && <Check className="w-2.5 h-2.5" strokeWidth={3} aria-hidden="true" />}
           </span>
-          compare
+          Compare
         </button>
       </div>
 
-      <div className="flex flex-col flex-1 p-5">
-        <div className="flex items-center justify-between gap-3 mb-2.5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary truncate">{project.category}</span>
-          <span className="font-mono text-[10px] text-muted-foreground tabular-nums shrink-0">{yearLabel(project.timeline)}</span>
+      <div className="flex flex-col flex-1 pt-5">
+        <div className="flex items-baseline justify-between gap-3 t-caption">
+          <span className="truncate">{project.category}</span>
+          <span className="tabular-nums shrink-0">{yearLabel(project.timeline)}</span>
         </div>
 
-        {/* Stretched link: the title's pseudo-element covers the card, leaving
-            one link in the accessibility tree and the repo links clickable. */}
-        <h3 className="font-mono text-[15px] leading-tight">
+        {/* Stretched link: the title's pseudo-element covers the entry,
+            leaving one link in the accessibility tree and the repo links
+            clickable. */}
+        <h3 className="mt-3 t-subhead">
           <TransitionLink
             to={`/projects/${project.id}`}
-            className="text-foreground group-hover:text-primary transition-colors before:absolute before:inset-0 before:content-['']"
+            className={`before:absolute before:inset-0 before:content-[''] ${isDesign ? 'text-muted-foreground group-hover:text-foreground' : 'text-foreground'} transition-colors`}
           >
             <span className="inline-block" style={named ? { viewTransitionName: transitionName('title', project.id) } : undefined}>
               {project.title}
             </span>
           </TransitionLink>
         </h3>
-        <p className="text-[12px] text-muted-foreground mt-1 leading-snug line-clamp-2">{project.subtitle}</p>
+        <p className="t-caption mt-1 line-clamp-2">{project.subtitle}</p>
+        <p className="t-caption mt-3 truncate">
+          {project.stack.length ? project.stack.slice(0, 4).join(' · ') + (project.stack.length > 4 ? ` and ${project.stack.length - 4} more` : '') : 'Not built yet'}
+        </p>
 
-        <ul className="flex flex-wrap gap-1 mt-4" aria-label="Stack">
-          {project.stack.slice(0, 4).map((tech) => (
-            <li key={tech} className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider border border-border/70 px-1.5 py-0.5">
-              {tech}
-            </li>
-          ))}
-          {project.stack.length > 4 && (
-            <li className="font-mono text-[10px] text-muted-foreground px-1 py-0.5">+{project.stack.length - 4}</li>
-          )}
-        </ul>
-
-        <div className="flex items-center justify-between gap-3 mt-auto pt-5">
-          <span className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-widest">
-            <span className="flex items-center gap-1.5 text-primary">
-              case study
-              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
-            </span>
+        <div className="flex items-center justify-between gap-3 mt-auto pt-5 border-b border-border pb-4">
+          <span className="flex items-center gap-4 text-[13px]">
+            <StatusText status={status} />
             {(depth.tradeoffs > 0 || depth.fieldNotes > 0) && (
-              <span className="text-muted-foreground normal-case tracking-normal tabular-nums">
-                {depth.tradeoffs} trade-offs{depth.fieldNotes ? ` · ${depth.fieldNotes} notes` : ''}
+              <span className="text-muted-foreground tabular-nums hidden sm:inline">
+                {describeDepth(depth.tradeoffs, depth.fieldNotes)}
               </span>
             )}
           </span>
-          <span className="relative z-10 flex items-center gap-3">
+          <span className="relative z-10 flex items-center gap-1 -mr-2">
             {project.github && (
               <a
                 href={project.github}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label={`${project.title} source code (opens in new tab)`}
               >
                 <Github className="w-3.5 h-3.5" aria-hidden="true" />
@@ -146,12 +131,13 @@ function ProjectCard({ project, index, compared, compareFull, onCompare }: CardP
                 href={project.liveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label={`${project.title} live site (opens in new tab)`}
               >
                 <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
               </a>
             )}
+            <ArrowRight className="nudge w-4 h-4 ml-1 text-muted-quiet group-hover:text-foreground transition-colors" aria-hidden="true" />
           </span>
         </div>
       </div>
@@ -172,11 +158,11 @@ export default function ProjectCards({ results, grouped, compare, onCompare, com
   const groups = grouped ? groupByTier(projects) : [{ tier: '', items: projects }];
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-20">
       {groups.map((group) => (
-        <div key={group.tier || 'all'} className="flex flex-col gap-3">
-          {grouped && group.tier && <TierRule tier={group.tier} count={group.items.length} />}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div key={group.tier || 'all'} className="flex flex-col gap-6">
+          {grouped && group.tier && <TierRule tier={group.tier} count={group.items.length} className="pb-4 border-b border-border" />}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-14">
             <AnimatePresence mode="popLayout" initial={false}>
               {group.items.map((project, index) => (
                 <ProjectCard

@@ -26,6 +26,6 @@ export const SECTIONS: SiteSection[] = [
   { id: 'home', label: 'Home', short: 'Home', icon: Home },
   { id: 'about', label: 'About', short: 'About', icon: User },
   { id: 'projects', label: 'Work', short: 'Work', icon: Briefcase },
-  { id: 'experience', label: 'Experience', short: 'Exp', icon: FileText },
+  { id: 'experience', label: 'Experience', short: 'Career', icon: FileText },
   { id: 'contact', label: 'Contact', short: 'Contact', icon: Mail },
 ];

@@ -1,9 +1,10 @@
 import React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Sparkles, Terminal } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 import { PROJECTS } from "@/data/projects";
 import { useAsk } from "@/components/ai/AskProvider";
+import { Reveal, RevealText, SectionHead } from "@/components/ui/Reveal";
 import FlagshipStage from "@/components/projects/FlagshipStage";
 import WorkToolbar from "@/components/projects/WorkToolbar";
 import ProjectIndex from "@/components/projects/ProjectIndex";
@@ -26,15 +27,16 @@ import {
 /* ==========================================================================
    WORK
 
-   A stage, then a catalogue.
+   Plates, then an index — the order of a studio monograph.
 
-   The flagships get a stage (FlagshipStage): four, chosen between rather
-   than rotated, each at a size that shows what it is. Below it, every
-   project — flagships included, so filters mean what they say — in the
-   catalogue: one toolbar, three views of the same results.
+   The flagships get plates (FlagshipStage): four, each a full spread with
+   a caption column, alternating sides so the run reads as a sequence.
+   Below them, every project — flagships included, so filters mean what
+   they say — in the index: one search line, and behind "Filter" the tier,
+   stack, sort and two more views of the same results.
 
-     index    the scanning view, in the terminal's language
-     cards    the browsing view, art on every card
+     index    the scanning view: one typographic table
+     plates   the browsing view, art on every entry
      matrix   projects × technologies — breadth and depth at a glance
 
    Search reaches into the case studies, not just the titles, and says where
@@ -43,9 +45,9 @@ import {
    and the comparison handed to the assistant.
 
    Two guarantees this section is not allowed to lose, whatever the design:
-   design-stage work always reads as not built (dashed borders, DESIGN STAGE
-   in amber, the caveat below), and every figure is the data's — counted
-   from PROJECTS, never written into the copy.
+   design-stage work always reads as not built (dashed rules and frames,
+   "design stage, not built", the caveat below), and every figure is the
+   data's — counted from PROJECTS, never written into the copy.
    ========================================================================== */
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -127,76 +129,61 @@ const Projects: React.FC = () => {
   const resetFilters = () => update({ query: "", tier: null, stack: [] });
 
   return (
-    <section id="projects" data-section="projects" className="py-24 relative" aria-label="Projects and case studies">
-      <div className="container px-6 md:px-12 lg:px-24 max-w-7xl mx-auto">
-        {/* ── Header ── */}
-        <motion.div
-          initial={prefersReduced ? false : { opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5, ease: EASE }}
-          className="mb-12 border-b border-border pb-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
-        >
-          <div>
-            <span className="flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground mb-4">
-              <Terminal className="w-4 h-4 text-primary" aria-hidden="true" />
-              Module 02 // Engineering
+    <section id="projects" data-section="projects" className="page-x section-y relative" aria-labelledby="work-title">
+      <div className="page-max">
+        <SectionHead
+          id="work-title"
+          title="Selected systems"
+          lede={
+            <>
+              {BUILT_COUNT} projects built and {DESIGN_COUNT} designed but not yet built. {CASE_STUDY_COUNT} have a full
+              write-up: the problem, how it was solved, what it achieved, and the option that was turned down.
+            </>
+          }
+          aside={
+            /* The full count line from sm up; on a phone, the two that matter
+               most, so the rule beside it is not crushed. */
+            <span className="tabular-nums">
+              {LIVE_COUNT} live · {SOURCE_OPEN_COUNT} with public code
+              <span className="hidden sm:inline">
+                {" "}· {TRADEOFF_COUNT} trade-offs · {FIELD_NOTE_COUNT} debugging stories
+              </span>
             </span>
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">
-              Systems <span className="text-muted-foreground font-mono font-normal">Index</span>
-            </h2>
-            <p className="text-[15px] md:text-[13px] text-muted-foreground max-w-md font-light leading-relaxed">
-              {BUILT_COUNT} built systems and {DESIGN_COUNT} design studies. {CASE_STUDY_COUNT} carry a full case
-              study — the problem, the approach, the measured outcome, and the alternative that was rejected.
-            </p>
-          </div>
-
-          {/* The catalogue's totals as a ledger — what a reader can go and
-              check, not adjectives about it. */}
-          {/* 2×2 on a phone, one row from sm up. Four nowrap labels in one row
-              needed ~400px, so at 390 "source open" ran into "trade-offs".
-              Hairlines come from the 1px gap over a border-coloured ground,
-              which draws correctly in either arrangement (divide-x cannot
-              draw the row between two rows). */}
-          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border self-start lg:self-end">
-            {[
-              { label: "live", value: LIVE_COUNT },
-              { label: "source open", value: SOURCE_OPEN_COUNT },
-              { label: "trade-offs", value: TRADEOFF_COUNT },
-              { label: "field notes", value: FIELD_NOTE_COUNT },
-            ].map((item) => (
-              <div key={item.label} className="bg-[#070707] px-4 py-3 sm:min-w-[84px]">
-                <dd className="font-mono text-xl text-foreground tabular-nums leading-none">{item.value}</dd>
-                <dt className="mt-2 font-mono text-[10px] sm:text-[9px] uppercase tracking-[0.2em] text-muted-foreground whitespace-nowrap">{item.label}</dt>
-              </div>
-            ))}
-          </dl>
-        </motion.div>
+          }
+          className="mb-20 md:mb-32"
+        />
 
         <FlagshipStage projects={FLAGSHIPS} />
 
-        {/* ── Catalogue ──
+        {/* ── Index ──
             The anchor other sections send people to when they mean "the
             results" rather than "the section" (About's stack does). The
             scroll margin clears the fixed navbar. */}
-        <div id="work-catalogue" className="flex items-baseline justify-between gap-4 mb-4 scroll-mt-24">
-          <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-foreground">
-            <span className="text-primary mr-2">//</span>catalogue
-          </h3>
-          <button
-            type="button"
-            onClick={() =>
-              openAsk({
-                question: isFiltered(state) && results.length
-                  ? `of ${results.slice(0, 5).map((r) => r.project.title).join(", ")}, which best shows how he works, and why?`
-                  : "which of his systems is the strongest, and why?",
-              })
-            }
-            className="group inline-flex items-center gap-1.5 py-2.5 -my-2.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Sparkles className="w-3 h-3 text-primary/80 group-hover:text-primary transition-colors" aria-hidden="true" />
-            {isFiltered(state) ? "ask about these" : "ask which to read first"}
-          </button>
+        <div id="work-catalogue" className="scroll-mt-24 mt-32 md:mt-48 grid grid-cols-12 gap-x-6 gap-y-6 mb-12 md:mb-16 items-end">
+          <RevealText as="h3" className="t-title col-span-12 md:col-span-6">
+            All projects
+          </RevealText>
+          <Reveal className="col-span-12 md:col-span-6 lg:col-span-5 lg:col-start-8 flex flex-col gap-4" delay={0.1}>
+            <p className="t-body">
+              Every project, including the four above. The search looks through the full write-ups, and you can compare
+              any two or three side by side.
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                openAsk({
+                  question: isFiltered(state) && results.length
+                    ? `of ${results.slice(0, 5).map((r) => r.project.title).join(", ")}, which best shows how he works, and why?`
+                    : "which of his systems is the strongest, and why?",
+                })
+              }
+              className="tap group self-start inline-flex items-center gap-2 text-[14px] text-foreground"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-primary transition-transform duration-500 ease-out-expo group-hover:rotate-12" aria-hidden="true" />
+              <span className="link-draw">{isFiltered(state) ? "Ask about these" : "Ask which to read first"}</span>
+              <ArrowRight className="nudge w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+            </button>
+          </Reveal>
         </div>
 
         <WorkToolbar
@@ -210,42 +197,38 @@ const Projects: React.FC = () => {
 
         {/* Design-stage caveat, whenever such a project is on screen. */}
         {showsDesign && (
-          <p className="text-[11px] text-muted-foreground leading-relaxed mb-5 max-w-2xl">
-            Entries marked <span className="text-status-warn font-mono">DESIGN STAGE</span> are reference architectures
-            produced ahead of implementation — specified, not built, and not running in production.
+          <p className="t-caption mb-8 max-w-2xl">
+            Rows under a dashed line, with outlined titles, are <span className="text-foreground">designed, not built</span>. They are plans
+            written before any code, and nothing in them is running.
           </p>
         )}
 
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={results.length === 0 ? "empty" : state.view}
-            initial={prefersReduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            initial={prefersReduced ? { opacity: 0 } : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            transition={{ duration: 0.28, ease: EASE }}
+            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+            transition={{ duration: 0.45, ease: EASE }}
           >
             {results.length === 0 ? (
-              <div className="py-16 px-6 text-center border border-dashed border-border">
-                <p className="font-mono text-[12px] text-foreground mb-2">nothing matches that</p>
-                <p className="text-[12px] text-muted-foreground mb-5">
-                  the search reads every case study, so it may not be here — or it may be phrased differently.
+              <div className="py-20 border-y border-border">
+                <p className="t-heading text-foreground">Nothing matches that.</p>
+                <p className="t-body mt-3 max-w-lg">
+                  The search looks through every write-up. It may not be here, or it may be worded differently.
                 </p>
-                <div className="flex items-center justify-center gap-5">
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="font-mono text-[10px] uppercase tracking-widest text-primary hover:text-primary-hover transition-colors"
-                  >
-                    clear filters
+                <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3">
+                  <button type="button" onClick={resetFilters} className="btn-line tap">
+                    Clear filters
                   </button>
                   {state.query.trim() && (
                     <button
                       type="button"
                       onClick={() => openAsk({ question: `has he worked with ${state.query.trim()}?` })}
-                      className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+                      className="tap group inline-flex items-center gap-2 text-[14px] text-foreground"
                     >
-                      <Sparkles className="w-3 h-3" aria-hidden="true" />
-                      ask instead
+                      <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+                      <span className="link-draw">Ask instead</span>
                     </button>
                   )}
                 </div>

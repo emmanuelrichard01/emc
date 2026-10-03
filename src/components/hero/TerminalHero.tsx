@@ -3,7 +3,6 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
 import { MAX_QUESTION_CHARS as AI_MAX_QUESTION_CHARS } from '@/lib/aiHistory';
-import { buildMotd, type MotdTone } from '@/lib/motd';
 import { useTerminalSession } from './useTerminalSession';
 import { useAsk } from '@/components/ai/AskProvider';
 import AiTranscript, { AI_SUGGESTIONS } from './AiTranscript';
@@ -38,6 +37,64 @@ import { emitCircuitSignal } from '@/lib/circuitBus';
    ========================================================================== */
 
 const PROMPT = 'em@builtbyem:~/$';
+/** The session, named once in the caption strip. */
+const SESSION = 'em@builtbyem';
+/** The line itself carries only the shell's own glyph. */
+const LINE_PROMPT = '~ $';
+
+/* Shell or Ask: the prompt takes both, and this says so out loud.
+   It used to be discoverable only by typing a question and noticing the
+   hint change; now the two modes are named on the instrument, and the
+   underline slides to whichever is live. Each side is the same action the
+   keyboard already has (`ai` / Esc), so nothing new is learned. */
+function ModeSwitch({
+  ai,
+  disabled,
+  onShell,
+  onAsk,
+  reduced,
+}: {
+  ai: boolean;
+  disabled: boolean;
+  onShell: () => void;
+  onAsk: () => void;
+  reduced: boolean;
+}) {
+  const options = [
+    { id: 'shell', label: 'Shell', active: !ai, onPick: onShell },
+    { id: 'ask', label: 'Ask', active: ai, onPick: onAsk },
+  ] as const;
+  return (
+    <div role="group" aria-label="Prompt mode" className="flex items-center">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          aria-pressed={option.active}
+          disabled={disabled || option.active}
+          onClick={(e) => {
+            e.stopPropagation();
+            option.onPick();
+          }}
+          className={`tap relative flex items-center gap-1.5 h-10 px-3 text-[12px] transition-colors disabled:cursor-default ${
+            option.active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          {option.id === 'ask' && <Sparkles className={`w-3 h-3 ${option.active ? 'text-primary' : ''}`} aria-hidden="true" />}
+          {option.label}
+          {option.active && (
+            <motion.span
+              layoutId="hero-mode"
+              className="absolute left-3 right-3 -bottom-px h-px bg-primary"
+              transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 36 }}
+              aria-hidden="true"
+            />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /* One token for every element on the prompt line.
 
@@ -52,17 +109,16 @@ const PROMPT = 'em@builtbyem:~/$';
    invitation — shoved the layout sideways on first touch. */
 const TERMINAL_TEXT = 'text-base md:text-[17px]';
 
-const MOTD_TONE_CLASS: Record<MotdTone, string> = {
-  identity: 'text-foreground/90',
-  meta: 'text-muted-foreground',
-  stat: 'text-muted-quiet',
-  hint: 'text-muted-quiet',
-};
-
-/* Chips double as the page's calls to action. `work`, `resume` and `contact`
-   are the buttons the old hero rendered — spelled as commands, so pressing
-   one runs the shell rather than bypassing it. */
-const CHIPS = ['ai', 'work', 'resume', 'contact'] as const;
+/* The actions under the prompt, and the page's two doors. Each runs the
+   shell command of the same name rather than bypassing it, so pressing one
+   is the same as typing it. "Download CV" is the door for hiring teams and
+   "Get in touch" the door for anyone with a project, with equal weight. */
+const CHIPS = [
+  { chip: 'ai', label: 'Ask the assistant' },
+  { chip: 'work', label: 'See the work' },
+  { chip: 'resume', label: 'Download CV' },
+  { chip: 'contact', label: 'Get in touch' },
+] as const;
 
 /* Typed into the empty prompt, one after another, so it is never a blank
    stare. Questions and commands alternate on purpose: the prompt takes both,
@@ -76,6 +132,15 @@ const EXAMPLES = [
   'ls',
 ] as const;
 
+/* A phone's prompt line holds about 22 characters at 16px mono (the size
+   iOS needs to not zoom). The long examples were cut mid-word there, so
+   narrow screens get their own, each a complete thought at that width. */
+const SHORT_EXAMPLES = ['what has he shipped?', 'work', 'how does mmr work?', 'resume', 'ls'] as const;
+
+function narrowScreen() {
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches;
+}
+
 /* The empty prompt types its examples out, holds them, and erases them.
    Driven by one timeout chain; stops entirely while anything is typed. */
 function useTypedExample(active: boolean, reduced: boolean): string {
@@ -86,8 +151,9 @@ function useTypedExample(active: boolean, reduced: boolean): string {
     let index = 0;
     let erasing = false;
     let timer: ReturnType<typeof setTimeout>;
+    const list: readonly string[] = narrowScreen() ? SHORT_EXAMPLES : EXAMPLES;
     const tick = () => {
-      const current = EXAMPLES[example];
+      const current = list[example];
       if (!erasing) {
         index += 1;
         setText(current.slice(0, index));
@@ -104,7 +170,7 @@ function useTypedExample(active: boolean, reduced: boolean): string {
       if (index <= 0) {
         erasing = false;
         index = 0;
-        example = (example + 1) % EXAMPLES.length;
+        example = (example + 1) % list.length;
         timer = setTimeout(tick, 600);
         return;
       }
@@ -113,7 +179,7 @@ function useTypedExample(active: boolean, reduced: boolean): string {
     timer = setTimeout(tick, 1400);
     return () => clearTimeout(timer);
   }, [active, reduced]);
-  return reduced ? 'ask a question, or type help' : text;
+  return reduced ? (narrowScreen() ? 'ask, or type help' : 'ask a question, or type help') : text;
 }
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -127,7 +193,6 @@ interface TerminalHeroProps {
 
 export default function TerminalHero({ live }: TerminalHeroProps) {
   const prefersReduced = useReducedMotion();
-  const motd = useMemo(() => buildMotd(), []);
 
   const {
     sessionLog,
@@ -442,7 +507,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         const question = inputValue.trim();
         if (looksLikeQuestion(question)) {
           if (question.length > AI_MAX_QUESTION_CHARS) {
-            ai.reject(`question is ${question.length} characters — keep it under ${AI_MAX_QUESTION_CHARS}.`);
+            ai.reject(`That question is ${question.length} characters long. Please keep it under ${AI_MAX_QUESTION_CHARS}.`);
             return;
           }
           setAiMode(true);
@@ -466,7 +531,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
       // trip to be told something the input already knew.
       if (question.length > AI_MAX_QUESTION_CHARS) {
         ai.reject(
-          `question is ${question.length} characters — keep it under ${AI_MAX_QUESTION_CHARS}.`
+          `That question is ${question.length} characters long. Please keep it under ${AI_MAX_QUESTION_CHARS}.`
         );
         return;
       }
@@ -553,7 +618,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
   /* Compact once the shell is in use.
      The wordmark is the largest thing on a resting screen and the least
      useful one on a working screen, so it gives up its space to output. */
-  const compact = hasOutput || aiMode;
+  const compact = hasOutput || (aiMode && (ai.turns.length > 0 || ai.busy));
 
   /* The resting hint teaches the prompt; once the visitor has used it —
      a command run, or the AI opened — it has done its job and steps aside
@@ -589,7 +654,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           ref={scrollRef}
           onScroll={handleScroll}
           className={`min-h-0 overflow-y-auto font-mono text-[12px] md:text-[13px] leading-[2] pr-2 -mr-2 ${
-            compact ? 'flex-1 mb-5' : 'shrink-0 mb-6 md:mb-8'
+            compact
+              ? 'flex-1 mb-5 pt-6 [mask-image:linear-gradient(to_bottom,transparent,#000_2.75rem)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,#000_2.75rem)]'
+              : 'shrink-0 mb-7 md:mb-9'
           }`}
         >
           {/* The banner folds away once the shell is in use.
@@ -610,30 +677,34 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
               opacity: compact ? 0 : 1,
             }}
             transition={{ duration: prefersReduced ? 0 : 0.4, ease: EASE }}
-            className="space-y-1.5 overflow-hidden text-center"
+            className="overflow-hidden text-center font-sans"
           >
-            {/* Identity and whereabouts only. The inventory and build lines
-                moved: the build to the baseline, the counts to `ls` and the
-                Work section, where they are one command or one scroll away. */}
-            {motd.filter((line) => line.tone === 'identity' || line.tone === 'meta').map((line, i) =>
-              line.tone === 'identity' ? (
-                <motion.h1
-                  key={line.text}
-                  {...reveal(0.15 + i * 0.06)}
-                  className={`text-[14px] md:text-[16px] font-normal tracking-wide ${MOTD_TONE_CLASS[line.tone]}`}
-                >
-                  {line.text}
-                </motion.h1>
-              ) : (
-                <motion.p
-                  key={line.text}
-                  {...reveal(0.15 + i * 0.06)}
-                  className={MOTD_TONE_CLASS[line.tone]}
-                >
-                  {line.text}
-                </motion.p>
-              )
-            )}
+            {/* The page's h1, in the same display face as every section title
+                on the site, held small so the prompt below stays the thing in
+                the middle of the screen. Then what he does, and where and
+                whether he is free, each a step quieter than the line above. */}
+            <motion.h1
+              {...reveal(0.15)}
+              className="font-display text-[1.75rem] md:text-[2.25rem] font-[560] leading-[1.05] tracking-[-0.025em] text-foreground"
+            >
+              Emmanuel Moghalu
+            </motion.h1>
+            <motion.p {...reveal(0.21)} className="mt-2.5 text-[15px] md:text-[17px] text-muted-foreground">
+              Data and backend engineer
+            </motion.p>
+            <motion.p
+              {...reveal(0.27)}
+              className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[13px] text-muted-foreground"
+            >
+              <span>Abuja, Nigeria</span>
+              <span aria-hidden="true" className="text-muted-ghost">·</span>
+              <span className="tabular-nums">UTC+1</span>
+              <span aria-hidden="true" className="hidden sm:inline text-muted-ghost">·</span>
+              <span className="basis-full sm:basis-auto inline-flex items-center justify-center gap-2 text-foreground">
+                <span className="w-1.5 h-1.5 bg-status-ok status-live" aria-hidden="true" />
+                Open to new roles and projects
+              </span>
+            </motion.p>
           </motion.div>
 
           {hasOutput && (
@@ -665,9 +736,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   clearSession();
                   focusInput();
                 }}
-                className="mt-2 font-mono text-[11px] uppercase tracking-widest text-muted-quiet hover:text-primary transition-colors"
+                className="mt-3 inline-flex items-center gap-2 font-sans text-[12px] text-muted-quiet hover:text-foreground transition-colors"
               >
-                clear ⌃L
+                Clear <kbd className="kbd">⌃L</kbd>
               </button>
             </div>
           )}
@@ -680,9 +751,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                   ("answers are generated and cite the data behind them").
                   What is left is the one claim neither of those makes. */}
               {ai.turns.length === 0 && !ai.busy && (
-                <div className="text-muted-foreground">
-                  every figure comes from this site's own query engine, and the evidence opens
-                  under the answer.
+                <div className="font-sans text-[14px] text-muted-foreground text-center [text-wrap:balance] max-w-[44ch] mx-auto">
+                  Every number in an answer comes from this site&rsquo;s own data, and you can open the
+                  evidence under it.
                 </div>
               )}
               <AiTranscript
@@ -700,268 +771,285 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           )}
         </div>
 
-        {/* ── The prompt ── */}
-        <motion.div {...reveal(0.45)} className="relative shrink-0">
-          {/* Corner brackets — the box reads as an instrument, not a form
-              field, and they brighten with focus. */}
-          {(['top-0 left-0 border-t border-l', 'top-0 right-0 border-t border-r', 'bottom-0 left-0 border-b border-l', 'bottom-0 right-0 border-b border-r'] as const).map(
-            (pos) => (
-              <span
-                key={pos}
-                aria-hidden="true"
-                className={`absolute w-2.5 h-2.5 z-10 transition-colors duration-300 ${pos} ${
-                  inputFocused ? 'border-primary' : 'border-primary/40'
-                }`}
-              />
-            )
-          )}
-
+        {/* ── The prompt ──
+            An instrument rather than a form field: a caption strip naming the
+            session, its state and its mode; the line you type on; and a strip
+            saying what the keys do. Hero measures this box (#hero-prompt) and
+            draws the black hole's disk straight through it, so the prompt sits
+            on the horizon's equator at every screen size. */}
+        <motion.div {...reveal(0.45)} id="hero-prompt" className="relative shrink-0 w-full max-w-2xl mx-auto">
           <form
             onSubmit={handleSubmit}
             onClick={() => focusInput()}
-            className={`flex items-center gap-2.5 border px-5 md:px-6 py-4 md:py-[22px] bg-background/80 transition-colors duration-300 cursor-text ${
+            className={`relative flex flex-col border bg-background/85 transition-[border-color,box-shadow] duration-500 cursor-text ${
               aiMode
                 ? `ai-border border-transparent ${ai.busy ? 'ai-border--busy' : ''}`
                 : inputFocused
-                  ? 'border-primary/60'
-                  : 'border-border'
+                  ? 'border-rule-strong shadow-[0_32px_90px_-34px_hsl(var(--primary)/0.45)]'
+                  : 'border-border hover:border-rule-strong'
             }`}
-            style={inputFocused && !aiMode ? { boxShadow: 'var(--shadow-glow)' } : undefined}
           >
-            {running ? (
-              /* Tappable as well as Ctrl+C — a phone has no Ctrl key, so a
-                 keyboard-only cancel would strand a streaming command. */
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  cancelRunning();
-                }}
-                className={`flex items-center gap-2 min-w-0 text-left group font-mono ${TERMINAL_TEXT} w-full`}
-                aria-label={`Cancel ${running.name}`}
-              >
-                <span className="w-1.5 h-1.5 bg-primary status-live shrink-0" aria-hidden="true" />
-                <span className="text-primary shrink-0">{running.name}</span>
-                <span className="text-muted-quiet truncate group-hover:text-primary transition-colors">
-                  running — tap or ^C to cancel
-                </span>
-              </button>
-            ) : (
-              <>
+            {/* Caption strip */}
+            <div className="flex items-center justify-between gap-4 pl-4 md:pl-5 pr-2 h-10 border-b border-border font-sans text-[12px]">
+              <span className="flex items-center gap-2 min-w-0 text-muted-foreground">
                 <span
-                  className={`font-mono ${TERMINAL_TEXT} text-primary shrink-0 select-none flex items-center gap-1.5`}
+                  className={`w-1.5 h-1.5 shrink-0 transition-colors duration-500 ${
+                    running || ai.busy ? 'bg-primary status-live' : 'bg-status-ok'
+                  }`}
                   aria-hidden="true"
-                >
-                  {aiMode ? (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      ask
-                      <span className="text-muted-quiet">?</span>
-                    </>
-                  ) : (
-                    PROMPT
-                  )}
+                />
+                <span className="font-mono text-[11.5px] text-foreground/85">{SESSION}</span>
+                <span className="hidden sm:inline text-muted-ghost" aria-hidden="true">·</span>
+                <span className="hidden sm:inline truncate" aria-live="polite">
+                  {running ? `running ${running.name}` : ai.busy ? 'thinking' : aiMode ? 'talking to the assistant' : 'ready'}
                 </span>
+              </span>
+              <ModeSwitch ai={aiMode} disabled={running !== null} onShell={exitAi} onAsk={enterAi} reduced={Boolean(prefersReduced)} />
+            </div>
 
-                <div ref={trackRef} className="relative flex-1 min-w-0 flex items-center">
-                  {/* Off-screen ruler for the monospace advance width. */}
-                  <span
-                    ref={rulerRef}
-                    aria-hidden="true"
-                    className={`pointer-events-none absolute -left-[9999px] top-0 font-mono ${TERMINAL_TEXT} whitespace-pre`}
-                  >
-                    0000000000
-                  </span>
-
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => {
-                      setInput(e.target.value);
-                      // Each keystroke is a small flare in the disk behind.
-                      emitCircuitSignal({ type: 'burst', strength: 0.12 });
-                    }}
-                    onKeyDown={handlePromptKeyDown}
-                    onKeyUp={syncCaret}
-                    onClick={syncCaret}
-                    onSelect={syncCaret}
-                    onScroll={syncScroll}
-                    onFocus={() => {
-                      setInputFocused(true);
-                      syncCaret();
-                    }}
-                    onBlur={() => {
-                      setInputFocused(false);
-                      // Blurring can reset the field's scroll to 0 while the
-                      // caret index stays where it was; without this the
-                      // hollow block reappears far to the right of the text.
-                      syncScroll();
-                    }}
-                    spellCheck={false}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    readOnly={autoTyping}
-                    placeholder={aiMode ? 'ask anything about his work…' : undefined}
-                    aria-label={
-                      aiMode
-                        ? "Ask a question about Emmanuel's work"
-                        : 'Terminal command input. Type help for available commands.'
-                    }
-                    aria-autocomplete="inline"
-                    aria-busy={running !== null}
-                    /* caret-transparent hides only the painted hairline — the
-                       block below stands in for it. The global focus-visible
-                       ring is suppressed too: on a bare inline input it draws
-                       a heavy box, and here the lit border is the indicator. */
-                    className={`relative z-10 w-full bg-transparent border-none outline-none focus:outline-none focus-visible:outline-none text-foreground font-mono ${TERMINAL_TEXT} p-0 caret-transparent`}
-                  />
-
-                  {/* The block. Solid and blinking while focused; hollow and
-                      still when not, which is how a terminal shows that the
-                      window no longer has the keyboard.
-
-                      Offset by the field's own scroll, which is the whole
-                      difference between a caret and a runaway. `caret *
-                      charWidth` is a distance into the *string*; the field
-                      only shows a window onto that string, and once the value
-                      outgrows the box the browser slides the window along.
-                      Without the subtraction the block kept walking right —
-                      out of the prompt, over the `exit` control, and off the
-                      edge of the screen — while the text it was supposed to
-                      be sitting on scrolled the other way underneath it.
-
-                      Worst on a phone by construction: the field is at its
-                      narrowest and the type at its largest (16px, to stop iOS
-                      zooming), so a value overflows after far fewer
-                      characters than it does on a desktop. */}
-                  {charWidth > 0 && !running && caretVisible && (
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none absolute top-1/2 -translate-y-1/2 z-20 h-[1.2em] ${
-                        inputFocused
-                          ? `bg-primary ${autoTyping ? '' : 'terminal-caret'}`
-                          : 'border border-primary/50'
-                      }`}
-                      /* One cell wide, measured rather than assumed. The
-                         hardcoded 8px matched 14px text only, so it no longer
-                         covered a character once mobile rendered at 16px. */
-                      style={{ left: `${caretLeft}px`, width: `${charWidth}px` }}
-                    />
-                  )}
-
-                  {ghost && !autoTyping && (
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none absolute inset-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-ghost flex items-center`}
-                      /* Same correction as the block: the completion is drawn
-                         after an invisible copy of the value, so it has to
-                         travel with the text it is completing. */
-                      style={{ transform: `translateX(${-scrollLeft}px)` }}
-                    >
-                      <span className="invisible">{inputValue}</span>
-                      {ghost}
-                    </span>
-                  )}
-
-                  {/* The typed example — offset past the block caret so the
-                      caret never sits on its first letter. */}
-                  {!aiMode && inputValue === '' && !running && example && charWidth > 0 && (
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-ghost flex items-center truncate`}
-                      style={{ left: charWidth * 1.6, right: 0 }}
-                    >
-                      {example}
-                    </span>
-                  )}
-                </div>
-
-                {/* The way out, as a control rather than a keybinding.
-
-                    AI mode advertised "esc to leave" at every width, and a
-                    phone has no Escape key — so the only exit on touch was
-                    typing `exit`, which nothing on screen mentioned. Same
-                    reasoning as the cancel row above: a keyboard-only verb
-                    strands the devices that cannot press it.
-
-                    Labelled `exit` rather than `esc` because that is also the
-                    word the prompt accepts, so the button and the command
-                    agree. py-2 -my-2 clears the 24px minimum without changing
-                    the row's height. */}
-                {aiMode && (
+            {/* The line */}
+            <div className="flex items-center gap-2.5 px-4 md:px-5 py-4 md:py-[18px]">
+                {running ? (
+                  /* Tappable as well as Ctrl+C — a phone has no Ctrl key, so a
+                     keyboard-only cancel would strand a streaming command. */
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      exitAi();
+                      cancelRunning();
                     }}
-                    /* Full-strength, not the /60 the rail's other mono labels
-                       use: at 11px that measured 2.65:1, and this is the one
-                       control on the row a stuck visitor is looking for. */
-                    className="shrink-0 -mr-2 px-2 py-2 -my-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-primary transition-colors"
-                    aria-label="Leave AI mode"
+                    className={`flex items-center gap-2 min-w-0 text-left group font-mono ${TERMINAL_TEXT} w-full`}
+                    aria-label={`Cancel ${running.name}`}
                   >
-                    exit
+                    <span className="w-1.5 h-1.5 bg-primary status-live shrink-0" aria-hidden="true" />
+                    <span className="text-primary shrink-0">{running.name}</span>
+                    <span className="text-muted-quiet truncate group-hover:text-primary transition-colors">
+                      running, tap or press ^C to stop
+                    </span>
                   </button>
-                )}
+                ) : (
+                  <>
+                    <span
+                      className={`font-mono ${TERMINAL_TEXT} text-primary shrink-0 select-none flex items-center gap-1.5`}
+                      aria-hidden="true"
+                    >
+                      {aiMode ? (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          ask
+                          <span className="text-muted-quiet">?</span>
+                        </>
+                      ) : (
+                        LINE_PROMPT
+                      )}
+                    </span>
 
-                {unlocked && (
-                  <span
-                    className="font-mono text-[10px] text-primary/80 shrink-0 hidden sm:inline"
-                    title="Query layer unlocked"
-                  >
-                    Ω
+                    <div ref={trackRef} className="relative flex-1 min-w-0 flex items-center">
+                      {/* Off-screen ruler for the monospace advance width. */}
+                      <span
+                        ref={rulerRef}
+                        aria-hidden="true"
+                        className={`pointer-events-none absolute -left-[9999px] top-0 font-mono ${TERMINAL_TEXT} whitespace-pre`}
+                      >
+                        0000000000
+                      </span>
+
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => {
+                          setInput(e.target.value);
+                          // Each keystroke is a small flare in the disk behind.
+                          emitCircuitSignal({ type: 'burst', strength: 0.12 });
+                        }}
+                        onKeyDown={handlePromptKeyDown}
+                        onKeyUp={syncCaret}
+                        onClick={syncCaret}
+                        onSelect={syncCaret}
+                        onScroll={syncScroll}
+                        onFocus={() => {
+                          setInputFocused(true);
+                          syncCaret();
+                        }}
+                        onBlur={() => {
+                          setInputFocused(false);
+                          // Blurring can reset the field's scroll to 0 while the
+                          // caret index stays where it was; without this the
+                          // hollow block reappears far to the right of the text.
+                          syncScroll();
+                        }}
+                        spellCheck={false}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        readOnly={autoTyping}
+                        aria-label={
+                          aiMode
+                            ? "Ask a question about Emmanuel's work"
+                            : 'Terminal command input. Type help for available commands.'
+                        }
+                        aria-autocomplete="inline"
+                        aria-busy={running !== null}
+                        /* caret-transparent hides only the painted hairline — the
+                           block below stands in for it. The global focus-visible
+                           ring is suppressed too: on a bare inline input it draws
+                           a heavy box, and here the lit border is the indicator. */
+                        className={`relative z-10 w-full bg-transparent border-none outline-none focus:outline-none focus-visible:outline-none text-foreground font-mono ${TERMINAL_TEXT} p-0 caret-transparent`}
+                      />
+
+                      {/* The block. Solid and blinking while focused; hollow and
+                          still when not, which is how a terminal shows that the
+                          window no longer has the keyboard.
+
+                          Offset by the field's own scroll, which is the whole
+                          difference between a caret and a runaway. `caret *
+                          charWidth` is a distance into the *string*; the field
+                          only shows a window onto that string, and once the value
+                          outgrows the box the browser slides the window along.
+                          Without the subtraction the block kept walking right —
+                          out of the prompt, over the `exit` control, and off the
+                          edge of the screen — while the text it was supposed to
+                          be sitting on scrolled the other way underneath it.
+
+                          Worst on a phone by construction: the field is at its
+                          narrowest and the type at its largest (16px, to stop iOS
+                          zooming), so a value overflows after far fewer
+                          characters than it does on a desktop. */}
+                      {charWidth > 0 && !running && caretVisible && (
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none absolute top-1/2 -translate-y-1/2 z-20 h-[1.2em] ${
+                            inputFocused
+                              ? `bg-primary ${autoTyping ? '' : 'terminal-caret'}`
+                              : 'border border-primary/50'
+                          }`}
+                          /* One cell wide, measured rather than assumed. The
+                             hardcoded 8px matched 14px text only, so it no longer
+                             covered a character once mobile rendered at 16px. */
+                          style={{ left: `${caretLeft}px`, width: `${charWidth}px` }}
+                        />
+                      )}
+
+                      {ghost && !autoTyping && (
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none absolute inset-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-ghost flex items-center`}
+                          /* Same correction as the block: the completion is drawn
+                             after an invisible copy of the value, so it has to
+                             travel with the text it is completing. */
+                          style={{ transform: `translateX(${-scrollLeft}px)` }}
+                        >
+                          <span className="invisible">{inputValue}</span>
+                          {ghost}
+                        </span>
+                      )}
+
+                      {/* The typed example — offset past the block caret so the
+                          caret never sits on its first letter. */}
+                      {!aiMode && inputValue === '' && !running && example && charWidth > 0 && (
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-ghost flex items-center truncate`}
+                          style={{ left: charWidth * 1.6, right: 0 }}
+                        >
+                          {example}
+                        </span>
+                      )}
+
+                      {/* Ask mode's placeholder, drawn the same way and for the
+                          same reason: a native placeholder starts at the
+                          caret, so the block sat on its first letter. */}
+                      {aiMode && inputValue === '' && !running && charWidth > 0 && (
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-ghost flex items-center truncate`}
+                          style={{ left: charWidth * 1.6, right: 0 }}
+                        >
+                          ask about his work…
+                        </span>
+                      )}
+                    </div>
+
+                    {/* The way out, as a control rather than a keybinding.
+
+                        AI mode advertised "esc to leave" at every width, and a
+                        phone has no Escape key — so the only exit on touch was
+                        typing `exit`, which nothing on screen mentioned. Same
+                        reasoning as the cancel row above: a keyboard-only verb
+                        strands the devices that cannot press it.
+
+                        Labelled `exit` rather than `esc` because that is also the
+                        word the prompt accepts, so the button and the command
+                        agree. py-2 -my-2 clears the 24px minimum without changing
+                        the row's height. */}
+                    {aiMode && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exitAi();
+                        }}
+                        /* Full-strength, not the /60 the rail's other mono labels
+                           use: at 11px that measured 2.65:1, and this is the one
+                           control on the row a stuck visitor is looking for. */
+                        className="shrink-0 -mr-2 px-2 py-2 -my-2 font-sans text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Leave the assistant and go back to the terminal"
+                      >
+                        Exit
+                      </button>
+                    )}
+
+                    {unlocked && (
+                      <span
+                        className="font-mono text-[10px] text-primary/80 shrink-0 hidden sm:inline"
+                        title="Query layer unlocked"
+                      >
+                        Ω
+                      </span>
+                    )}
+                  </>
+                )}
+            </div>
+
+            {/* Key strip: what Enter will do, said as it changes. */}
+            <div className="flex items-center justify-between gap-4 px-4 md:px-5 min-h-10 py-2 border-t border-border font-sans text-[12px] text-muted-quiet">
+              <span className="min-w-0">
+                {typedQuestion ? (
+                  <>Enter asks the assistant. Its answers show where each fact comes from.</>
+                ) : aiMode ? (
+                  <>Answers are written by AI and show their sources.</>
+                ) : (
+                  <span className={`transition-opacity duration-700 ${taught ? 'opacity-60' : ''}`}>
+                    <span className="md:hidden">Ask anything, or tap an option below.</span>
+                    <span className="hidden md:inline">
+                      Ask in your own words, or type <span className="font-mono text-foreground">help</span>.
+                    </span>
                   </span>
                 )}
-              </>
-            )}
+              </span>
+              <span className="hidden md:flex items-center gap-3 shrink-0" aria-hidden="true">
+                {aiMode ? (
+                  <span className="flex items-center gap-1.5">
+                    <kbd className="kbd">Esc</kbd> back
+                  </span>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1.5">
+                      <kbd className="kbd">Tab</kbd> complete
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <kbd className="kbd">↑</kbd> history
+                    </span>
+                  </>
+                )}
+                <span className="flex items-center gap-1.5">
+                  <kbd className="kbd">↵</kbd> {aiMode || typedQuestion ? 'ask' : 'run'}
+                </span>
+              </span>
+            </div>
           </form>
         </motion.div>
-
-        {/* ── Hint ── */}
-        <motion.p
-          {...reveal(0.55)}
-          className={`font-mono text-[11px] md:text-[12px] text-muted-quiet shrink-0 text-center ${compact ? 'mt-2.5' : 'mt-4'}`}
-        >
-          {typedQuestion ? (
-            /* Said as they type, so Enter doing something other than a
-               shell would is never a surprise. */
-            <>
-              <span className="text-primary/80">↵</span> asks the ai · answers cite the site&rsquo;s own data
-            </>
-          ) : aiMode ? (
-            <>
-              {/* Same split as the resting hint below: name the gesture the
-                  device actually has. "esc to leave" was shown on phones that
-                  have no Escape key. */}
-              <span className="md:hidden">
-                tap <span className="text-primary/80">exit</span> to leave
-              </span>
-              <span className="hidden md:inline">
-                <span className="text-primary/80">esc</span> to leave
-              </span>{' '}
-              · answers are generated and cite the data behind them
-            </>
-          ) : (
-            /* Faded rather than removed, so the chips below keep their place. */
-            <span
-              className={`transition-opacity duration-700 ${taught ? 'opacity-0' : ''}`}
-              aria-hidden={taught || undefined}
-            >
-              {/* "type 'help'" asks for a keyboard, which on a phone costs
-                  about 40% of the viewport before anything is shown. The
-                  chips below do the same job with one tap, so mobile is
-                  pointed at those and the typed form is kept for devices
-                  that already have somewhere to type. */}
-              <span className="md:hidden">ask anything, or tap below</span>
-              <span className="hidden md:inline">
-                ask a question, or type <span className="text-primary/80">help</span> for commands
-              </span>
-            </span>
-          )}
-        </motion.p>
 
         {/* ── Chips ──
             In AI mode these become starter questions instead of commands, so
@@ -980,51 +1068,34 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             />
           </motion.div>
         )}
-        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center justify-center gap-x-2 md:gap-x-1 gap-y-2 shrink-0 ${aiMode ? 'hidden' : compact ? 'mt-4' : 'mt-6'}`}>
+        <motion.div {...reveal(0.65)} className={`flex flex-wrap items-center justify-center gap-x-2 md:gap-x-1 gap-y-2 shrink-0 ${aiMode ? 'hidden' : compact ? 'mt-4' : 'mt-7'}`}>
           {!aiMode &&
-            CHIPS.map((chip, i) => (
-                <React.Fragment key={chip}>
-                  {i > 0 && (
-                    <span
-                      className="hidden md:inline text-muted-foreground/20 font-mono text-[11px] px-1.5"
-                      aria-hidden="true"
-                    >
-                      ·
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => (chip === 'ai' ? enterAi() : runChip(chip))}
-                    disabled={autoTyping || running !== null}
-                    /* py-2 -my-2 grows the hit area without moving anything.
-                       These chips are the hero's calls to action and stood
-                       17px tall — under the 24px minimum and genuinely hard
-                       to hit with a thumb. The negative margin cancels the
-                       padding in the flex line, so the row's height and the
-                       spacing between chips are unchanged. */
-                    /* Boxed below `md`, inline above it. As bare text among
-                       "·" separators these read as prose on a phone, which is
-                       the one place they are the primary way in — the border
-                       matches the AI starter questions directly below and
-                       makes the affordance obvious. The desktop treatment is
-                       untouched. */
-                    className={`tap font-mono text-[11px] md:text-[12px] border border-border md:border-0 px-2.5 md:px-1 md:-mx-1 py-1.5 md:py-2 md:-my-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed md:underline-offset-4 md:hover:underline decoration-primary/40 ${
-                      chip === 'ai'
-                        ? 'text-primary/80 hover:text-primary'
-                        : 'text-muted-quiet hover:text-primary'
-                    }`}
-                  >
-                    {chip === 'ai' ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Sparkles className="w-3 h-3" aria-hidden="true" />
-                        ask ai
-                      </span>
-                    ) : (
-                      chip
+            CHIPS.map(({ chip, label }, i) => (
+              <React.Fragment key={chip}>
+                {i > 0 && (
+                  <span className="hidden md:inline text-muted-ghost text-[13px] px-2.5" aria-hidden="true">
+                    ·
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => (chip === 'ai' ? enterAi() : runChip(chip))}
+                  disabled={autoTyping || running !== null}
+                  /* Bordered tiles on a phone, where they are the main way in;
+                     text with a drawn underline on a desktop, where the prompt is. */
+                  className={`tap group font-sans text-[13px] md:text-[14px] border border-border hover:border-rule-strong md:border-0 px-3 md:px-0 py-1.5 md:py-2 md:-my-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    chip === 'ai' ? 'text-primary hover:text-primary' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1.5 md:bg-[linear-gradient(currentColor,currentColor)] md:bg-no-repeat md:bg-[length:0%_1px] md:bg-[position:0_100%] md:pb-0.5 md:transition-[background-size] md:duration-500 md:ease-out-expo md:group-hover:bg-[length:100%_1px] md:group-focus-visible:bg-[length:100%_1px]">
+                    {chip === 'ai' && (
+                      <Sparkles className="w-3.5 h-3.5 transition-transform duration-500 ease-out-expo group-hover:rotate-12" aria-hidden="true" />
                     )}
-                  </button>
-                </React.Fragment>
-              ))}
+                    {label}
+                  </span>
+                </button>
+              </React.Fragment>
+            ))}
         </motion.div>
       </div>
 

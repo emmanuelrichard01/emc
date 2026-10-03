@@ -87,7 +87,7 @@ function toolGetProject(call: ToolCall): ToolResult {
   const study = project.caseStudy;
   const lines = [
     `id: ${project.id}`,
-    `title: ${project.title} — ${project.subtitle}`,
+    `title: ${project.title}: ${project.subtitle}`,
     `tier: ${project.tier}`,
     `status: ${STATUS_LABEL[projectStatus(project)]}`,
     `category: ${project.category}`,
@@ -242,7 +242,7 @@ const PASSAGES: Passage[] = [
   ...EXPERIENCE.flatMap((e): Passage[] => {
     const at = (where: string, text: string): Passage => ({ kind: 'role', id: e.id, title: e.company, where, text });
     return [
-      at('role', `${e.company} — ${e.role} (${e.type}, ${e.period}). ${e.summary}`),
+      at('role', `${e.company}, ${e.role} (${e.type}, ${e.period}). ${e.summary}`),
       ...e.highlights.map((h) => at('role highlight', h)),
       at('stack', e.stack.join(', ')),
     ];

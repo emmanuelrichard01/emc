@@ -20,11 +20,22 @@ export interface Intent {
 }
 
 export const INTENTS: readonly Intent[] = [
-  { id: 'role', label: 'A role', prompt: 'The team, what the role would own, and where it sits. A link to the posting helps.' },
-  { id: 'project', label: 'A project', prompt: 'What you are building, where it stands today, and the timeline you have in mind.' },
-  { id: 'collab', label: 'Collaboration', prompt: 'What you have in mind, and what each side would bring to it.' },
-  { id: 'other', label: 'Something else', prompt: 'Whatever it is — a question about a case study is welcome too.' },
+  { id: 'role', label: 'A role', prompt: 'Tell me about the team, what the role would own, and where it sits. A link to the job post helps.' },
+  { id: 'project', label: 'A project', prompt: 'What are you building, where does it stand today, and what timeline do you have in mind?' },
+  { id: 'collab', label: 'Collaboration', prompt: 'What do you have in mind, and what would each of us bring to it?' },
+  { id: 'other', label: 'Something else', prompt: 'Anything at all. Questions about a case study are welcome too.' },
 ];
+
+/* The section's two doors ("Hiring for a role?", "Have a project in mind?")
+   live outside the form but choose what it is about. A window event rather
+   than lifted state, so the form keeps owning its own draft and the doors
+   need nothing but an id. */
+export const INTENT_EVENT = 'emc:contact-intent';
+
+/** Picks what the message is about; the form brings itself into view and focuses the message. */
+export function requestIntent(id: Intent['id']): void {
+  window.dispatchEvent(new CustomEvent<Intent['id']>(INTENT_EVENT, { detail: id }));
+}
 
 /** The subject a message arrives under: sortable before it is opened. */
 export function subjectFor(intent: Intent, name: string): string {

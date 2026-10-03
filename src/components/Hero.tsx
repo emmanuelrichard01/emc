@@ -4,6 +4,7 @@ import { motion, useMotionTemplate, useReducedMotion, useScroll, useSpring, useT
 import { useBooted } from '@/components/hero/BootOverlay';
 import TerminalHero from '@/components/hero/TerminalHero';
 import EventHorizon from '@/components/hero/EventHorizon';
+import Starfield from '@/components/hero/Starfield';
 import { HeroBaseline, HeroTopBar } from '@/components/hero/HeroChrome';
 
 /* ==========================================================================
@@ -66,8 +67,11 @@ const DIVE_LENGTH = 0.7;
 /** Scroll the reveal takes — how long the next section is pinned while it grows in. */
 const REVEAL_LENGTH = 0.45;
 
-/* Where the hole sits on screen, and its size — shared by the shader and
-   the CSS mask so the two can never drift apart. */
+/* Where the hole sits, and its size: a close-up rising out of the
+   bottom-right corner, the disk on a cinematic diagonal, so the middle of
+   the screen belongs to the prompt and the hole is felt more than looked
+   at. Shared by the shader, the CSS mask and the starfield, so the three
+   can never drift apart. */
 const HOLE = { x: 0.92, y: 0.98, radius: 0.31, roll: -0.34 };
 
 export default function Hero({ children }: { children?: ReactNode }) {
@@ -180,9 +184,20 @@ export default function Hero({ children }: { children?: ReactNode }) {
         style={still ? undefined : { opacity: heroOpacity, pointerEvents: heroPointer }}
         className="sticky top-0 h-[100svh] min-h-[560px] flex flex-col overflow-hidden px-5 md:px-10 lg:px-14 pt-5 md:pt-7 pb-4 md:pb-5"
       >
-        {/* Surface: a dim slate rather than pure black, so the hole has
-            something to be darker than. */}
+        {/* Surface: the page's own stock, so the first screen is page one of
+            the same book rather than a different room. */}
         <div className="absolute inset-0 z-0 bg-[hsl(var(--hero-surface))]" aria-hidden="true" />
+
+        {/* The distant sky the hole sits in: fades in after the hole, and
+            is pulled into it during the dive. */}
+        <motion.div
+          className="absolute inset-0 z-0 pointer-events-none"
+          initial={still ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 4, delay: 0.8, ease: 'easeOut' }}
+        >
+          <Starfield className="absolute inset-0 w-full h-full" hole={{ x: HOLE.x, y: HOLE.y }} dive={still ? undefined : p} />
+        </motion.div>
 
         {/* The hole. Scroll owns this layer's opacity and mask; the slow
             fade-in on arrival lives on the inner layer, so the two never
@@ -216,18 +231,17 @@ export default function Hero({ children }: { children?: ReactNode }) {
         </motion.div>
 
         {/* A soft dark pool behind the prompt, so text never sits on disk
-            light, and a vignette to hold the frame. Fades with the prompt,
-            so it does not sit over the dive as a grey smudge. */}
+            light or a bright star, and a vignette to hold the frame. Fades
+            with the prompt, so it does not sit over the dive as a smudge. */}
         <motion.div
           className="absolute inset-0 z-[1] pointer-events-none"
           aria-hidden="true"
           style={{
             opacity: still ? 1 : contentOpacity,
             background:
-              'radial-gradient(ellipse 44% 30% at 50% 50%, hsl(var(--hero-surface) / 0.75), transparent 72%), radial-gradient(ellipse 110% 100% at 45% 45%, transparent 55%, hsl(0 0% 0% / 0.55) 100%)',
+              'radial-gradient(ellipse 44% 32% at 50% 50%, hsl(var(--hero-surface) / 0.8), transparent 72%), radial-gradient(ellipse 110% 100% at 45% 45%, transparent 55%, hsl(0 0% 0% / 0.55) 100%)',
           }}
         />
-        <div className="absolute inset-0 z-[1] pointer-events-none select-none noise-overlay" />
 
         <motion.div style={still ? undefined : { opacity: chromeOpacity }} className="relative z-20 shrink-0">
           <HeroTopBar />

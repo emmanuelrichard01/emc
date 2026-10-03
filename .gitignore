@@ -31,3 +31,9 @@ dist-ssr
 # Local reference media — never part of the site
 output.mp4
 *.mp4
+
+# Impeccable: local review captures, question logs and machine settings
+.impeccable/review/
+.impeccable/questions/
+.impeccable/mocks/
+.impeccable/config.local.json

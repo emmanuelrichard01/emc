@@ -1,0 +1,229 @@
+{
+  "title": "Choose the visual world",
+  "question": "The terminal stays the hero either way. This picks the world around it: the room it sits in, the type, and how the rest of the site reads.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Black Box, White Cube",
+      "kicker": "THE ROLL",
+      "lineage": "contemporary gallery: projection room, then the white cube with wall labels",
+      "thesis": "The hero is the dark projection room. The dive opens onto a quiet white gallery where each system gets a wall and a label.",
+      "palette": [
+        "#0B0B0C",
+        "#F6F6F4",
+        "#1A1A1A",
+        "#76767A",
+        "#E8A33D"
+      ],
+      "materials": [
+        "matte wall white",
+        "vinyl wall lettering",
+        "engraved label plates",
+        "one projected light: the event horizon"
+      ],
+      "viewport": "Dark room: name set very large, the terminal centred under it, the black hole low right. Scrolling falls through the horizon and the lights come up on a white wall with About.",
+      "risk": "The dark-to-light change after the dive is a big shift for a site that has always been dark, and it reads as a flash if the transition is not staged slowly.",
+      "raised": [
+        {
+          "from": "challenger-boarding-pass",
+          "raise": "Catalogue filters re-rank rows in place, keeping each row's identity, and a changed row holds its highlight until you have seen it."
+        },
+        {
+          "from": "challenger-provenance",
+          "raise": "Built work is set solid; design-stage work is set in hairline outline, so status reads before any badge."
+        },
+        {
+          "from": "challenger-specimen",
+          "raise": "Hierarchy by scale contrast alone: no boxed panels and no chips, one display size per room."
+        },
+        {
+          "from": "challenger-iridescent",
+          "raise": "Colour stays on hairline edges and live state; every text field stays achromatic."
+        }
+      ],
+      "comp": ".impeccable/mocks/decision/assigned.webp"
+    },
+    {
+      "id": "model-pick",
+      "label": "Night Monograph",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "an architecture studio's printed monograph, set on black stock",
+      "thesis": "The site as a studio monograph: full-bleed plates of each system, short captions, a numbered index, and a colophon.",
+      "palette": [
+        "#0A0A0A",
+        "#F2F2F0",
+        "#8A8A8E",
+        "#1C1C1E",
+        "#E8A33D"
+      ],
+      "materials": [
+        "black uncoated stock",
+        "full-bleed plates",
+        "hairline index rules"
+      ],
+      "viewport": "The terminal over the black hole, the name above it in a large grotesk; below the fold, plate 01 runs edge to edge with a two-line caption.",
+      "risk": "This is where most dark developer portfolios land. It is familiar and effective, and familiarity is the cost.",
+      "comp": ".impeccable/mocks/decision/model-pick.webp"
+    },
+    {
+      "id": "challenger-brodovitch",
+      "label": "Bazaar Spread",
+      "verdict": "competitive",
+      "lineage": "Brodovitch's Harper's Bazaar spreads",
+      "thesis": "Case studies as two-page spreads: the screenshot poses on the left, a hairline display headline answers on the right.",
+      "palette": [
+        "#F7F5F0",
+        "#141414",
+        "#5E5E5E",
+        "#C8102E"
+      ],
+      "materials": [
+        "warm white paper",
+        "photogravure greys",
+        "Didot ink"
+      ],
+      "viewport": "A spread: the terminal on the left page, the name in a large hairline display face on the right, the gutter as a fixed seam.",
+      "case": "It fuses well on studio-level finish, but fashion editorial reads as a different world for engineering hiring, and serif display is a familiar AI look.",
+      "risk": "Can feel like a magazine costume on an engineer's site."
+    },
+    {
+      "id": "challenger-boarding-pass",
+      "label": "Gate Board",
+      "verdict": "competitive",
+      "lineage": "airport departure boards and boarding passes",
+      "thesis": "The catalogue as a departure board ranking systems by status, and each case study as a segmented pass.",
+      "palette": [
+        "#111111",
+        "#F4F4F2",
+        "#9A9A9A",
+        "#FFB000"
+      ],
+      "materials": [
+        "split-flap rows",
+        "tabular figures",
+        "perforated pass segments"
+      ],
+      "viewport": "The terminal above a live board of systems, each row reranking in place.",
+      "case": "Holds product clarity for the catalogue, but travel ephemera does not say 'engineer' to either audience.",
+      "risk": "Becomes a theme park of split-flap effects if not held to the grid."
+    },
+    {
+      "id": "challenger-specimen",
+      "label": "Type Specimen",
+      "verdict": "declined",
+      "lineage": "variable font specimens",
+      "thesis": "The name as a giant specimen glyph morphing under the pointer.",
+      "palette": [
+        "#FAFAF8",
+        "#0A0A0A",
+        "#3B5BFF"
+      ],
+      "materials": [
+        "paper",
+        "ink"
+      ],
+      "viewport": "A single giant letterform with axis sliders.",
+      "case": "Competes with the pinned terminal hero and says nothing about data systems.",
+      "kept": "Hierarchy by scale contrast alone.",
+      "risk": "Type showcase instead of engineering proof."
+    },
+    {
+      "id": "challenger-provenance",
+      "label": "Provenance Ribbon",
+      "verdict": "declined",
+      "lineage": "museum provenance records",
+      "thesis": "The career as one continuous custody ribbon with gaps and claims.",
+      "palette": [
+        "#EFE8DA",
+        "#B3261E",
+        "#8C8C8C"
+      ],
+      "materials": [
+        "archival buff",
+        "red silk",
+        "dealer stamps"
+      ],
+      "viewport": "A red ribbon threading the roles.",
+      "case": "Beautiful for the timeline alone, too narrow for the whole site.",
+      "kept": "Known work set solid, inferred or unbuilt work set in hairline.",
+      "risk": "Archival mood fights a modern studio feel."
+    },
+    {
+      "id": "challenger-iridescent",
+      "label": "Cloud Edge",
+      "verdict": "declined",
+      "lineage": "iridescent cloud diffraction",
+      "thesis": "Pastel spectral fringes on white.",
+      "palette": [
+        "#FFFFFF",
+        "#4A5560",
+        "#9FE3C8",
+        "#C9A3F2"
+      ],
+      "materials": [
+        "cloud white",
+        "spectral hairlines"
+      ],
+      "viewport": "A white field with a spectral edge.",
+      "case": "No link to the audience or the work.",
+      "kept": "Colour confined to hairline edges; text fields stay achromatic.",
+      "risk": "Decorative."
+    },
+    {
+      "id": "challenger-cutting-bench",
+      "label": "Cutting Bench",
+      "verdict": "declined",
+      "lineage": "film editing bench",
+      "thesis": "Sections as frames on a perforated rail.",
+      "palette": [
+        "#000000",
+        "#FF6A13",
+        "#FFFFFF"
+      ],
+      "materials": [
+        "film grain",
+        "tape flags"
+      ],
+      "viewport": "An orange perforated rail across black.",
+      "case": "Orange owning a third of every screen breaks the minimal brief.",
+      "kept": "State shown as a mark, not a hue.",
+      "risk": "Loud."
+    }
+  ],
+  "reroll": {
+    "registers": [
+      "safer",
+      "bolder"
+    ]
+  },
+  "buildPath": {
+    "value": "code"
+  },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A dark developer portfolio done at full craft: near-black, Inter, bento grid, soft gradient glow.",
+    "palette": [
+      "#09090B",
+      "#FAFAFA",
+      "#71717A",
+      "#6366F1"
+    ],
+    "materials": [
+      "bento cards",
+      "soft glow",
+      "glass nav"
+    ],
+    "viewport": "The terminal hero, then a bento grid of projects and stats.",
+    "risk": "Indistinguishable from thousands of portfolios by design."
+  },
+  "steer": true,
+  "seed": {
+    "key": "599f9600",
+    "mode": "experience",
+    "scope": "direction",
+    "assignedIndex": 5,
+    "chosen": "model-pick (Night Monograph)",
+    "note": "From `impeccable concept-seed --scope direction --mode experience` (key 599f9600). User chose the pick card via the structured question on 2026-10-03; telemetry recorded with --kind pick --from 599f9600."
+  }
+}

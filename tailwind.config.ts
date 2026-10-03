@@ -21,10 +21,15 @@ export default {
 		extend: {
 			fontFamily: {
 				sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+				display: ['Archivo', 'Inter', 'system-ui', 'sans-serif'],
 				mono: ['"JetBrains Mono"', 'Menlo', 'Consolas', 'monospace'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
+				rule: {
+					DEFAULT: 'hsl(var(--border))',
+					strong: 'hsl(var(--rule-strong))'
+				},
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
@@ -96,6 +101,7 @@ export default {
 			},
 			transitionTimingFunction: {
 				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
+				'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',
 				'bounce': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
 			},
 			borderRadius: {

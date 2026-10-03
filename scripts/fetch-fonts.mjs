@@ -33,6 +33,12 @@ const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 const FAMILIES = [
+  /* The display face. Archivo is a variable grotesque with a width axis as
+     well as weight: headings are set expanded (font-stretch ~118%), which is
+     what gives them the voice of a studio monograph's title pages rather than
+     of body text set large. Latin only — it never sets running text, so the
+     other scripts would be bytes no heading asks for. */
+  { name: 'Archivo', slug: 'archivo', css: 'Archivo:wdth,wght@62..125,100..900', subsets: ['latin', 'latin-ext'] },
   { name: 'Inter', slug: 'inter', css: 'Inter:wght@300;400;500;700' },
   { name: 'JetBrains Mono', slug: 'jetbrains-mono', css: 'JetBrains+Mono:wght@400;500' },
 ];
@@ -57,6 +63,7 @@ function parseFaces(css) {
       url,
       style: pick('font-style') ?? 'normal',
       weight: pick('font-weight') ?? '400',
+      stretch: pick('font-stretch'),
       unicodeRange: pick('unicode-range'),
     });
   }
@@ -83,7 +90,7 @@ async function run() {
     const res = await fetch(cssUrl, { headers: { 'User-Agent': UA } });
     if (!res.ok) throw new Error(`${family.name}: CSS request failed (HTTP ${res.status})`);
 
-    const faces = parseFaces(await res.text());
+    const faces = parseFaces(await res.text()).filter((f) => !family.subsets || family.subsets.includes(f.subset));
     const distinct = new Set(faces.map((f) => f.url)).size;
     console.log(`${family.name}: ${faces.length} faces, ${distinct} distinct files`);
 
@@ -116,6 +123,7 @@ async function run() {
           `  font-family: '${family.name}';`,
           `  font-style: ${face.style};`,
           `  font-weight: ${face.weight};`,
+          ...(face.stretch ? [`  font-stretch: ${face.stretch};`] : []),
           // swap, so text paints immediately in the fallback and reflows once
           // the real face arrives rather than holding the first paint.
           '  font-display: swap;',
@@ -131,13 +139,13 @@ async function run() {
     '/* GENERATED — do not edit by hand.',
     '   Regenerate with: npm run update-fonts  (scripts/fetch-fonts.mjs)',
     '',
-    '   Inter and JetBrains Mono, vendored from Google Fonts and served from',
+    '   Archivo, Inter and JetBrains Mono, vendored from Google Fonts and served from',
     '   this origin. Self-hosted so no inline script is needed to apply them',
     '   (the CSP forbids one) and no cross-origin round trip blocks the first',
     '   paint. Each face keeps its unicode-range, so browsers fetch only the',
     '   subsets they need.',
     '',
-    '   Both families are licensed under the SIL Open Font License 1.1. */',
+    '   All three families are licensed under the SIL Open Font License 1.1. */',
     '',
   ].join('\n');
 
@@ -146,11 +154,12 @@ async function run() {
   fs.writeFileSync(
     path.join(OUT_FONTS, 'OFL.txt'),
     [
+      'Archivo — Copyright 2020 The Archivo Project Authors (https://github.com/Omnibus-Type/Archivo)',
       'Inter — Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)',
       'JetBrains Mono — Copyright (c) 2020 The JetBrains Mono Project Authors',
       '  (https://github.com/JetBrains/JetBrainsMono)',
       '',
-      'Both families are licensed under the SIL Open Font License, Version 1.1.',
+      'All three families are licensed under the SIL Open Font License, Version 1.1.',
       'Full text: https://scripts.sil.org/OFL',
       '',
       'Regenerate these files with: npm run update-fonts',

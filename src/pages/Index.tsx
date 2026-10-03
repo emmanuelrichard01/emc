@@ -11,7 +11,6 @@ import Experience from '../components/Experience';
 import Contact from '../components/Contact';
 import SEOHead from '../components/SEOHead';
 import StructuredData from '../components/StructuredData';
-import SectionSeam from '../components/transitions/SectionSeam';
 
 // Types
 import { SEOMetadata } from '../types';
@@ -36,20 +35,20 @@ const Index = () => {
   // Console hint for developers who open DevTools
   useEffect(() => {
     console.log(
-      "%c👋 Hey, you found the console.",
-      "color: #8b5cf6; font-size: 14px; font-weight: bold;"
+      "%c👋 Hi, you found the console.",
+      "color: #e8a33d; font-size: 14px; font-weight: bold;"
     );
     console.log(
-      "%cThree ways in: the Konami code, `konami` in the terminal, or just run __emc.unlock() right here.",
+      "%cThere's a hidden layer. Three ways in: the Konami code, typing `konami` in the terminal, or running __emc.unlock() right here.",
       "color: #666; font-size: 11px;"
     );
-    console.log("%c__emc.status() // check your clearance", "color: #444; font-size: 11px;");
+    console.log("%c__emc.status() shows whether you're in.", "color: #666; font-size: 11px;");
   }, []);
 
   const seoMetadata: SEOMetadata = {
     title: "Emmanuel Moghalu | Data Engineer & Backend Systems",
     description:
-      "Data and backend engineer building event-driven pipelines, payment reconciliation systems, and analytics platforms — shipped with the test suites that prove them. Nigerian fintech: multi-PSP integration, CBN and NDPR compliance.",
+      "Data and backend engineer in Abuja, Nigeria. I build data pipelines, payment reconciliation and analytics systems, and ship them with the tests that prove they work. Nigerian fintech experience with Paystack, Flutterwave, CBN and NDPR rules.",
     // Weighted toward the specific, searchable things this work actually
     // involves. Generic cloud keywords ("Azure", "GCP") competed against
     // millions of pages and described none of the projects on this site.
@@ -70,7 +69,7 @@ const Index = () => {
     canonical: `${SITE_ORIGIN}/`,
     openGraph: {
       title: "Emmanuel Moghalu | Data Engineer & Backend Systems",
-      description: "Event-driven pipelines, payment reconciliation, and analytics platforms — shipped with the test suites that prove them.",
+      description: "Data pipelines, payment reconciliation and analytics systems, shipped with the tests that prove they work.",
       image: `${SITE_ORIGIN}/og-image.jpg`,
       url: SITE_ORIGIN,
       type: "website"
@@ -79,18 +78,13 @@ const Index = () => {
       card: "summary_large_image",
       site: "@mrebr",
       creator: "@mrebr",
-      title: "Emmanuel Moghalu — Engineering Logs",
-      description: "Payment reconciliation, streaming telemetry, and analytics platforms — with the architectural decisions and trade-offs behind them."
+      title: "Emmanuel Moghalu, data and backend engineer",
+      description: "Payment reconciliation, live data pipelines and analytics systems, with the decisions and trade-offs behind each one."
     }
   };
 
   return (
     <div className="bg-background min-h-dvh relative selection:bg-primary/20 selection:text-primary overflow-x-clip max-w-full">
-      {/* Global Background Grid for continuous flow */}
-      <div className="fixed inset-0 z-0 pointer-events-none select-none">
-        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] [background-size:24px_24px]" />
-      </div>
-
       <div className="relative z-10 w-full flex flex-col items-stretch">
         <SEOHead metadata={seoMetadata} />
         <StructuredData />
@@ -100,13 +94,10 @@ const Index = () => {
         <Hero>
           <About />
         </Hero>
-        {/* Each module is entered along a trace drawn by the scroll — see
-            SectionSeam. Numbered to match the modules' own eyebrows. */}
-        <SectionSeam index="02" label="engineering" />
+        {/* Sections open on their own drawn rule (SectionHead); the space
+            between them is the transition. */}
         <Projects />
-        <SectionSeam index="03" label="career ledger" />
         <Experience />
-        <SectionSeam index="04" label="connect" />
         <Contact />
       </div>
     </div>

@@ -56,13 +56,13 @@ export function isQueryError(value: QueryResult | QueryError): value is QueryErr
 const projectsTable: TableSpec = {
   name: 'projects',
   columns: [
-    { name: 'id', type: 'string', note: 'slug — the same one open/cat take' },
+    { name: 'id', type: 'string', note: 'short id, the same one open and cat use' },
     { name: 'title', type: 'string', note: 'display name' },
     { name: 'tier', type: 'string', note: 'flagship | production | system | design' },
     { name: 'category', type: 'string', note: 'domain label' },
     { name: 'year', type: 'string', note: 'timeline, as written' },
     { name: 'status', type: 'string', note: 'derived from the links that exist' },
-    { name: 'stack', type: 'string', note: 'comma-joined — search it with LIKE' },
+    { name: 'stack', type: 'string', note: 'tools joined by commas, search it with LIKE' },
     { name: 'decisions', type: 'number', note: 'documented architecture decisions' },
     { name: 'tradeoffs', type: 'number', note: 'decisions with a named rejected option' },
     { name: 'case_study', type: 'boolean', note: 'has a long-form write-up' },
@@ -89,7 +89,7 @@ const experienceTable: TableSpec = {
     { name: 'role', type: 'string', note: 'title held' },
     { name: 'type', type: 'string', note: 'Contract | Full-time | Part-time | Freelance' },
     { name: 'period', type: 'string', note: 'dates, as written' },
-    { name: 'stack', type: 'string', note: 'comma-joined — search it with LIKE' },
+    { name: 'stack', type: 'string', note: 'tools joined by commas, search it with LIKE' },
     { name: 'highlights', type: 'number', note: 'recorded highlights' },
   ],
   rows: EXPERIENCE.map((e) => ({

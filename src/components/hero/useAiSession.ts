@@ -250,7 +250,7 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
           fail(
             data?.error ??
               (response.status === 404
-                ? 'no /api/ask endpoint — the answering function is not running. locally, restart `npm run dev`.'
+                ? 'the assistant is not running (no /api/ask endpoint). if this is a local copy, restart `npm run dev`.'
                 : `endpoint returned ${response.status}${raw.trim() ? `: ${raw.slice(0, 120)}` : ''}`),
             /* 429 excluded on purpose: a rate limit is the endpoint saying
                "not yet", and a retry button beside it invites making it worse. */

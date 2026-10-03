@@ -118,7 +118,7 @@ export function AskProvider({ children }: { children: React.ReactNode }) {
       // Caught here rather than as a 400 — the endpoint keeps its own cap as
       // the real boundary; this spares a round trip to be told it.
       if (trimmed.length > MAX_QUESTION_CHARS) {
-        reject(`question is ${trimmed.length} characters — keep it under ${MAX_QUESTION_CHARS}.`);
+        reject(`That question is ${trimmed.length} characters long. Please keep it under ${MAX_QUESTION_CHARS}.`);
         return;
       }
       void send(trimmed);

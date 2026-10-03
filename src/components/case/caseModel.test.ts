@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { PROJECTS } from '@/data/projects';
-import { firstSentence, leadOf, readingMinutes, relatedProjects, sectionsFor, wordsIn } from './caseModel';
+import { firstSentence, leadOf, readingMinutes, relatedProjects, sectionsFor, toParagraphs, wordsIn } from './caseModel';
 
 const byId = (id: string) => PROJECTS.find((p) => p.id === id)!;
 
@@ -91,5 +91,28 @@ describe('relatedProjects', () => {
       expect(r.project.id).not.toBe('mmr-engine');
       expect(r.shared.every((t) => byId('mmr-engine').stack.includes(t))).toBe(true);
     }
+  });
+});
+
+describe('toParagraphs', () => {
+  it('breaks a long write-up into short paragraphs without changing a word', () => {
+    for (const p of PROJECTS) {
+      for (const text of [p.caseStudy?.problem, p.caseStudy?.approach, p.caseStudy?.outcome].filter(Boolean) as string[]) {
+        const parts = toParagraphs(text);
+        expect(parts.join(' ')).toBe(text.replace(/\s+/g, ' '));
+        for (const part of parts) expect(part.length).toBeLessThanOrEqual(900);
+      }
+    }
+  });
+
+  it('never splits inside a number or a version', () => {
+    expect(toParagraphs('Scores must reach 0.75 to match. It ships as v1.0.0 today.')).toEqual([
+      'Scores must reach 0.75 to match. It ships as v1.0.0 today.',
+    ]);
+  });
+
+  it('splits a long run of sentences into several paragraphs', () => {
+    const text = Array.from({ length: 7 }, (_, i) => `Sentence number ${i + 1} is here.`).join(' ');
+    expect(toParagraphs(text).length).toBeGreaterThan(1);
   });
 });

@@ -53,11 +53,11 @@ export default function ProjectAsk({ project }: { project: Project }) {
   };
 
   return (
-    <div className="border border-border bg-card/40">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 md:px-5 py-3">
-        <span className="flex items-center gap-2 min-w-0">
+    <div className="border border-border focus-within:border-rule-strong transition-colors duration-500">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 md:px-6 py-3.5">
+        <span className="flex items-center gap-2.5 min-w-0">
           <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
-          <span className="font-mono text-[12px] text-foreground truncate">ask about {project.title.toLowerCase()}</span>
+          <span className="text-[14px] text-foreground truncate">Ask about {project.title}</span>
         </span>
         <span className="flex items-center gap-4 shrink-0">
           {/* The same conversation, in a panel that stays open while the
@@ -65,30 +65,30 @@ export default function ProjectAsk({ project }: { project: Project }) {
           <button
             type="button"
             onClick={() => openAsk()}
-            className="hidden md:inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors py-1"
+            className="hidden md:inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors py-1"
           >
-            <PanelRight className="w-3 h-3" aria-hidden="true" />
-            keep open
+            <PanelRight className="w-3.5 h-3.5" aria-hidden="true" />
+            Open in side panel
           </button>
           {ai.turns.length > 0 && (
             <button
               type="button"
               onClick={ai.reset}
-              className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors py-1"
+              className="tap inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors py-1"
             >
-              <RotateCcw className="w-3 h-3" aria-hidden="true" />
-              new
+              <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+              Start over
             </button>
           )}
         </span>
       </div>
 
-      <div className="px-4 md:px-5 py-4">
+      <div className="px-4 md:px-6 py-5">
         {ai.turns.length === 0 ? (
           <>
-            <p className="font-mono text-[12px] text-muted-foreground leading-relaxed mb-4 max-w-[60ch]">
-              answers come from this page and the rest of the site. every figure is checked against the site&rsquo;s
-              data, and the queries behind an answer open under it.
+            <p className="t-body text-[15px] mb-5 max-w-[60ch]">
+              Answers are based on this page and the rest of the site. Numbers are checked against the site&rsquo;s own
+              data, and you can open the sources under each answer.
             </p>
             <SuggestionMarquee items={starters} onPick={ask} disabled={ai.busy} className="-mx-1" />
           </>
@@ -105,7 +105,7 @@ export default function ProjectAsk({ project }: { project: Project }) {
         )}
       </div>
 
-      <form onSubmit={onSubmit} className="flex items-end gap-2 border-t border-border px-4 md:px-5 py-3">
+      <form onSubmit={onSubmit} className="flex items-end gap-3 border-t border-border px-4 md:px-6 py-3.5">
         <label htmlFor={`ask-${project.id}`} className="sr-only">
           Ask a question about {project.title}
         </label>
@@ -117,16 +117,16 @@ export default function ProjectAsk({ project }: { project: Project }) {
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={onKeyDown}
           maxLength={MAX_QUESTION_CHARS + 50}
-          placeholder="ask anything about this project…"
+          placeholder="Ask anything about this project…"
           // 16px on phones: anything smaller makes iOS zoom the page on focus.
-          className="flex-1 resize-none bg-transparent font-mono text-[16px] md:text-[13px] leading-relaxed text-foreground placeholder:text-muted-quiet focus:outline-none py-1.5 max-h-32"
+          className="flex-1 resize-none bg-transparent text-[16px] md:text-[15px] leading-relaxed text-foreground placeholder:text-muted-quiet focus:outline-none focus-visible:outline-none py-2 max-h-32"
         />
         {ai.busy ? (
           <button
             type="button"
             onClick={ai.cancel}
             aria-label="Stop answering"
-            className="shrink-0 flex items-center justify-center w-9 h-9 border border-border text-muted-foreground hover:text-primary hover:border-primary/60 transition-colors"
+            className="shrink-0 flex items-center justify-center w-10 h-10 border border-rule-strong text-foreground hover:border-foreground transition-colors"
           >
             <Square className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
@@ -135,9 +135,9 @@ export default function ProjectAsk({ project }: { project: Project }) {
             type="submit"
             disabled={!question.trim()}
             aria-label="Ask"
-            className="shrink-0 flex items-center justify-center w-9 h-9 bg-primary text-primary-foreground disabled:bg-transparent disabled:text-muted-foreground disabled:border disabled:border-border transition-colors"
+            className="group shrink-0 flex items-center justify-center w-10 h-10 bg-foreground text-background hover:bg-white disabled:bg-transparent disabled:text-muted-quiet disabled:shadow-[inset_0_0_0_1px_hsl(var(--border))] transition-colors"
           >
-            <ArrowUp className="w-4 h-4" aria-hidden="true" />
+            <ArrowUp className="w-4 h-4 transition-transform duration-300 group-enabled:group-hover:-translate-y-0.5" aria-hidden="true" />
           </button>
         )}
       </form>

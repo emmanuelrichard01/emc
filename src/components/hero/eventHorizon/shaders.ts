@@ -129,6 +129,15 @@ float shift(float r, float c) {
   return doppler * sqrt(max(0.0, 1.0 - 1.0 / r) / (1.0 - 1.0 / uCam));
 }
 
+// How hard Doppler beaming weighs brightness. Physically it is g cubed, and
+// at the disk's ~0.6c that leaves the receding side a faint smear: correct,
+// and on a first screen it reads as half the hole fading out. Interstellar's
+// renderers made the same call and dropped beaming from brightness
+// altogether. This keeps it, tempered: the approaching side still runs
+// brighter and (through warmth, untouched) whiter, while the far side keeps
+// its body.
+const float BEAM = 1.35;
+
 // Light the disk sends toward the camera from \`hit\`, for a photon travelling
 // along \`toCam\`: luminance (x) and warmth (y), positive when blueshifted.
 vec2 disk(vec3 hit, vec3 toCam) {
@@ -136,7 +145,7 @@ vec2 disk(vec3 hit, vec3 toCam) {
   // Gas orbits counter-clockwise seen from above.
   vec3 v = normalize(vec3(-hit.z, 0.0, hit.x));
   float g = shift(r, dot(v, toCam));
-  return vec2(gas(hit) * g * g * g, g - 1.0);
+  return vec2(gas(hit) * pow(g, BEAM), g - 1.0);
 }
 
 // Sparse stars on the celestial sphere, sampled along the lensed direction.
@@ -275,7 +284,7 @@ void main() {
     vec3 node = cross(vec3(0.0, 1.0, 0.0), Lh);
     node = length(node) > 1e-3 ? normalize(node) : right;
     float g = shift(4.5, Lh.y);
-    float em = 0.5 * (gas(node * 4.5) + gas(-node * 4.5)) * g * g * g;
+    float em = 0.5 * (gas(node * 4.5) + gas(-node * 4.5)) * pow(g, BEAM);
     float ring = trans * ringw * 0.9 * em;
     light += ring;
     warmth += ring * (g - 1.0);
