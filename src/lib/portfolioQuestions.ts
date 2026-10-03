@@ -38,12 +38,12 @@ export const CURATED_QUESTIONS: CuratedQuestion[] = [
   {
     question: 'What is actually live right now?',
     sql: "SELECT title, category FROM projects WHERE status = 'LIVE'",
-    answer: (n) => `${n} of ${TOTAL} are deployed and publicly reachable.`,
+    answer: (n) => `${n} of ${TOTAL} are online right now, and you can open them.`,
   },
   {
     question: 'Which systems are open source?',
     sql: "SELECT title, year FROM projects WHERE status = 'SOURCE OPEN'",
-    answer: (n) => `${n} have public repositories you can read.`,
+    answer: (n) => `${n} have public code you can read.`,
   },
   {
     question: 'Which systems use Python?',
@@ -54,34 +54,34 @@ export const CURATED_QUESTIONS: CuratedQuestion[] = [
     // The tier filter is the point, not noise: a design study has an empty
     // stack, so it satisfies NOT LIKE '%Docker%' vacuously and would be
     // counted as a system "running without containers" while running nowhere.
-    question: 'What ships without Docker?',
+    question: 'What runs without Docker?',
     sql: "SELECT title, stack FROM projects WHERE tier != 'design' AND stack NOT LIKE '%Docker%'",
-    answer: (n) => `${n} of ${TOTAL} built systems run without containers.`,
+    answer: (n) => `${n} of ${TOTAL} built systems run without containers (Docker).`,
   },
   {
-    question: 'Where does event streaming show up?',
+    question: 'Which systems stream events?',
     sql: "SELECT title, stack FROM projects WHERE stack LIKE '%Redpanda%'",
     answer: (n) => `${n} systems move events through Redpanda.`,
   },
   {
-    question: 'Which systems sit on PostgreSQL?',
+    question: 'Which systems use PostgreSQL?',
     sql: "SELECT title, tier FROM projects WHERE stack LIKE '%PostgreSQL%'",
-    answer: (n) => `${n} of ${TOTAL} use PostgreSQL as the system of record.`,
+    answer: (n) => `${n} of ${TOTAL} keep their main data in PostgreSQL.`,
   },
   {
-    question: 'Which projects document their trade-offs?',
+    question: 'Which projects explain their trade-offs?',
     sql: 'SELECT title, tradeoffs FROM projects WHERE tradeoffs > 0 ORDER BY tradeoffs DESC',
-    answer: (n) => `${n} record decisions with the rejected alternative named, not just the choice made.`,
+    answer: (n) => `${n} explain their decisions, including the option that was turned down.`,
   },
   {
     question: 'Which have full case studies?',
     sql: 'SELECT title, tier FROM projects WHERE case_study = true',
-    answer: (n) => `${n} of ${TOTAL} have long-form write-ups behind them.`,
+    answer: (n) => `${n} of ${TOTAL} have a full write-up you can read.`,
   },
   {
     question: 'What is still only a design?',
     sql: "SELECT title, category FROM projects WHERE tier = 'design'",
-    answer: (n) => `${n} are architecture studies — designed and specified, not built.`,
+    answer: (n) => `${n} are design studies: planned and written up, but not built.`,
   },
   {
     question: 'Which roles were contract work?',

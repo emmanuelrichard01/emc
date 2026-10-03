@@ -23,9 +23,9 @@ import { MAX_QUESTION_CHARS } from './aiHistory.js';
 export type Audience = 'general' | 'hiring' | 'engineer';
 
 export const AUDIENCES: readonly { id: Audience; label: string; hint: string }[] = [
-  { id: 'general', label: 'general', hint: 'balanced answers' },
-  { id: 'hiring', label: 'hiring', hint: 'outcomes and scope, plain language' },
-  { id: 'engineer', label: 'engineer', hint: 'mechanisms, failure modes, rejected options' },
+  { id: 'general', label: 'general', hint: 'a bit of everything' },
+  { id: 'hiring', label: 'hiring', hint: 'what was built and what it achieved, in plain words' },
+  { id: 'engineer', label: 'engineer', hint: 'how it works, what can break, what was turned down' },
 ];
 
 export function isAudience(value: unknown): value is Audience {

@@ -27,4 +27,12 @@ describe('stackUsage', () => {
     const roles = EXPERIENCE.filter((r) => r.stack.includes('Python')).length;
     expect(python.count).toBe(built + roles);
   });
+
+  it('counts SQL wherever a SQL database or tool was used, not only where "SQL" is written', () => {
+    const [sql, postgres] = stackUsage(['SQL', 'PostgreSQL'], PROJECTS, EXPERIENCE);
+    // Everything built on PostgreSQL wrote SQL, so SQL can never count fewer.
+    for (const p of postgres.projects) expect(sql.projects.map((x) => x.id)).toContain(p.id);
+    for (const r of postgres.roles) expect(sql.roles).toContain(r);
+    expect(sql.implied).toContain('PostgreSQL');
+  });
 });

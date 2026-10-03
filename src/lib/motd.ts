@@ -60,7 +60,7 @@ export function buildMotd(): MotdLine[] {
   const designs = PROJECTS.filter((p) => p.tier === 'design').length;
 
   const lines: MotdLine[] = [
-    { text: `${NAME} — ${ROLE}`, tone: 'identity' },
+    { text: `${NAME}, ${ROLE}`, tone: 'identity' },
     { text: `${LOCATION} · ${AVAILABILITY}`, tone: 'meta' },
   ];
 

@@ -1,4 +1,5 @@
 import type { ExperienceItem, Project } from '@/types';
+import { IMPLIED_BY, usesTech } from '@/lib/techFamily';
 
 /* ==========================================================================
    STACK USAGE
@@ -18,13 +19,21 @@ export interface Usage {
   roles: string[];
   /** Projects + roles. */
   count: number;
+  /** For a family like SQL: the tools that also counted (PostgreSQL, dbt…). */
+  implied: readonly string[];
 }
 
 export function stackUsage(names: readonly string[], projects: Project[], roles: ExperienceItem[]): Usage[] {
   const built = projects.filter((p) => p.tier !== 'design');
   return names.map((name) => {
-    const inProjects = built.filter((p) => p.stack.includes(name)).map((p) => ({ id: p.id, title: p.title }));
-    const inRoles = roles.filter((r) => r.stack.includes(name)).map((r) => r.company);
-    return { name, projects: inProjects, roles: inRoles, count: inProjects.length + inRoles.length };
+    const inProjects = built.filter((p) => usesTech(p.stack, name)).map((p) => ({ id: p.id, title: p.title }));
+    const inRoles = roles.filter((r) => usesTech(r.stack, name)).map((r) => r.company);
+    return {
+      name,
+      projects: inProjects,
+      roles: inRoles,
+      count: inProjects.length + inRoles.length,
+      implied: IMPLIED_BY[name] ?? [],
+    };
   });
 }

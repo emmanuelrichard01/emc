@@ -49,7 +49,7 @@ const SEOHead = ({ metadata, children }: SEOHeadProps) => {
 
   const origin = getOrigin();
   const imageUrl = absoluteImage(openGraph?.image, origin);
-  const imageAlt = openGraph?.imageAlt ?? 'Emmanuel Moghalu — Data Engineer & System Architect';
+  const imageAlt = openGraph?.imageAlt ?? 'Emmanuel Moghalu, data and backend engineer';
   const url = openGraph?.url || canonical || origin;
 
   return (
