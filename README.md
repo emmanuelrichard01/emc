@@ -13,7 +13,8 @@ A performance-first, dark-mode portfolio built as a system interface rather than
 | **Framework** | React 19 + Vite 7 |
 | **Language** | TypeScript 5.9 (strict) |
 | **Styling** | Tailwind CSS 3 + CSS custom properties (runtime accent theming — two public, one unlockable) |
-| **Animation** | Framer Motion 12, plus a hand-written WebGL fragment shader for the Hero's event-horizon background |
+| **Animation** | Framer Motion 12, Lenis (smoothed wheel scrolling), plus a hand-written WebGL fragment shader for the Hero's event-horizon background |
+| **Type** | Archivo (expanded, titles), Inter (reading), JetBrains Mono (terminal, code, figures), all self-hosted |
 | **Routing** | React Router 7 |
 | **Icons** | Lucide React, react-icons (Simple Icons) |
 | **SEO** | react-helmet-async + hand-authored JSON-LD structured data |
@@ -42,7 +43,8 @@ src/
 │   ├── Experience.tsx            # Career ledger with highlights + stack tags
 │   ├── Contact.tsx               # Formspree contact form + honeypot spam guard
 │   ├── Footer.tsx                # Systems-status footer — live clock, build metadata
-│   ├── DynamicNavigation.tsx     # Auto-hiding navbar + mobile bottom island
+│   ├── DynamicNavigation.tsx     # The running head (desktop) + mobile bottom island
+│   ├── SmoothScroll.tsx          # Lenis driver: wheel smoothing, pauses under overlays
 │   ├── CommandPalette.tsx        # ⌘K / Ctrl+K keyboard-first navigation
 │   ├── CommandPaletteProvider.tsx # Palette open state + the ⌘K binding
 │   ├── SEOHead.tsx               # Per-page meta tags + OG/Twitter cards
@@ -103,7 +105,7 @@ It listens through `circuitBus.ts` — a plain module, because the shader consum
 ### The query layer
 The site keeps its projects and roles in two tables, and you can read them.
 
-`ask` — **available to everyone** — offers ten prepared questions (*"what's actually live right now?"*, *"what ships without Docker?"*). Each answer shows the question, the SQL that produced it, the result table, and a plain-language summary, so it reads for a non-technical visitor while remaining visibly derived rather than hardcoded.
+`ask` — **available to everyone** — offers ten prepared questions (*"What is actually live right now?"*, *"What runs without Docker?"*). Each answer shows the question, the SQL that produced it, the result table, and a plain-language summary, so it reads for a non-technical visitor while remaining visibly derived rather than hardcoded.
 
 `schema` and `sql` are the raw layer, unlocked by the easter egg. `portfolioQuery.ts` implements a deliberately bounded SQL subset — `SELECT` with `WHERE`/`AND`, `ORDER BY`, `LIMIT`, and `= != <> > < >= <= LIKE NOT LIKE IN NOT IN` — evaluated against the same arrays that render the page, so a result can never disagree with what you see. No `JOIN`, `GROUP BY`, `OR` or subqueries, and it says so rather than mis-evaluating them. A bare `SELECT` typed at the prompt is treated as a query; the `sql` prefix is optional.
 
@@ -128,8 +130,11 @@ Case studies carry an optional `problem` / `approach` / `outcome` narrative with
 ### The assistant — one session, many doors
 `AskProvider` holds a single conversation above the routes. The hero terminal's `ai` mode, the dock (`⌘J` / `Ctrl+J` or `/`), the case-study panel, the palette, the footer's last prompt, a text selection ("ask about this") and a link (`/?ask=…`) all open onto it, so a question asked on the home page is still there on a case study, and a reload keeps it. On a case study the page is sent as context, so "this" means that project. An audience lens (general / hiring / engineer) changes how answers are pitched — never what they may claim: grounding and the per-figure audit are identical under every lens. Voice input uses the browser's own speech recognition where it exists.
 
-### Section transitions
-Modules hand off along a trace: a scroll-linked seam draws between sections with a lit head riding its edge. The nav's active underline doubles as a meter of progress through the current section. All of it is transform-only and static under reduced motion.
+### Design: Night Monograph
+Below the hero the site is set like a studio monograph on black stock: section titles in expanded Archivo, reading text in Inter, mono only for the terminal, code and measured figures, hairline rules instead of boxes, screenshots as plates with captions, and a numbered index of every project. Amber is reserved for what is live or active. The tokens and the four type voices (`t-display`, `t-title`, `t-heading`, `t-lede`…) live in `src/index.css`; see `DESIGN.md`.
+
+### Motion
+One shared set of entrances (`components/ui/Reveal.tsx`): titles rise word by word from behind their baseline, plates are uncovered top to bottom, rules draw across the measure. Lenis smooths wheel scrolling (touch keeps native physics). A jump to a distant section is a page turn (`lib/sectionVeil.ts`): the stock covers the screen with the section's name, the page moves underneath, and the cover lifts; nearby sections smooth-scroll. The nav's active underline doubles as a meter of progress through the current section. Everything is static under reduced motion.
 
 ## Security
 

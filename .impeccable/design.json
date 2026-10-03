@@ -1,0 +1,760 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T12:55:31.922Z",
+  "title": "Design System: builtbyem",
+  "extensions": {
+    "colorMeta": {
+      "stock": {
+        "role": "neutral",
+        "displayName": "Black Stock",
+        "canonical": "hsl(0 0% 4%)",
+        "hex": "#0A0A0A",
+        "oklch": "oklch(14.6% 0.000 0)",
+        "purpose": "The page, and the hero surface.",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0)",
+          "oklch(26.4% 0.000 0)",
+          "oklch(37.9% 0.000 0)",
+          "oklch(49.3% 0.000 0)",
+          "oklch(60.7% 0.000 0)",
+          "oklch(72.1% 0.000 0)",
+          "oklch(83.6% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "hsl(60 6% 94%)",
+        "hex": "#F1F1EF",
+        "oklch": "oklch(95.6% 0.002 106.4)",
+        "purpose": "Titles, ledes, links, active text, the ink button fill.",
+        "tonalRamp": [
+          "oklch(15.0% 0.001 0)",
+          "oklch(26.4% 0.002 106.4)",
+          "oklch(37.9% 0.002 106.4)",
+          "oklch(49.3% 0.002 106.4)",
+          "oklch(60.7% 0.002 106.4)",
+          "oklch(72.1% 0.002 106.4)",
+          "oklch(83.6% 0.002 0)",
+          "oklch(95.0% 0.001 0)"
+        ]
+      },
+      "plate": {
+        "role": "neutral",
+        "displayName": "Plate Backing",
+        "canonical": "hsl(240 2% 6.5%)",
+        "hex": "#101011",
+        "oklch": "oklch(17.4% 0.001 0)",
+        "purpose": "Behind a plate image; never a card.",
+        "tonalRamp": [
+          "oklch(15.0% 0.001 0)",
+          "oklch(26.4% 0.001 0)",
+          "oklch(37.9% 0.001 0)",
+          "oklch(49.3% 0.001 0)",
+          "oklch(60.7% 0.001 0)",
+          "oklch(72.1% 0.001 0)",
+          "oklch(83.6% 0.001 0)",
+          "oklch(95.0% 0.000 0)"
+        ]
+      },
+      "popover": {
+        "role": "neutral",
+        "displayName": "Popover",
+        "canonical": "hsl(240 2% 7%)",
+        "hex": "#111112",
+        "oklch": "oklch(18.0% 0.001 0)",
+        "purpose": "Floating layers only.",
+        "tonalRamp": [
+          "oklch(15.0% 0.001 0)",
+          "oklch(26.4% 0.001 0)",
+          "oklch(37.9% 0.001 0)",
+          "oklch(49.3% 0.001 0)",
+          "oklch(60.7% 0.001 0)",
+          "oklch(72.1% 0.001 0)",
+          "oklch(83.6% 0.001 0)",
+          "oklch(95.0% 0.001 0)"
+        ]
+      },
+      "muted-surface": {
+        "role": "neutral",
+        "displayName": "Muted Surface",
+        "canonical": "hsl(240 2% 8%)",
+        "hex": "#141415",
+        "oklch": "oklch(19.2% 0.002 0)",
+        "purpose": "Code wells, rare filled insets.",
+        "tonalRamp": [
+          "oklch(15.0% 0.001 0)",
+          "oklch(26.4% 0.002 0)",
+          "oklch(37.9% 0.002 0)",
+          "oklch(49.3% 0.002 0)",
+          "oklch(60.7% 0.002 0)",
+          "oklch(72.1% 0.002 0)",
+          "oklch(83.6% 0.001 0)",
+          "oklch(95.0% 0.001 0)"
+        ]
+      },
+      "caption-grey": {
+        "role": "neutral",
+        "displayName": "Caption Grey",
+        "canonical": "hsl(240 2% 55%)",
+        "hex": "#8A8A8F",
+        "oklch": "oklch(63.5% 0.007 286.2)",
+        "purpose": "Running text, captions, inactive nav. 5.8:1 on stock.",
+        "tonalRamp": [
+          "oklch(15.0% 0.004 286.2)",
+          "oklch(26.4% 0.007 286.2)",
+          "oklch(37.9% 0.007 286.2)",
+          "oklch(49.3% 0.007 286.2)",
+          "oklch(60.7% 0.007 286.2)",
+          "oklch(72.1% 0.007 286.2)",
+          "oklch(83.6% 0.004 286.2)",
+          "oklch(95.0% 0.002 286.2)"
+        ]
+      },
+      "quiet-grey": {
+        "role": "neutral",
+        "displayName": "Quiet Grey",
+        "canonical": "hsl(240 1% 50%)",
+        "hex": "#7E7E81",
+        "oklch": "oklch(59.5% 0.004 286.3)",
+        "purpose": "Folios, placeholders, hints. The contrast floor for content: 4.9:1 on stock.",
+        "tonalRamp": [
+          "oklch(15.0% 0.002 286.3)",
+          "oklch(26.4% 0.004 286.3)",
+          "oklch(37.9% 0.004 286.3)",
+          "oklch(49.3% 0.004 286.3)",
+          "oklch(60.7% 0.004 286.3)",
+          "oklch(72.1% 0.004 286.3)",
+          "oklch(83.6% 0.003 286.3)",
+          "oklch(95.0% 0.001 0)"
+        ]
+      },
+      "ghost-grey": {
+        "role": "neutral",
+        "displayName": "Ghost Grey",
+        "canonical": "hsl(240 1% 40%)",
+        "hex": "#656567",
+        "oklch": "oklch(50.7% 0.003 286.3)",
+        "purpose": "Not-yet-typed, aria-hidden text and separators only.",
+        "tonalRamp": [
+          "oklch(15.0% 0.002 0)",
+          "oklch(26.4% 0.003 286.3)",
+          "oklch(37.9% 0.003 286.3)",
+          "oklch(49.3% 0.003 286.3)",
+          "oklch(60.7% 0.003 286.3)",
+          "oklch(72.1% 0.003 286.3)",
+          "oklch(83.6% 0.002 286.3)",
+          "oklch(95.0% 0.001 0)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "hsl(240 3% 13%)",
+        "hex": "#202022",
+        "oklch": "oklch(24.5% 0.004 286.1)",
+        "purpose": "The page rule.",
+        "tonalRamp": [
+          "oklch(15.0% 0.002 286.1)",
+          "oklch(26.4% 0.004 286.1)",
+          "oklch(37.9% 0.004 286.1)",
+          "oklch(49.3% 0.004 286.1)",
+          "oklch(60.7% 0.004 286.1)",
+          "oklch(72.1% 0.004 286.1)",
+          "oklch(83.6% 0.002 286.1)",
+          "oklch(95.0% 0.001 0)"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "hsl(240 2% 24%)",
+        "hex": "#3C3C3E",
+        "oklch": "oklch(35.7% 0.004 286.2)",
+        "purpose": "A rule that must be seen: field underline, hovered row, line button outline.",
+        "tonalRamp": [
+          "oklch(15.0% 0.003 286.2)",
+          "oklch(26.4% 0.004 286.2)",
+          "oklch(37.9% 0.004 286.2)",
+          "oklch(49.3% 0.004 286.2)",
+          "oklch(60.7% 0.004 286.2)",
+          "oklch(72.1% 0.004 286.2)",
+          "oklch(83.6% 0.003 286.2)",
+          "oklch(95.0% 0.001 0)"
+        ]
+      },
+      "amber": {
+        "role": "primary",
+        "displayName": "Telemetry Amber",
+        "canonical": "hsl(38 92% 50%)",
+        "hex": "#F59F0A",
+        "oklch": "oklch(77.0% 0.165 70.6)",
+        "purpose": "Live and active state only.",
+        "tonalRamp": [
+          "oklch(15.0% 0.099 70.6)",
+          "oklch(26.4% 0.165 70.6)",
+          "oklch(37.9% 0.165 70.6)",
+          "oklch(49.3% 0.165 70.6)",
+          "oklch(60.7% 0.165 70.6)",
+          "oklch(72.1% 0.165 70.6)",
+          "oklch(83.6% 0.108 70.6)",
+          "oklch(95.0% 0.058 70.6)"
+        ]
+      },
+      "amber-hover": {
+        "role": "primary",
+        "displayName": "Amber Hover",
+        "canonical": "hsl(38 92% 55%)",
+        "hex": "#F6A823",
+        "oklch": "oklch(78.9% 0.159 74.1)",
+        "purpose": "Hover step of the accent.",
+        "tonalRamp": [
+          "oklch(15.0% 0.096 74.1)",
+          "oklch(26.4% 0.159 74.1)",
+          "oklch(37.9% 0.159 74.1)",
+          "oklch(49.3% 0.159 74.1)",
+          "oklch(60.7% 0.159 74.1)",
+          "oklch(72.1% 0.159 74.1)",
+          "oklch(83.6% 0.105 74.1)",
+          "oklch(95.0% 0.056 74.1)"
+        ]
+      },
+      "amber-ink": {
+        "role": "primary",
+        "displayName": "Amber Ink",
+        "canonical": "hsl(0 0% 2%)",
+        "hex": "#050505",
+        "oklch": "oklch(11.6% 0.000 0)",
+        "purpose": "Text on an amber fill.",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0)",
+          "oklch(26.4% 0.000 0)",
+          "oklch(37.9% 0.000 0)",
+          "oklch(49.3% 0.000 0)",
+          "oklch(60.7% 0.000 0)",
+          "oklch(72.1% 0.000 0)",
+          "oklch(83.6% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
+        ]
+      },
+      "status-ok": {
+        "role": "status",
+        "displayName": "Status OK",
+        "canonical": "hsl(158 52% 56%)",
+        "hex": "#54C99E",
+        "oklch": "oklch(75.8% 0.123 166.0)",
+        "purpose": "Online, deployed, available.",
+        "tonalRamp": [
+          "oklch(15.0% 0.074 166.0)",
+          "oklch(26.4% 0.123 166.0)",
+          "oklch(37.9% 0.123 166.0)",
+          "oklch(49.3% 0.123 166.0)",
+          "oklch(60.7% 0.123 166.0)",
+          "oklch(72.1% 0.123 166.0)",
+          "oklch(83.6% 0.081 166.0)",
+          "oklch(95.0% 0.043 166.0)"
+        ]
+      },
+      "status-warn": {
+        "role": "status",
+        "displayName": "Status Warn",
+        "canonical": "hsl(46 92% 66%)",
+        "hex": "#F8D359",
+        "oklch": "oklch(87.6% 0.144 92.1)",
+        "purpose": "Caution, yellower than the accent.",
+        "tonalRamp": [
+          "oklch(15.0% 0.087 92.1)",
+          "oklch(26.4% 0.144 92.1)",
+          "oklch(37.9% 0.144 92.1)",
+          "oklch(49.3% 0.144 92.1)",
+          "oklch(60.7% 0.144 92.1)",
+          "oklch(72.1% 0.144 92.1)",
+          "oklch(83.6% 0.095 92.1)",
+          "oklch(95.0% 0.051 92.1)"
+        ]
+      },
+      "status-error": {
+        "role": "status",
+        "displayName": "Status Error",
+        "canonical": "hsl(0 86% 71%)",
+        "hex": "#F57575",
+        "oklch": "oklch(71.3% 0.157 21.8)",
+        "purpose": "Errors.",
+        "tonalRamp": [
+          "oklch(15.0% 0.094 21.8)",
+          "oklch(26.4% 0.157 21.8)",
+          "oklch(37.9% 0.157 21.8)",
+          "oklch(49.3% 0.157 21.8)",
+          "oklch(60.7% 0.157 21.8)",
+          "oklch(72.1% 0.157 21.8)",
+          "oklch(83.6% 0.103 21.8)",
+          "oklch(95.0% 0.055 21.8)"
+        ]
+      },
+      "paper-white": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "hsl(0 0% 100%)",
+        "hex": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0)",
+        "purpose": "Ink button hover fill only.",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0)",
+          "oklch(26.4% 0.000 0)",
+          "oklch(37.9% 0.000 0)",
+          "oklch(49.3% 0.000 0)",
+          "oklch(60.7% 0.000 0)",
+          "oklch(72.1% 0.000 0)",
+          "oklch(83.6% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
+        ]
+      }
+    },
+    "accentSwaps": [
+      {
+        "name": "amber",
+        "value": "hsl(38 92% 50%)",
+        "purpose": "Default accent."
+      },
+      {
+        "name": "purple",
+        "value": "hsl(271 91% 74%)",
+        "purpose": "Public alternative from the command palette (Theme). Replaces only the accent and ring."
+      },
+      {
+        "name": "phosphor",
+        "value": "hsl(145 72% 50%)",
+        "purpose": "Hidden; unlocked by the Konami code or the terminal. Replaces the accent, ring and status-ok."
+      }
+    ],
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "voice": "title",
+        "purpose": "Name on a title page, case-study title, Contact title, 404 title, page-turn label.",
+        "cssClass": "t-display"
+      },
+      "headline": {
+        "displayName": "Section Title",
+        "voice": "title",
+        "purpose": "A section h2.",
+        "cssClass": "t-title"
+      },
+      "title": {
+        "displayName": "Plate Title",
+        "voice": "title",
+        "purpose": "A plate or block title.",
+        "cssClass": "t-heading"
+      },
+      "subhead": {
+        "displayName": "Subhead",
+        "voice": "title",
+        "purpose": "Index row titles, small heads, running-head name.",
+        "cssClass": "t-subhead"
+      },
+      "identity": {
+        "displayName": "Identity",
+        "voice": "title",
+        "purpose": "Hero h1 only; 1.75rem on phones, 2.25rem from md."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "voice": "reading",
+        "purpose": "Opening paragraph of a section, in ink.",
+        "cssClass": "t-lede"
+      },
+      "body": {
+        "displayName": "Body",
+        "voice": "reading",
+        "purpose": "Running text in Caption Grey, 30 to 60ch.",
+        "cssClass": "t-body"
+      },
+      "label": {
+        "displayName": "Button Label",
+        "voice": "reading",
+        "purpose": "Ink and line button text."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "voice": "caption",
+        "purpose": "Under a plate, table heads, tier sub-heads.",
+        "cssClass": "t-caption"
+      },
+      "folio": {
+        "displayName": "Folio",
+        "voice": "caption",
+        "purpose": "Index numbers and counts, Quiet Grey, never tracked.",
+        "cssClass": "t-folio"
+      },
+      "figure": {
+        "displayName": "Figure",
+        "voice": "figure",
+        "purpose": "A measured value. Mono because it is a measurement.",
+        "cssClass": "t-figure"
+      },
+      "terminal": {
+        "displayName": "Terminal",
+        "voice": "figure",
+        "purpose": "The hero prompt line: 16px on phones, 17px from md."
+      },
+      "kbd": {
+        "displayName": "Key",
+        "voice": "caption",
+        "purpose": "Keyboard hint keys.",
+        "cssClass": "kbd"
+      }
+    },
+    "shadows": [
+      {
+        "name": "float-sm",
+        "value": "0 0 0 1px hsl(240 3% 13%), 0 18px 48px -16px rgba(0,0,0,0.8)",
+        "purpose": "Mobile bottom bar, toasts, small popovers."
+      },
+      {
+        "name": "float-lg",
+        "value": "0 0 0 1px hsl(240 3% 13%), 0 32px 80px -24px rgba(0,0,0,0.85)",
+        "purpose": "Command palette and dialogs."
+      },
+      {
+        "name": "dock-edge",
+        "value": "-1px 0 0 hsl(240 3% 13%), -32px 0 80px -32px rgba(0,0,0,0.85)",
+        "purpose": "Assistant dock side sheet."
+      },
+      {
+        "name": "running-head-base",
+        "value": "inset 0 -1px 0 hsl(240 3% 13%)",
+        "purpose": "Scrolled running head bottom hairline."
+      },
+      {
+        "name": "hero-prompt-focus",
+        "value": "0 32px 90px -34px hsl(38 92% 50% / 0.45)",
+        "purpose": "Hero instrument only, while focused. Not part of the page vocabulary."
+      },
+      {
+        "name": "hero-ai-bloom",
+        "value": "inset 0 0 0 1px hsl(38 92% 50% / 0.16), 0 0 26px -6px hsl(38 92% 50% / 0.28)",
+        "purpose": "Hero instrument in Ask mode (bloom 0.5 while busy). Status, not decoration."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The house ease: every entrance, link draw, nudge, view transition."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.65, 0, 0.35, 1)",
+        "purpose": "Symmetric moves: the scroll cue light."
+      },
+      {
+        "name": "ease-wipe",
+        "value": "cubic-bezier(0.77, 0, 0.18, 1)",
+        "purpose": "Plate clip-path wipe and the section veil."
+      },
+      {
+        "name": "reveal-text",
+        "value": "y 105% to 0, 0.95s, stagger 45ms",
+        "purpose": "Titles rise word by word from behind the baseline."
+      },
+      {
+        "name": "reveal",
+        "value": "opacity 0 to 1, y 14px to 0, 0.9s",
+        "purpose": "Blocks settle in."
+      },
+      {
+        "name": "rule-draw",
+        "value": "scaleX 0 to 1 from left, 1.4s",
+        "purpose": "Section hairlines draw across the measure."
+      },
+      {
+        "name": "plate-wipe",
+        "value": "clip-path inset(0 0 100% 0) to inset(0), 1.25s; image scale 1.08 to 1, 1.6s",
+        "purpose": "Plates uncovered top to bottom."
+      },
+      {
+        "name": "viewport-trigger",
+        "value": "once, margin 0 0 -12% 0",
+        "purpose": "All entrances fire once, a little above the bottom edge."
+      },
+      {
+        "name": "link-draw",
+        "value": "background-size 0.5s",
+        "purpose": "Drawn underlines."
+      },
+      {
+        "name": "nudge",
+        "value": "translateX(3px), 0.35s",
+        "purpose": "Arrow in a link or button on hover or focus; outbound arrows 2px up-right."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.98), 0.2s",
+        "purpose": "Button press."
+      },
+      {
+        "name": "section-veil",
+        "value": "cover 380ms, hold 160ms, lift 520ms; threshold 1.4 viewports",
+        "purpose": "Page turn for distant section jumps."
+      },
+      {
+        "name": "hero-dive",
+        "value": "pin 0.7 viewports; zoom 1 + 12t^3; next section pin 0.45 viewports, scale 0.9 to 1",
+        "purpose": "The one authored moment, scroll-driven and reversible."
+      },
+      {
+        "name": "lenis",
+        "value": "lerp 0.11, wheel only, nested scroll allowed",
+        "purpose": "Smooth wheel scrolling; not mounted under reduced motion."
+      },
+      {
+        "name": "view-transition",
+        "value": "group 380ms ease-out; root cross-fade 200ms",
+        "purpose": "Plate and title travel into the case study."
+      },
+      {
+        "name": "status-live",
+        "value": "2s ease-in-out pulse",
+        "purpose": "Live squares only."
+      },
+      {
+        "name": "terminal-caret",
+        "value": "1.06s steps(1)",
+        "purpose": "Stepped block caret."
+      },
+      {
+        "name": "starfield",
+        "value": "<=30fps; twinkle per star; scintillation every ~2s; meteor every 15 to 35s",
+        "purpose": "Hero sky; one still frame under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "xs",
+        "value": "360px",
+        "note": "Smallest phones; mobile bar Home target hides below."
+      },
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "note": "Running head appears; page-x 2.5rem."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "note": "Plate spreads go side by side; hero proof line appears."
+      },
+      {
+        "name": "xl",
+        "value": "1280px",
+        "note": "page-x 3.5rem."
+      }
+    ],
+    "accessibility": {
+      "contrast": {
+        "ink": "17.5:1",
+        "captionGrey": "5.8:1",
+        "quietGrey": "4.9:1 on stock, 4.7:1 on plate (floor for content)",
+        "ghostGrey": "3.4:1, aria-hidden only",
+        "amber": "9.3:1"
+      },
+      "focus": "2px solid accent outline, 2px offset, on every :focus-visible",
+      "coarseTargets": "min-height 44px on primary controls under (pointer: coarse) via .tap",
+      "reducedMotion": "Every entrance renders its final state with no transition; no Lenis, veil or dive; WebGL hole and starfield render one still frame; marquees become wrapped lists.",
+      "forcedColors": "Borders become CanvasText; outlined design-stage titles fall back to solid CanvasText.",
+      "selection": "Inverts: ink background, stock text."
+    }
+  },
+  "components": [
+    {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "The one ink action per decision: square, ink on stock, arrow nudges on hover.",
+      "html": "<button class=\"ds-btn-ink\">Describe your project <span class=\"ds-nudge\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></button>",
+      "css": ".ds-btn-ink { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 20px; background: hsl(60 6% 94%); color: hsl(0 0% 4%); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 0.9375rem; font-weight: 500; letter-spacing: -0.006em; border: 0; border-radius: 0; cursor: pointer; transition: background-color 0.25s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-ink:hover { background: hsl(0 0% 100%); } .ds-btn-ink:active { transform: scale(0.98); } .ds-btn-ink:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; } .ds-btn-ink:disabled { opacity: 0.45; cursor: not-allowed; transform: none; } .ds-nudge { display: inline-flex; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-ink:hover .ds-nudge, .ds-btn-ink:focus-visible .ds-nudge { transform: translateX(3px); }"
+    },
+    {
+      "name": "Line Button",
+      "kind": "button",
+      "refersTo": "button-line",
+      "description": "Secondary action: transparent, square, a Strong Rule outline that turns ink on hover.",
+      "html": "<button class=\"ds-btn-line\">See the work <span class=\"ds-nudge\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></button>",
+      "css": ".ds-btn-line { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 20px; background: transparent; color: hsl(60 6% 94%); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 0.9375rem; font-weight: 500; letter-spacing: -0.006em; border: 0; border-radius: 0; cursor: pointer; box-shadow: inset 0 0 0 1px hsl(240 2% 24%); transition: box-shadow 0.25s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-line:hover { box-shadow: inset 0 0 0 1px hsl(60 6% 94%); } .ds-btn-line:active { transform: scale(0.98); } .ds-btn-line:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; } .ds-nudge { display: inline-flex; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-line:hover .ds-nudge, .ds-btn-line:focus-visible .ds-nudge { transform: translateX(3px); }"
+    },
+    {
+      "name": "Ink Link",
+      "kind": "custom",
+      "refersTo": "link-ink",
+      "description": "An underline that is drawn, not toggled: a Strong Rule hairline at rest, drawn in ink from the left on hover.",
+      "html": "<p class=\"ds-p\">Or write to <a class=\"ds-link-ink\" href=\"#\">hello@builtbyem.dev</a> directly.</p>",
+      "css": ".ds-p { font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 1rem; line-height: 1.7; color: hsl(240 2% 55%); margin: 0; } .ds-link-ink { color: hsl(60 6% 94%); text-decoration: none; padding-bottom: 2px; background-image: linear-gradient(hsl(60 6% 94%), hsl(60 6% 94%)), linear-gradient(hsl(240 2% 24%), hsl(240 2% 24%)); background-size: 0% 1px, 100% 1px; background-position: 0 100%, 0 100%; background-repeat: no-repeat; transition: background-size 0.5s cubic-bezier(0.16, 1, 0.3, 1); } .ds-link-ink:hover, .ds-link-ink:focus-visible { background-size: 100% 1px, 100% 1px; } .ds-link-ink:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Keyboard Key",
+      "kind": "chip",
+      "refersTo": "kbd",
+      "description": "A key drawn as a 22px hairline square; shown beside shortcuts on pointer devices.",
+      "html": "<span class=\"ds-hint\"><kbd class=\"ds-kbd\">⌘</kbd><kbd class=\"ds-kbd\">K</kbd> search</span>",
+      "css": ".ds-hint { display: inline-flex; align-items: center; gap: 4px; font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 12px; color: hsl(240 1% 50%); } .ds-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 1.375rem; height: 1.375rem; padding: 0 0.3rem; font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 11px; line-height: 1; color: hsl(240 2% 55%); box-shadow: inset 0 0 0 1px hsl(240 3% 13%); border-radius: 0; }"
+    },
+    {
+      "name": "Underline Field",
+      "kind": "input",
+      "refersTo": "field-underline",
+      "description": "No box: a caption label over a single bottom rule that turns ink on focus; amber caret.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Your email</span><input class=\"ds-input\" type=\"email\" placeholder=\"you@company.com\"></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 4px; max-width: 360px; } .ds-field-label { font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 0.8125rem; line-height: 1.55; color: hsl(240 2% 55%); } .ds-input { width: 100%; background: transparent; color: hsl(60 6% 94%); caret-color: hsl(38 92% 50%); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 1.0625rem; padding: 12px 0; border: 0; border-bottom: 1px solid hsl(240 2% 24%); border-radius: 0; outline: none; transition: border-color 0.3s ease; } .ds-input::placeholder { color: hsl(240 1% 50%); } .ds-input:hover { border-bottom-color: hsl(240 2% 55%); } .ds-input:focus { border-bottom-color: hsl(60 6% 94%); } .ds-input[aria-invalid=\"true\"] { border-bottom-color: hsl(0 86% 71%); }"
+    },
+    {
+      "name": "Running Head",
+      "kind": "nav",
+      "refersTo": "running-head",
+      "description": "The monograph running head: mark and name left, sections right; the current section carries a hairline that fills with amber as it is read.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-mark\" href=\"#\">Emmanuel Moghalu</a><div class=\"ds-nav-links\"><a class=\"ds-nav-link\" href=\"#\">About</a><a class=\"ds-nav-link is-active\" aria-current=\"location\" href=\"#\">Work<span class=\"ds-nav-meter\"><span></span></span></a><a class=\"ds-nav-link\" href=\"#\">Experience</a><a class=\"ds-nav-link\" href=\"#\">Contact</a><span class=\"ds-nav-div\"></span><button class=\"ds-nav-ask\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\"/></svg> Ask</button></div></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; justify-content: space-between; gap: 32px; height: 64px; padding: 0 2.5rem; background: hsl(0 0% 4% / 0.9); box-shadow: inset 0 -1px 0 hsl(240 3% 13%); font-family: 'Inter', system-ui, -apple-system, sans-serif; } .ds-nav-mark { font-family: 'Archivo', 'Inter', system-ui, sans-serif; font-stretch: 112%; font-size: 14px; font-weight: 560; letter-spacing: -0.01em; color: hsl(60 6% 94%); text-decoration: none; } .ds-nav-links { display: flex; align-items: center; gap: 28px; } .ds-nav-link { position: relative; padding: 8px 0; font-size: 13px; color: hsl(240 2% 55%); text-decoration: none; transition: color 0.3s ease; } .ds-nav-link:hover, .ds-nav-link.is-active { color: hsl(60 6% 94%); } .ds-nav-link:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; } .ds-nav-meter { position: absolute; left: 0; right: 0; bottom: 2px; height: 1px; background: hsl(240 2% 24%); overflow: hidden; } .ds-nav-meter span { position: absolute; inset: 0; background: hsl(38 92% 50%); transform-origin: left; transform: scaleX(0.4); } .ds-nav-div { width: 1px; height: 16px; background: hsl(240 3% 13%); } .ds-nav-ask { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; background: transparent; border: 0; color: hsl(60 6% 94%); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 13px; cursor: pointer; transition: color 0.2s ease; } .ds-nav-ask svg { color: hsl(38 92% 50%); } .ds-nav-ask:hover { color: hsl(38 92% 50%); } .ds-nav-ask:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Index Row",
+      "kind": "custom",
+      "refersTo": "index-row",
+      "description": "A numbered row of the full index on a hairline: folio, title and summary, status as a word, year; design-stage rows set in outline under a dashed rule.",
+      "html": "<div class=\"ds-index\"><a class=\"ds-row\" href=\"#\"><span class=\"ds-folio\">01</span><span class=\"ds-row-main\"><span class=\"ds-row-title\">MMR Engine</span><span class=\"ds-row-sum\">Frozen v1.0.0 reference implementation, 276 tests</span></span><span class=\"ds-row-status\"><span class=\"ds-live\"></span>Live</span><span class=\"ds-row-year\">2026</span><span class=\"ds-nudge\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></a><a class=\"ds-row is-design\" href=\"#\"><span class=\"ds-folio\">12</span><span class=\"ds-row-main\"><span class=\"ds-row-title\">A design study</span><span class=\"ds-row-sum\">Designed, not built</span></span><span class=\"ds-row-status ds-muted\">Designed, not built</span><span class=\"ds-row-year\">2025</span><span class=\"ds-nudge\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></a></div>",
+      "css": ".ds-index { font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 760px; } .ds-row { display: grid; grid-template-columns: 2.5rem minmax(0,1fr) 9rem 3.5rem 1rem; align-items: baseline; gap: 24px; padding: 24px 0; border-top: 1px solid hsl(240 3% 13%); color: hsl(60 6% 94%); text-decoration: none; } .ds-row.is-design { border-top: 1px dashed hsl(240 2% 24%); } .ds-row:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; } .ds-folio { font-size: 0.8125rem; line-height: 1; font-variant-numeric: tabular-nums; color: hsl(240 1% 50%); } .ds-row-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; } .ds-row-title { font-family: 'Archivo', 'Inter', system-ui, sans-serif; font-stretch: 112%; font-size: 1.0625rem; font-weight: 560; line-height: 1.25; letter-spacing: -0.01em; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); } .ds-row:hover .ds-row-title { transform: translateX(4px); } .ds-row.is-design .ds-row-title { color: transparent; -webkit-text-stroke: 1px hsl(240 2% 55%); } .ds-row-sum { font-size: 0.8125rem; line-height: 1.55; color: hsl(240 2% 55%); transition: color 0.3s ease; } .ds-row:hover .ds-row-sum { color: hsl(60 6% 94%); } .ds-row-status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; } .ds-muted { color: hsl(240 2% 55%); } .ds-live { width: 6px; height: 6px; background: hsl(158 52% 56%); } .ds-row-year { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; color: hsl(240 2% 55%); } .ds-nudge { display: inline-flex; color: hsl(240 1% 50%); transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease; } .ds-row:hover .ds-nudge { transform: translateX(3px); color: hsl(60 6% 94%); }"
+    },
+    {
+      "name": "Plate With Caption",
+      "kind": "card",
+      "refersTo": "plate",
+      "description": "A square plate on its backing with the caption column beside it: folio, title, facts on hairline rows, the way in.",
+      "html": "<article class=\"ds-spread\"><a class=\"ds-plate\" href=\"#\"><span class=\"ds-plate-img\"></span></a><div class=\"ds-cap\"><span class=\"ds-folio\">01</span><h3 class=\"ds-cap-title\">MMR Engine</h3><p class=\"ds-cap-body\">A frozen v1.0.0 reference implementation: 276 tests, mypy strict, 16 reversible migrations.</p><dl class=\"ds-facts\"><div><dt>Status</dt><dd>Public code</dd></div><div><dt>Year</dt><dd>2026</dd></div></dl><a class=\"ds-read\" href=\"#\"><span class=\"ds-draw\">Read the case study</span> <span class=\"ds-nudge\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></a></div></article>",
+      "css": ".ds-spread { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap: 24px; font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 880px; } .ds-plate { position: relative; display: block; overflow: hidden; aspect-ratio: 16 / 10; background: hsl(240 2% 6.5%); border-radius: 0; } .ds-plate-img { position: absolute; inset: 0; background: linear-gradient(160deg, hsl(240 2% 14%), hsl(240 2% 7%)); transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1); } .ds-plate:hover .ds-plate-img { transform: scale(1.02); } .ds-plate:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; } .ds-folio { font-size: 0.8125rem; line-height: 1; font-variant-numeric: tabular-nums; color: hsl(60 6% 94%); } .ds-cap-title { margin: 24px 0 0; font-family: 'Archivo', 'Inter', system-ui, sans-serif; font-stretch: 118%; font-size: 1.625rem; font-weight: 560; line-height: 1.1; letter-spacing: -0.02em; color: hsl(60 6% 94%); } .ds-cap-body { margin: 12px 0 0; font-size: 1rem; line-height: 1.7; color: hsl(240 2% 55%); } .ds-facts { margin: 24px 0 0; border-top: 1px solid hsl(240 3% 13%); font-size: 13px; } .ds-facts div { display: grid; grid-template-columns: 6rem 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid hsl(240 3% 13%); } .ds-facts dt { color: hsl(240 2% 55%); } .ds-facts dd { margin: 0; color: hsl(60 6% 94%); display: inline-flex; align-items: center; gap: 8px; } .ds-live { width: 6px; height: 6px; background: hsl(158 52% 56%); } .ds-read { display: inline-flex; align-items: center; gap: 8px; margin-top: 24px; font-size: 15px; color: hsl(60 6% 94%); text-decoration: none; } .ds-read:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; } .ds-draw { padding-bottom: 2px; background-image: linear-gradient(currentColor, currentColor); background-size: 0% 1px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size 0.5s cubic-bezier(0.16, 1, 0.3, 1); } .ds-read:hover .ds-draw, .ds-read:focus-visible .ds-draw { background-size: 100% 1px; } .ds-nudge { display: inline-flex; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); } .ds-read:hover .ds-nudge { transform: translateX(3px); }"
+    },
+    {
+      "name": "Terminal Instrument",
+      "kind": "custom",
+      "refersTo": "terminal-instrument",
+      "description": "The hero prompt: caption strip with the Shell/Ask switch, the mono line with an amber prompt and stepped caret, a key strip.",
+      "html": "<form class=\"ds-term\"><div class=\"ds-term-strip\"><span class=\"ds-term-sess\"><span class=\"ds-term-dot\"></span><code>em@builtbyem</code><span class=\"ds-ghost\">·</span>ready</span><span class=\"ds-term-modes\"><button type=\"button\" class=\"ds-mode is-on\" aria-pressed=\"true\">Shell</button><button type=\"button\" class=\"ds-mode\" aria-pressed=\"false\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\"/></svg> Ask</button></span></div><label class=\"ds-term-line\"><span class=\"ds-term-ps\">~ $</span><input class=\"ds-term-input\" placeholder=\"ask a question, or type help\" aria-label=\"Command\"></label><div class=\"ds-term-keys\"><span>Ask in your own words, or type <code>help</code>.</span><span><kbd class=\"ds-k\">Tab</kbd> complete <kbd class=\"ds-k\">↵</kbd> run</span></div></form>",
+      "css": ".ds-term { max-width: 42rem; background: hsl(0 0% 4% / 0.85); border: 1px solid hsl(240 3% 13%); border-radius: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; transition: border-color 0.5s ease, box-shadow 0.5s ease; } .ds-term:hover { border-color: hsl(240 2% 24%); } .ds-term:focus-within { border-color: hsl(240 2% 24%); box-shadow: 0 32px 90px -34px hsl(38 92% 50% / 0.45); } .ds-term-strip { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 8px 0 20px; border-bottom: 1px solid hsl(240 3% 13%); font-size: 12px; color: hsl(240 2% 55%); } .ds-term-sess { display: inline-flex; align-items: center; gap: 8px; } .ds-term-sess code { font-family: 'JetBrains Mono', Menlo, Consolas, monospace; font-size: 11.5px; color: hsl(60 6% 94%); } .ds-ghost { color: hsl(240 1% 40%); } .ds-term-dot { width: 6px; height: 6px; background: hsl(158 52% 56%); } .ds-term-modes { display: flex; } .ds-mode { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; background: transparent; border: 0; color: hsl(240 2% 55%); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 12px; cursor: pointer; } .ds-mode:hover, .ds-mode.is-on { color: hsl(60 6% 94%); } .ds-mode.is-on::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 1px; background: hsl(38 92% 50%); } .ds-mode:focus-visible { outline: 2px solid hsl(38 92% 50%); outline-offset: 2px; } .ds-term-line { display: flex; align-items: center; gap: 10px; padding: 18px 20px; } .ds-term-ps { font-family: 'JetBrains Mono', Menlo, Consolas, monospace; font-size: 17px; color: hsl(38 92% 50%); } .ds-term-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: hsl(60 6% 94%); caret-color: hsl(38 92% 50%); font-family: 'JetBrains Mono', Menlo, Consolas, monospace; font-size: 17px; } .ds-term-input::placeholder { color: hsl(240 1% 40%); } .ds-term-keys { display: flex; justify-content: space-between; gap: 16px; padding: 8px 20px; min-height: 40px; align-items: center; border-top: 1px solid hsl(240 3% 13%); font-size: 12px; color: hsl(240 1% 50%); } .ds-term-keys code { font-family: 'JetBrains Mono', Menlo, Consolas, monospace; color: hsl(60 6% 94%); } .ds-k { display: inline-flex; align-items: center; justify-content: center; min-width: 1.375rem; height: 1.375rem; padding: 0 0.3rem; font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 11px; color: hsl(240 2% 55%); box-shadow: inset 0 0 0 1px hsl(240 3% 13%); }"
+    },
+    {
+      "name": "Section Head",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "A section opening: a hairline across the measure with a quiet aside, the title in the headline voice, the lede in ink from column 8. No eyebrow, no number.",
+      "html": "<header class=\"ds-head\"><div class=\"ds-head-rule\"><span class=\"ds-rule\"></span><span class=\"ds-aside\">13 projects</span></div><div class=\"ds-head-grid\"><h2 class=\"ds-h2\">Selected systems</h2><p class=\"ds-lede\">Four flagships set as plates, then the full index. Every figure is derived from the work itself.</p></div></header>",
+      "css": ".ds-head { font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 1100px; } .ds-head-rule { display: flex; align-items: center; gap: 24px; margin-bottom: 56px; } .ds-rule { flex: 1; height: 1px; background: hsl(240 3% 13%); } .ds-aside { font-size: 0.8125rem; color: hsl(240 2% 55%); } .ds-head-grid { display: grid; grid-template-columns: repeat(12, minmax(0,1fr)); column-gap: 24px; row-gap: 32px; } .ds-h2 { grid-column: span 5; margin: 0; font-family: 'Archivo', 'Inter', system-ui, sans-serif; font-stretch: 118%; font-size: clamp(2.125rem, 1.25rem + 2.9vw, 4rem); font-weight: 540; line-height: 1; letter-spacing: -0.03em; color: hsl(60 6% 94%); text-wrap: balance; } .ds-lede { grid-column: 8 / span 5; margin: 0; padding-top: 8px; font-size: clamp(1.125rem, 1rem + 0.45vw, 1.375rem); line-height: 1.5; letter-spacing: -0.011em; color: hsl(240 2% 55%); text-wrap: pretty; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night Monograph",
+    "overview": "The site is set like a studio's printed monograph of shipped systems, on black stock. Titles are cut in an expanded grotesque, reading text sits in a quiet sans, screenshots are mounted as square plates with captions under them, sections open on a drawn hairline, and the full body of work is a numbered index. Hierarchy comes from scale contrast, rules and space, never from boxes, chips or glow. The interface recedes so the work leads.\n\nColour is ink on stock. One accent, a telemetry amber, is reserved for what is live or active right now: a command running, the assistant answering, the section being read, the field being typed in. Because it appears rarely, it means something when it does. The first screen is page one of the same book: the same black, a faint starfield, a ray-traced black hole rising out of the bottom-right corner, and a working terminal prompt at the centre. Its one authored motion, the dive into the hole, is the only cinematic moment; every other entrance is a quiet print gesture (a rule drawn, a title rising from its baseline, a plate uncovered).\n\nThe world explicitly rejects the developer-portfolio default: glowing bento cards, tracked mono eyebrows, dashboard chrome, decorative terminals and boxed panels. Everything that looks interactive is interactive, and every figure on the page is derived from the site's own data.",
+    "keyCharacteristics": [
+      "Dark only. Black stock, near-white ink, three greys, one hairline.",
+      "Amber marks live and active state only.",
+      "Archivo expanded (118% width) for titles; Inter for reading; JetBrains Mono only for the terminal, code and measured figures.",
+      "Square everything (0px radius). Rules instead of boxes.",
+      "Plates with captions, a numbered index, a colophon footer.",
+      "Built work set solid; design-stage work set in hairline outline under a dashed rule.",
+      "Motion is a print gesture: drawn rules, rising lines, uncovered plates. Fully static under reduced motion."
+    ],
+    "rules": [
+      {
+        "name": "The Live Amber Rule",
+        "body": "Amber appears only where something is live or active at this moment, or on the assistant's door. It never decorates a heading, a border at rest, a tag or a background fill.",
+        "section": "colors"
+      },
+      {
+        "name": "The Quiet Floor Rule",
+        "body": "Quiet Grey is the dimmest colour any content may take. To make text quieter, use Quiet Grey or a smaller size, never an alpha on a grey.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status Is Meaning Rule",
+        "body": "Status colours are independent of the accent and survive an accent swap. A live project gets a green square and the word \"Live\"; it does not get amber.",
+        "section": "colors"
+      },
+      {
+        "name": "The Four Voices Rule",
+        "body": "Title, reading, caption, figure. Nothing else. No eyebrows, no kickers, no tracked uppercase labels above headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is A Measurement Rule",
+        "body": "JetBrains Mono is used only for the terminal, code, and measured figures. It is never a costume for headings, labels or navigation.",
+        "section": "typography"
+      },
+      {
+        "name": "The Outline Means Unbuilt Rule",
+        "body": "Design-stage work sets its title in a 1px Caption Grey outline (transparent fill) at title sizes from md up, so a blueprint never reads as something running. Below about 15px, or on phones, it falls back to solid Caption Grey; under forced colours it falls back to solid CanvasText. Built work is always set solid.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Left Edge Rule",
+        "body": "Every section and the running head use the shared page margin and page-max container. Nothing invents its own side padding.",
+        "section": "layout"
+      },
+      {
+        "name": "The Floating-Only Shadow Rule",
+        "body": "If it scrolls with the page, it has no shadow. Shadows mark layers that sit above the page, and every one is paired with a hairline ring.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Square Plate Rule",
+        "body": "Radius is 0 everywhere. A rounded corner reads as a different product.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Rule Not Box Rule",
+        "body": "Separate with a hairline across the measure, not with a bordered panel. A container gets a full outline only when it is a control (a line button, a kbd key, the terminal instrument, a phone action tile).",
+        "section": "shapes"
+      },
+      {
+        "name": "The One Movement Rule",
+        "body": "A button moves only by its arrow's nudge and a 0.98 press. Nothing lifts, glows or bounces on hover.",
+        "section": "components"
+      },
+      {
+        "name": "The One Authored Moment Rule",
+        "body": "The hero dive is the site's only cinematic motion. Every other motion is a print gesture: a rule drawn, a line risen, a plate uncovered, a page turned.",
+        "section": "components"
+      },
+      {
+        "name": "The Still Means Still Rule",
+        "body": "Under reduced motion every entrance renders its final state with no transition at all (not a faster one), Lenis is not mounted, the veil and the dive do not run, the hero is an ordinary first screen, the black hole and the starfield each render one still frame, and marquees become wrapped static lists.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** use amber only for live or active state: focus, caret, a running command, the assistant thinking, the current-section meter, the page-turn hairline, the assistant's door.",
+      "**Do** separate content with 1px hairlines (`{colors.hairline}`) drawn across the measure, and use Strong Rule (`{colors.rule-strong}`) where a rule must be seen.",
+      "**Do** set every title in Archivo at 118% width in one of the title-voice steps, every paragraph in Inter, and reserve JetBrains Mono for the terminal, code and measured figures.",
+      "**Do** mount images as square plates with a caption, and set built work solid and design-stage work in hairline outline under a dashed rule.",
+      "**Do** use the shared page margin, the 1440px page-max and the section rhythm (`{spacing.section-top}` above, `{spacing.section-bottom}` below) for every section.",
+      "**Do** enter with RevealText, Reveal, Plate and Rule only, once, on the house ease.",
+      "**Do** keep the hero's composition: terminal always at the centre, the black hole rising from the bottom-right corner, the three-line identity block above the instrument (user-confirmed).",
+      "**Do** keep text at or above Quiet Grey (4.9:1 on stock, 4.7:1 on a plate); Ghost Grey is only for aria-hidden, not-yet-typed text and separators.",
+      "**Do** give every primary control on a coarse pointer a minimum 44px height, and every control a visible 2px amber focus outline with a 2px offset.",
+      "**Do** honour reduced motion with no transition at all, including the WebGL hero.",
+      "**Do** write in plain English and sentence case, and derive or attribute every figure on the page."
+    ],
+    "donts": [
+      "**Don't** use amber for decoration: no amber headings, resting borders, tags, fills or gradients.",
+      "**Don't** build boxed panels, cards, chips, bento grids or glowing surfaces; the monograph separates with rules and space.",
+      "**Don't** round a corner. Radius is 0px.",
+      "**Don't** set tracked uppercase eyebrows or kickers above headings, and don't use monospace as a costume for labels or navigation.",
+      "**Don't** put a shadow on anything that scrolls with the page; shadows belong to floating layers only.",
+      "**Don't** make text quieter with an alpha on a grey; use Quiet Grey or a smaller size.",
+      "**Don't** add a second cinematic motion; the hero dive is the only one.",
+      "**Don't** move the black hole back to the centre or push the terminal off the centre of the first screen (user-confirmed).",
+      "**Don't** use em-dashes in visible copy (user-confirmed).",
+      "**Don't** fabricate testimonials, client logos, press or figures."
+    ]
+  }
+}

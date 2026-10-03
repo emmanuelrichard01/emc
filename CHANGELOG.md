@@ -5,6 +5,82 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — Night Monograph: the site redesigned around the terminal
+
+### Changed
+- **One visual world below the hero.** The site is now set like a studio
+  monograph on black stock: expanded Archivo titles, Inter for reading,
+  mono kept for the terminal, code and measured figures only, hairline rules
+  instead of boxed cards, screenshots as plates with captions, and amber kept
+  for what is live or active. Gone: "MODULE 0X //" eyebrows, uppercase mono
+  labels, chip tags, glows and the dot-grid backdrop.
+- **The hero, refined around its terminal.** The terminal stays the centre.
+  The first screen now sits on the page's own stock (no slate, no grain),
+  under a faint distant sky: stars at three depths that twinkle slowly, one
+  that scintillates now and then, a rare meteor, a few pixels of parallax
+  with the pointer, and an inward pull toward the hole during the dive
+  (`hero/Starfield.tsx`, a 2D canvas at 30fps, paused off screen, still
+  under reduced motion). The black hole stays low right. The name is set in
+  the display face, and the top edge is the same running head the page
+  carries later.
+- **The terminal is an instrument.** A caption strip names the session and
+  its state and carries a Shell / Ask switch, so the assistant is no longer
+  found only by typing a question; a key strip under the line says what
+  Enter, Tab and the arrows will do. A proof line at the bottom edge reads
+  the counts from the data: systems built, live now, written up in full.
+- **The black hole's far side keeps its body.** Doppler beaming now weighs
+  brightness as g^1.35 rather than g³. The approaching side still runs
+  brighter and whiter, but the receding side no longer fades to nothing.
+- **Jumps land on the section, not above it.** Going to a section brings its
+  opening rule and title to rest just under the running head, instead of
+  leaving the section's top padding as an empty band (including About,
+  which is pinned on the hero's reveal stage while it grows in).
+- **Navigation** is a running head (mark and name left, sections, Ask and ⌘K
+  right) that arrives after the hero; the accent toggle moved into the
+  command palette. On phones the island shows text labels and fits 320px.
+- **Every section rebuilt:** About (figures, a scroll-lit bio, portrait plate,
+  "How I work" as four plain practices with a real example each, the stack as
+  a typographic index with logo cards), Work (flagships as alternating plates,
+  then a full index that re-ranks in place when filtered; filters, pictures,
+  the tools table and compare sit behind one Filter control), Career (an
+  unboxed timeline, folded "time in each technology", earlier roles folded),
+  Contact (two equal doors, hiring and projects, and a hairline form), the
+  footer (a colophon with the visit's vitals behind a disclosure), case
+  studies (a book layout with a contents rail), the palette, the assistant
+  dock, the 404 and the error page.
+- **Plain English everywhere.** All visible copy, the project write-ups and
+  the roles were rewritten for a reader without an engineering background,
+  with no em-dashes. Facts and figures are unchanged; the assistant is told to
+  answer the same way.
+
+### Added
+- **Smooth scrolling** with Lenis (wheel only; touch stays native; paused
+  under overlays; off under reduced motion).
+- **A page turn for long jumps**: going to a distant section covers the
+  screen with its name, moves the page and uncovers it, instead of a long
+  blurred scroll (`lib/sectionVeil.ts`).
+- **Shared entrances** (`components/ui/Reveal.tsx`): titles rise word by
+  word, plates are uncovered, rules draw.
+- **"How I work" follows the reader**: a spine fills as you scroll, the
+  principle in the middle of the screen is lit, and the fact each example
+  rests on is underlined as it arrives.
+- **SQL is counted where it was used**, not only where it was written: any
+  project or role built on PostgreSQL, MySQL, DuckDB, dbt, TimescaleDB,
+  pgvector or Supabase counts (`lib/techFamily.ts`), in the About count,
+  the Work filter and Career's links alike. 4 became 14.
+
+### Updated from the repositories
+- **MMR Engine** rebuilt from its v1.0.0 repository: 276 tests (23 against
+  real PostgreSQL), 16 reversible migrations, keyed name tokens instead of
+  trigram matching on masked names, M-Pesa and dbt removed, the console's
+  screenshots, three debugging stories from its changelog, and its honest
+  scope (synthetic data only, never run on live merchant traffic). The 99.5%
+  match rate and sub-10s latency were targets, never measurements, and are
+  gone.
+- **ULTRA-NEWS V3** checked against commit `00af5ac`: every figure held; a
+  verbatim excerpt of how confirmation is counted per publisher and a new
+  debugging story were added.
+
 ## [Unreleased] — The answering endpoint type-checks on Vercel
 
 ### Fixed
