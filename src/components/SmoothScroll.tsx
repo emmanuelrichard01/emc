@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import Lenis from 'lenis';
 
-import { registerLenis } from '@/lib/smoothScroll';
+import { isPageHeld, PAGE_HOLD_ATTR, registerLenis } from '@/lib/smoothScroll';
 
 /* ==========================================================================
    SMOOTH SCROLL — the driver
@@ -48,12 +48,13 @@ export default function SmoothScroll() {
     frame = requestAnimationFrame(raf);
 
     const syncLock = () => {
-      const locked = document.body.style.overflow === 'hidden';
+      const locked = document.body.style.overflow === 'hidden' || isPageHeld();
       if (locked) lenis.stop();
       else lenis.start();
     };
     const observer = new MutationObserver(syncLock);
     observer.observe(document.body, { attributes: true, attributeFilter: ['style'] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: [PAGE_HOLD_ATTR] });
     syncLock();
 
     return () => {

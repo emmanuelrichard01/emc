@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import SEOHead from "@/components/SEOHead";
 
@@ -10,10 +10,11 @@ import SEOHead from "@/components/SEOHead";
    and what went unanswered because no model was available. It is the list
    of what to write next. Stored without identities (api/insights.ts).
 
-   Not linked from anywhere, not indexed. Opened with a private link of the
-   form /insights#token=…: the token is read once from the fragment (which
-   never reaches a server log), kept for this tab only, and removed from the
-   address bar so it is not left on screen or in a screenshot.
+   Not linked from anywhere, not indexed. The token (INSIGHTS_TOKEN) is
+   pasted into the field here, or arrives in a private link of the form
+   /insights#token=…, read once from the fragment (which never reaches a
+   server log) and removed from the address bar. Either way it is kept for
+   this tab only.
 
    Expected response from GET /api/insights (Authorization: Bearer <token>):
      { items: [{ question, reason, count, lastAt }], since? }
@@ -35,7 +36,7 @@ type Load =
   | { state: "no-token" }
   | { state: "denied" }
   | { state: "error"; message: string }
-  | { state: "ready"; rows: Row[]; since: string | null };
+  | { state: "ready"; rows: Row[]; since: string | null; stored: boolean };
 
 const REASONS: Record<string, string> = {
   "not-covered": "Not covered by the site",
@@ -82,8 +83,23 @@ const dateFormat = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "
 
 export default function Insights() {
   // Read once, on first render: from the link fragment, or from this tab.
-  const [token] = useState(readToken);
+  const [token, setToken] = useState(readToken);
   const [load, setLoad] = useState<Load>(() => (token ? { state: "loading" } : { state: "no-token" }));
+  const [draft, setDraft] = useState("");
+
+  const submitToken = (event: FormEvent) => {
+    event.preventDefault();
+    const next = draft.trim();
+    if (!next) return;
+    try {
+      sessionStorage.setItem(TOKEN_KEY, next);
+    } catch {
+      /* storage blocked: it still works until the tab reloads */
+    }
+    setDraft("");
+    setLoad({ state: "loading" });
+    setToken(next);
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -92,6 +108,11 @@ export default function Insights() {
       try {
         const response = await fetch("/api/insights", { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
         if (response.status === 401 || response.status === 403) {
+          try {
+            sessionStorage.removeItem(TOKEN_KEY);
+          } catch {
+            /* nothing stored */
+          }
           setLoad({ state: "denied" });
           return;
         }
@@ -99,9 +120,9 @@ export default function Insights() {
           setLoad({ state: "error", message: `The insights endpoint answered ${response.status}.` });
           return;
         }
-        const data = (await response.json()) as { items?: unknown[]; since?: unknown };
+        const data = (await response.json()) as { items?: unknown[]; since?: unknown; stored?: unknown };
         const rows = (data.items ?? []).map(toRow).filter((r): r is Row => r !== null);
-        setLoad({ state: "ready", rows, since: typeof data.since === "string" ? data.since : null });
+        setLoad({ state: "ready", rows, since: typeof data.since === "string" ? data.since : null, stored: data.stored !== false });
       } catch {
         if (!controller.signal.aborted) setLoad({ state: "error", message: "Could not reach the insights endpoint." });
       }
@@ -132,7 +153,32 @@ export default function Insights() {
           <div className="mt-14" aria-live="polite">
             {load.state === "loading" && <p className="t-caption">Loading</p>}
             {(load.state === "no-token" || load.state === "denied") && (
-              <p className="text-[15px] text-foreground">This page needs the private link.</p>
+              <form onSubmit={submitToken} className="max-w-md">
+                <label htmlFor="insights-token" className="t-caption">
+                  Your insights token
+                </label>
+                <div className="mt-2 flex items-end gap-4">
+                  <input
+                    id="insights-token"
+                    type="password"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    aria-invalid={load.state === "denied"}
+                    aria-describedby="insights-token-note"
+                    className="flex-1 min-w-0 bg-transparent py-3 text-[16px] text-foreground border-b border-rule-strong hover:border-muted-foreground focus:border-foreground focus:outline-none caret-primary transition-colors"
+                  />
+                  <button type="submit" className="btn-ink tap" disabled={!draft.trim()}>
+                    Show
+                  </button>
+                </div>
+                <p id="insights-token-note" className={`mt-3 text-[13px] ${load.state === "denied" ? "text-status-error" : "text-muted-foreground"}`}>
+                  {load.state === "denied"
+                    ? "That token was not accepted. Check it matches INSIGHTS_TOKEN in Vercel, and that the site was redeployed after it was set."
+                    : "The value of INSIGHTS_TOKEN from Vercel. It is kept for this tab only."}
+                </p>
+              </form>
             )}
             {load.state === "error" && <p className="text-[15px] text-foreground">{load.message}</p>}
             {load.state === "ready" && (
@@ -141,7 +187,12 @@ export default function Insights() {
                   {rows.length} {rows.length === 1 ? "question" : "questions"}, asked {total} {total === 1 ? "time" : "times"}
                   {load.since ? `, since ${load.since}` : ""}
                 </p>
-                {rows.length === 0 ? (
+                {!load.stored ? (
+                  <p className="mt-8 max-w-[54ch] text-[15px] text-foreground">
+                    Nothing is being recorded yet: the site has no store to keep questions in. Add an Upstash Redis database in Vercel
+                    (Storage, then Upstash for Redis, connected to this project), redeploy, and questions will start to appear here.
+                  </p>
+                ) : rows.length === 0 ? (
                   <p className="mt-8 text-[15px] text-foreground">Nothing yet. Questions the site could not answer will appear here.</p>
                 ) : (
                   <div className="mt-6 overflow-x-auto" data-lenis-prevent>

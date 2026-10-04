@@ -10,6 +10,7 @@ import AiTranscript, { AI_SUGGESTIONS } from './AiTranscript';
 import SuggestionMarquee from '@/components/ai/SuggestionMarquee';
 import { looksLikeQuestion } from '@/lib/fuzzy';
 import { emitCircuitSignal } from '@/lib/circuitBus';
+import { holdPage } from '@/lib/smoothScroll';
 
 /* ==========================================================================
    TERMINAL HERO
@@ -665,6 +666,20 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
     emitCircuitSignal({ type: 'recede', value: compact ? 1 : 0 });
   }, [compact]);
 
+  /* Full mode holds the page still, so scrolling through the history never
+     drags the page (and the dive) with it. Only while the hero is the
+     screen: the drop-down console shares this session, and a command run
+     from lower down must not freeze the page there. Coming back to the
+     prompt holds it again; any jump lets go (scrollToY), and so do Clear
+     and leaving the page. */
+  useEffect(() => {
+    if (compact && window.scrollY < window.innerHeight * 0.25) holdPage(true);
+  }, [compact, inputFocused]);
+  useEffect(() => {
+    if (!compact) holdPage(false);
+  }, [compact]);
+  useEffect(() => () => holdPage(false), []);
+
   return (
     /* The rail is a flex sibling, not absolutely positioned.
        It used to be pinned with `absolute bottom-0` inside this container —
@@ -688,7 +703,10 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className={`min-h-0 overflow-y-auto font-mono text-[12px] md:text-[13px] leading-[2] pr-2 -mr-2 ${
+          // In full mode the history owns the wheel: Lenis leaves it alone and
+          // reaching either end does not hand the scroll on to the page.
+          {...(compact ? { 'data-lenis-prevent': '' } : {})}
+          className={`min-h-0 overflow-y-auto overscroll-contain font-mono text-[12px] md:text-[13px] leading-[2] pr-2 -mr-2 ${
             compact
               ? 'flex-1 mb-5 pt-6 [mask-image:linear-gradient(to_bottom,transparent,#000_2.75rem)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,#000_2.75rem)]'
               : 'shrink-0 mb-7 md:mb-9'

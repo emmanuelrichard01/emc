@@ -65,8 +65,8 @@ export async function recordGap(question: string, reason: GapReason): Promise<vo
 }
 
 /** The most-asked gaps first. Expired entries are pruned from the index as they are found. */
-export async function listGaps(limit = 100): Promise<{ items: GapItem[]; total: number }> {
-  if (!storeConfigured()) return { items: [], total: 0 };
+export async function listGaps(limit = 100): Promise<{ items: GapItem[]; total: number; stored?: false }> {
+  if (!storeConfigured()) return { items: [], total: 0, stored: false };
   const index = await pipeline([
     ['ZREVRANGE', INDEX_KEY, 0, limit - 1],
     ['ZCARD', INDEX_KEY],
