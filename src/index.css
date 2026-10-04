@@ -191,6 +191,13 @@
     overflow: clip;
   }
 
+  /* The hero terminal in full mode holds the page still (lib/smoothScroll.ts
+     holdPage). Here too, for touch and reduced motion, where Lenis is not
+     the one scrolling. */
+  html[data-page-hold] {
+    overflow: clip;
+  }
+
   /* No word left alone on a line. */
   h1, h2, h3, h4 {
     text-wrap: balance;

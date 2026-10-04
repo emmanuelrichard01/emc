@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Github, Linkedin, Sparkles } from 'lucide-react';
 
@@ -21,6 +22,7 @@ const PROOF = [
   { value: PROJECTS.filter((p) => p.caseStudy).length, label: 'written up in full' },
 ];
 import { scrollToSection } from '@/lib/scrollToSection';
+import { isPageHeld, onPageHold } from '@/lib/smoothScroll';
 
 /* ==========================================================================
    HERO CHROME
@@ -119,6 +121,8 @@ export function HeroTopBar() {
 export function HeroBaseline() {
   const { time } = useLagosClock();
   const prefersReduced = useReducedMotion();
+  // While the terminal holds the page, the proof line steps aside for the way back.
+  const held = useSyncExternalStore(onPageHold, isPageHeld, () => false);
 
   return (
     <motion.div
@@ -143,16 +147,22 @@ export function HeroBaseline() {
         ))}
       </div>
 
-      <p className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 whitespace-nowrap text-muted-foreground">
-        {PROOF.map((item, i) => (
-          <span key={item.label} className="flex items-center gap-2.5">
-            {i > 0 && <span aria-hidden="true" className="text-muted-ghost">·</span>}
-            <span>
-              <span className="t-figure text-foreground">{item.value}</span> {item.label}
+      {held ? (
+        <p className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-2 whitespace-nowrap text-muted-quiet">
+          The page stays put while you use the terminal. Clear it with <kbd className="kbd">⌃L</kbd> to scroll on.
+        </p>
+      ) : (
+        <p className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 whitespace-nowrap text-muted-foreground">
+          {PROOF.map((item, i) => (
+            <span key={item.label} className="flex items-center gap-2.5">
+              {i > 0 && <span aria-hidden="true" className="text-muted-ghost">·</span>}
+              <span>
+                <span className="t-figure text-foreground">{item.value}</span> {item.label}
+              </span>
             </span>
-          </span>
-        ))}
-      </p>
+          ))}
+        </p>
+      )}
 
       <div className="flex items-center gap-3 tabular-nums">
         {/* The way on is down: a hairline with a light travelling it, so the

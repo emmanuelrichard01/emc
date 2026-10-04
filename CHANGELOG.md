@@ -5,6 +5,23 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The terminal holds the page; the 404 joins the error page
+
+### Changed
+- **Full terminal mode holds the page still.** Once the hero terminal is in
+  use, the wheel scrolls its history and never the page, and the proof line
+  gives way to "The page stays put while you use the terminal. Clear it
+  with ⌃L to scroll on." Any jump (nav, Scroll, the palette) lets go first
+  (`holdPage` in `lib/smoothScroll.ts`), and a command run from the
+  drop-down console lower on the page never locks it.
+- **The 404 is built like the error page**: one screen, no scroll at
+  desktop or phone sizes, the black hole large and faint in the top-right
+  corner (the hero's is bottom right, the error page's bottom left), and
+  the flagship projects as one line of links.
+- **The insights page takes the token in a field** instead of needing a
+  `#token=` link, says when a token is refused, and says when no store is
+  connected rather than showing an empty list.
+
 ## [Unreleased] — The assistant, the shell, contact and About, upgraded
 
 ### Added
