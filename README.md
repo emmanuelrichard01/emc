@@ -107,7 +107,7 @@ The site keeps its projects and roles in two tables, and you can read them.
 
 `ask` — **available to everyone** — offers ten prepared questions (*"What is actually live right now?"*, *"What runs without Docker?"*). Each answer shows the question, the SQL that produced it, the result table, and a plain-language summary, so it reads for a non-technical visitor while remaining visibly derived rather than hardcoded.
 
-`schema` and `sql` are the raw layer, unlocked by the easter egg. `portfolioQuery.ts` implements a deliberately bounded SQL subset — `SELECT` with `WHERE`/`AND`, `ORDER BY`, `LIMIT`, and `= != <> > < >= <= LIKE NOT LIKE IN NOT IN` — evaluated against the same arrays that render the page, so a result can never disagree with what you see. No `JOIN`, `GROUP BY`, `OR` or subqueries, and it says so rather than mis-evaluating them. A bare `SELECT` typed at the prompt is treated as a query; the `sql` prefix is optional.
+`schema` and `sql` are the raw layer, unlocked by the easter egg. `portfolioQuery.ts` implements a deliberately bounded SQL subset — `SELECT` with `WHERE`/`AND`, `ORDER BY`, `LIMIT`, and `= != <> > < >= <= LIKE NOT LIKE IN NOT IN` — evaluated against the same arrays that render the page, so a result can never disagree with what you see. It also takes `OR` and brackets, `COUNT(*)`, `GROUP BY`, `DISTINCT`, several `ORDER BY` keys and `OFFSET`; `d` describes a table and `--csv` prints CSV. No `JOIN` or subqueries, and it says so rather than mis-evaluating them. A bare `SELECT` typed at the prompt is treated as a query; the `sql` prefix is optional.
 
 ### The easter egg
 The Konami code (`↑ ↑ ↓ ↓ ← → ← → b a`), the `konami` command, or `__emc.unlock()` from DevTools grants clearance — persisted across visits, and revocable with `lock`. It unlocks the raw query layer plus a hidden **phosphor** accent theme that is deliberately absent from the visible toggle.
@@ -124,11 +124,19 @@ Project status is **derived** from the links each project actually has — `LIVE
 
 Case studies carry an optional `problem` / `approach` / `outcome` narrative with explicit trade-offs (what was chosen, what was rejected, and why) and, where relevant, a scope notice stating limits up front — synthetic demo data, single points of failure, deliberate scope cuts.
 
+### The shell
+The hero terminal is a small real shell (`src/lib/shell/`): pipes (`ls projects | grep live | head -3`), `&&` and `;`, a read-only virtual filesystem of the site's content (`cd projects`, `cat mmr-engine/outcome`), history with `Ctrl+R`, Tab completion with a menu, and `? <words>` to ask for a command in plain English (`/api/command`). The backtick key opens the same session as a drop-down console on any page; `ConsoleLauncher` keeps it out of the first download until it is opened. `/?run=<command>` links run a command on arrival.
+
 ### Command Palette
 `⌘K` / `Ctrl+K` opens keyboard-first navigation to any section, any case study (by name, stack or category), action (copy email, download CV), external link, or theme — plus the hidden easter-egg entry, surfaced only when searched for. Results are fuzzy-ranked, and anything typed can be handed to the assistant as "Ask: …", which leads when the query reads as a question.
 
 ### The assistant — one session, many doors
 `AskProvider` holds a single conversation above the routes. The hero terminal's `ai` mode, the dock (`⌘J` / `Ctrl+J` or `/`), the case-study panel, the palette, the footer's last prompt, a text selection ("ask about this") and a link (`/?ask=…`) all open onto it, so a question asked on the home page is still there on a case study, and a reload keeps it. On a case study the page is sent as context, so "this" means that project. An audience lens (general / hiring / engineer) changes how answers are pitched — never what they may claim: grounding and the per-figure audit are identical under every lens. Voice input uses the browser's own speech recognition where it exists.
+
+Answers are structured, not plain prose: paragraphs, bullets, inline citations that open the exact case-study section, and small blocks (a project card, a comparison, a role, a code excerpt, a diagram). The server validates every citation and checks every figure and every name against the site's data before the answer is marked done; anything it cannot find is flagged in the answer. The dock has four tabs. **Ask** is the conversation. **Role fit** takes a job description and marks each requirement strong, partial or not shown, with quotes from the site that the server has checked word for word. **Project** turns a visitor's idea into a short brief they can send through the contact form. **Tour** walks the work one step at a time, moving only when the visitor says so. Claude (`claude-opus-5-5`) answers first, with Gemini and Groq as fallbacks; search mixes keyword ranking with Gemini embeddings built at deploy time. Questions the site could not answer are kept (no identities) and listed at `/insights` for the site owner.
+
+### Contact
+`/api/contact` sends through Resend: the message to the site owner with Reply-To set to the visitor, and a short confirmation to the visitor. Without a Resend key it answers 503 and the form falls back to Formspree, so it never breaks. The form validates as you type, keeps a draft, and can attach a conversation with the assistant, a role-fit report or a project brief.
 
 ### Design: Night Monograph
 Below the hero the site is set like a studio monograph on black stock: section titles in expanded Archivo, reading text in Inter, mono only for the terminal, code and measured figures, hairline rules instead of boxes, screenshots as plates with captions, and a numbered index of every project. Amber is reserved for what is live or active. The tokens and the four type voices (`t-display`, `t-title`, `t-heading`, `t-lede`…) live in `src/index.css`; see `DESIGN.md`.
@@ -186,7 +194,15 @@ Copy `.env.example` to `.env` and fill in your own value — never commit the re
 | Variable | Purpose |
 |----------|---------|
 | `SCREENSHOT_API_KEY` | Read at **build** time. `vite.config.ts` recaptures every live project screenshot into `dist/images/`, so each deploy ships current previews; `scripts/fetch-screenshots.mjs` refreshes the committed fallbacks in `public/images/`. **Set this in the Vercel project's Environment Variables dashboard** — without it the build skips capture and serves the committed images instead, which degrades to slightly stale previews but never fails the build. |
-| `VITE_FORMSPREE_ENDPOINT` *(optional)* | Overrides the contact form's submission target. Falls back to a hardcoded Formspree endpoint in `Contact.tsx` if unset. |
+| `ANTHROPIC_API_KEY` *(optional)* | Runtime, server only. Claude answers first when set. |
+| `GEMINI_API_KEY` / `GROQ_API_KEY` *(optional)* | Runtime fallbacks. `GEMINI_API_KEY` at build time also embeds the site's passages for semantic search. |
+| `RESEND_API_KEY`, `RESEND_FROM` *(optional)* | Runtime, server only. Contact form email through Resend; `CONTACT_TO` overrides where messages arrive. |
+| `UPSTASH_REDIS_REST_URL` / `_TOKEN` *(optional)* | Shared store for rate limits, cached answers and content gaps. Vercel KV names (`KV_REST_API_*`) also work. |
+| `INSIGHTS_TOKEN` *(optional)* | At least 16 characters. Protects `/api/insights`. |
+| `GITHUB_TOKEN` *(optional)* | Build time. Raises the GitHub rate limit for `scripts/fetch-github.mjs`; without it the public limit is used and a failure keeps the saved snapshot. |
+| `VITE_FORMSPREE_ENDPOINT` *(optional)* | The contact form's fallback target when Resend is not configured. |
+
+None of the server keys may be prefixed `VITE_`. `.env.example` explains each one.
 
 One other value is hardcoded intentionally rather than env-configured, since it changes rarely and benefits from being visible in source review:
 
@@ -203,6 +219,7 @@ One other value is hardcoded intentionally rather than env-configured, since it 
 | `npm run build:dev` | Development-mode build (unminified, for debugging build output) |
 | `npm run lint` | ESLint across the repo |
 | `npm run test` | Vitest suite (watch mode: `npm run test:watch`) |
+| `npm run eval:ai` | Asks the real model 41 fixed questions and checks the answers are grounded. Needs a key and spends real provider credit. Not part of `npm test`. |
 | `npm run preview` | Serve the production build locally |
 | `npm run update-screenshots` | Refresh the committed `public/images/*.png` fallbacks via the screenshot API |
 | `npm run update-fonts` | Re-vendor Inter + JetBrains Mono into `src/assets/fonts/` and regenerate `src/fonts.css` |

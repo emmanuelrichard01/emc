@@ -1077,3 +1077,74 @@ html, body, * {
     min-height: 44px;
   }
 }
+
+/* ── Assistant (dock, answers) ───────────────────────────────────────────
+   Docked (≥1280px), the dock is a column beside the page, not over it:
+   while <html> carries data-ask-docked, the page and its running head are
+   narrowed by the dock's width. Then the sentence an answer cited, marked
+   on arrival (components/ai/answer/highlight.ts), and the status line. */
+:root {
+  --ask-dock-w: 440px;
+}
+@media (min-width: 1440px) {
+  :root {
+    --ask-dock-w: 460px;
+  }
+}
+@media (min-width: 1280px) {
+  body {
+    transition: padding-right 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  html[data-ask-docked] body {
+    padding-right: var(--ask-dock-w);
+  }
+  nav[aria-label="Main"] {
+    transition: right 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  html[data-ask-docked] nav[aria-label="Main"] {
+    right: var(--ask-dock-w);
+  }
+  html[data-ask-docked] button[aria-label="Back to top"] {
+    margin-right: var(--ask-dock-w);
+  }
+}
+
+/* The cited sentence: painted, not wrapped, so the page's DOM is untouched. */
+::highlight(ai-quote) {
+  background-color: hsl(var(--primary) / 0.26);
+  color: hsl(var(--foreground));
+}
+
+/* Where the Highlight API is missing, or no sentence was named: the block
+   gets a short amber outline pulse, then keeps a quiet outline until it
+   clears. Under reduced motion, only the quiet outline. */
+@keyframes ai-section-pulse {
+  0% { outline-color: hsl(var(--primary) / 0); }
+  35% { outline-color: hsl(var(--primary) / 0.9); }
+  100% { outline-color: hsl(var(--primary) / 0.45); }
+}
+.ai-section-pulse {
+  outline: 1px solid hsl(var(--primary) / 0.45);
+  outline-offset: 8px;
+  animation: ai-section-pulse 1.4s cubic-bezier(0.16, 1, 0.3, 1) 2;
+}
+
+/* Each new progress line fades in rather than snapping. */
+@keyframes ai-status-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.ai-status {
+  animation: ai-status-in 240ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-section-pulse,
+  .ai-status {
+    animation: none;
+  }
+  body,
+  nav[aria-label="Main"] {
+    transition: none;
+  }
+}

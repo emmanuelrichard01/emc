@@ -5,6 +5,63 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are
 grouped by engineering pass rather than strict SemVer releases, since this is
 a personal portfolio site, not a versioned package.
 
+## [Unreleased] — The assistant, the shell, contact and About, upgraded
+
+### Added
+- **Structured, checked answers.** Answers carry citations that open the
+  exact case-study section, and small blocks: a project card, a comparison,
+  a role, a code excerpt, a diagram. The server drops any citation that
+  points at nothing and checks every figure and name against the site's
+  data; what it cannot find is marked in the answer (`aiAnswer.ts`,
+  `aiGrounding.ts`, `aiLexicon.ts`).
+- **Actions the visitor chooses.** An answer can offer to filter the work,
+  open a case study at a section with the passage highlighted, or open a
+  role. Nothing moves until the visitor presses the button.
+- **Role fit, project brief and a guided tour**, as tabs in the dock. Role
+  fit quotes the site word for word, and the server rejects any quote it
+  cannot find. The brief and the fit report can be attached to the contact
+  form.
+- **Claude as the first model** (`claude-opus-5-5`, prompt caching on the
+  tools and the fixed part of the system prompt), with Gemini and Groq as
+  fallbacks. `AI_MOCK=1` answers locally without a key.
+- **Hybrid search**: keyword ranking plus Gemini embeddings built at deploy
+  time and stored as small integer vectors (`api/_vectors.ts`).
+- **Content gaps**, opt-in: questions the site could not answer, with
+  contact details stripped and no visitor identity, readable at `/insights`
+  with a token.
+- **A real shell**: pipes, `&&`, a read-only filesystem of the site,
+  `Ctrl+R` history search, a completion menu, `? <words>` to ask for a
+  command, `?run=` links, and the backtick key for a drop-down console on
+  any page. The SQL layer gains `OR`, `GROUP BY`, `COUNT`, `DISTINCT`
+  and CSV output, still behind the Konami unlock.
+- **Contact through Resend** (`api/contact.ts`): the message to the owner,
+  a confirmation to the visitor, and Formspree as the fallback when no key
+  is set. Two clear paths (hiring, or a project), a reply promised within
+  one working day, and availability stated plainly.
+- **About reads its figures from the data.** The tests count is summed from
+  the projects (4,589), each figure says where it comes from, and the open
+  source block counts public merged pull requests from GitHub at build time
+  (`scripts/fetch-github.mjs`, which keeps the saved snapshot on failure).
+
+### Changed
+- The drop-down console is loaded on first use, which takes the first
+  download from 565 KB to 398 KB.
+- Commands in the console no longer break mid-word on phones.
+
+### Fixed (found by the first live eval run)
+- A citation to a section a case study does not have, or several references
+  in one bracket (`[^project:a, ^role:b]`), showed as raw markup. Both now
+  read as citations; an unknown section points at the project.
+- The name check flagged a technology the answer named only to deny it
+  ("the site does not mention Rust"). A name in a denying sentence is no
+  longer an unchecked claim; the same name claimed elsewhere still is.
+- An Anthropic account out of credit answers 400, which the chain treated
+  as the request's fault, so Claude was asked first on every question. It
+  is now reported as 402 and rested for a minute, like a bad key (401/403).
+- With every model down, "is he available for remote work?" found nothing.
+  Availability now lives in `src/data/availability.ts`, shared by the
+  contact section and the fallback, and the model's context says the same.
+
 ## [Unreleased] — Night Monograph: the site redesigned around the terminal
 
 ### Changed

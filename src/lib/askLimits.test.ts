@@ -43,7 +43,7 @@ describe('with a shared store', () => {
     for (let i = 0; i < QUESTIONS_PER_MIN; i++) expect(await admitQuestion('1.2.3.4')).toBeNull();
     // A fresh instance has no memory of its own — the store still refuses.
     resetLimits();
-    expect(await admitQuestion('1.2.3.4')).toMatch(/too many questions/);
+    expect(await admitQuestion('1.2.3.4')).toMatch(/too many questions/i);
     expect(await admitQuestion('5.6.7.8')).toBeNull();
   });
 
@@ -58,7 +58,7 @@ describe('with a shared store', () => {
     vi.stubGlobal('fetch', fakeRedis());
     for (let i = 0; i < DAILY_CALL_BUDGET; i++) expect(await spendCall()).toBe(true);
     expect(await spendCall()).toBe(false);
-    expect(await admitQuestion('9.9.9.9')).toMatch(/daily question budget/);
+    expect(await admitQuestion('9.9.9.9')).toMatch(/question budget/i);
   });
 
   it('falls back to memory when the store is down, rather than failing the question', async () => {
@@ -73,6 +73,6 @@ describe('without a store', () => {
     vi.stubEnv('UPSTASH_REDIS_REST_URL', '');
     vi.stubEnv('KV_REST_API_URL', '');
     for (let i = 0; i < QUESTIONS_PER_MIN; i++) expect(await admitQuestion('1.2.3.4')).toBeNull();
-    expect(await admitQuestion('1.2.3.4')).toMatch(/too many questions/);
+    expect(await admitQuestion('1.2.3.4')).toMatch(/too many questions/i);
   });
 });

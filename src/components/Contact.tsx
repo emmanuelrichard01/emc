@@ -1,11 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
+import { track } from "@vercel/analytics";
+import { ArrowUpRight, Check, Contact as ContactIcon } from "lucide-react";
 
-import { CVDownloadButton } from "@/components/ui/CVDownloadButton";
 import ContactForm from "@/components/contact/ContactForm";
-import { requestIntent } from "@/components/contact/contactModel";
-import { scrollToSection } from "@/lib/scrollToSection";
+import {
+  AVAILABILITY,
+  HOME_ZONE,
+  buildVCard,
+  overlapSentence,
+  workdayOverlapMinutes,
+  zoneOffsetMinutes,
+} from "@/components/contact/contactModel";
 import { Reveal, RevealText, Rule } from "@/components/ui/Reveal";
 import { relativeZone } from "@/lib/lagosClock";
 import { useLagosClock } from "@/lib/useLagosClock";
@@ -13,20 +19,20 @@ import { useLagosClock } from "@/lib/useLagosClock";
 /* ==========================================================================
    CONTACT — the closing invitation
 
-   The monograph ends on one large line and two doors of equal weight,
-   because the page is read by two kinds of visitor with two different next
-   steps:
+   The monograph ends on one short line and a choice of doors, because the
+   page is read by two kinds of visitor with two different next steps:
 
-     hiring     the CV, and a message about a role
+     hiring     a message about a role (the CV sits beside the doors)
      building   a message about a project
 
-   Neither door is the "main" one. Both lead to the same form; the door only
-   chooses what the message is about, so the prompt in the message box asks
-   for the details that make a first reply useful.
+   Neither door is the "main" one. Each opens its own form in place
+   (contact/ContactForm.tsx), with a prompt and optional details shaped for
+   that kind of message, and says what happens after it is sent.
 
-   Below them: the address itself, set large enough to read and copy, the
-   profiles as plain links, the local time in Abuja (the honest answer to
-   "when will I hear back"), and the form.
+   Above the doors: what Emmanuel is open to, in one line. Below: the
+   address itself, set large enough to read and copy, the profiles, the time
+   in Abuja and how much of a working day the visitor shares with it, and an
+   address-book card.
    ========================================================================== */
 
 const SOCIAL_LINKS = [
@@ -36,6 +42,43 @@ const SOCIAL_LINKS = [
 ];
 
 const EMAIL = "emma.moghalu@gmail.com";
+const SITE = "https://www.builtbyem.dev";
+
+/** The visitor's zone as their browser reports it, or null when it will not say. */
+function visitorZone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
+function saveContact() {
+  const card = buildVCard({
+    name: "Emmanuel Moghalu",
+    family: "Moghalu",
+    given: "Emmanuel",
+    title: "Software & Data Engineer",
+    email: EMAIL,
+    url: SITE,
+    city: "Abuja",
+    country: "Nigeria",
+    links: SOCIAL_LINKS.map((l) => l.href),
+  });
+  const url = URL.createObjectURL(new Blob([card], { type: "text/vcard;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Emmanuel-Moghalu.vcf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try {
+    track("vcard_download");
+  } catch {
+    // Analytics never breaks a download.
+  }
+}
 
 const Contact: React.FC = () => {
   const [copied, setCopied] = useState(false);
@@ -58,6 +101,16 @@ const Contact: React.FC = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  /* Worked out from both zones' rules for today, so a visitor in London
+     gets the right answer in July and in January. Re-read with the clock. */
+  const overlap = useMemo(() => {
+    const zone = visitorZone();
+    const now = new Date();
+    const visitor = zone ? zoneOffsetMinutes(zone, now) : -now.getTimezoneOffset();
+    return overlapSentence(workdayOverlapMinutes(visitor, zoneOffsetMinutes(HOME_ZONE, now)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clock.ahead]);
 
   const status = clock.working ? "working hours" : clock.weekend ? "the weekend" : "after hours";
   const statusSentence = clock.working
@@ -91,68 +144,33 @@ const Contact: React.FC = () => {
           </Reveal>
         </div>
 
-        <RevealText as="h2" id="contact-title" className="t-display text-foreground max-w-[14ch]">
-          Let&rsquo;s build something that stays correct.
+        <RevealText as="h2" id="contact-title" className="t-display text-foreground">
+          Let&rsquo;s work together.
         </RevealText>
 
         <Reveal delay={0.2} className="mt-8 md:mt-10 max-w-[38rem] t-lede text-muted-foreground">
-          Hiring for a data or backend role, or have a system that needs building? Either way, a few lines are
-          enough to start.
+          Hiring for a role or planning a project? Choose one below and I&rsquo;ll reply within 1 working day.
         </Reveal>
 
-        {/* ── Two doors, equal weight ── */}
-        <div className="mt-16 md:mt-24 grid grid-cols-1 md:grid-cols-2 border-y border-border">
-          <Reveal className="py-10 md:py-12 md:pr-12">
-            <h3 className="t-heading text-foreground">Hiring for a role?</h3>
-            <p className="mt-4 t-body max-w-[30rem]">
-              The CV has the roles, the stack and the dates. The case studies above have the reasoning behind
-              the work.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-              <CVDownloadButton variant="structural" />
-              <button
-                type="button"
-                onClick={() => requestIntent("role")}
-                className="tap group inline-flex items-center gap-2 text-[15px] text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <span className="link-draw">Write about a role</span>
-                <ArrowRight className="nudge w-4 h-4" aria-hidden="true" />
-              </button>
-            </div>
-          </Reveal>
+        <Reveal delay={0.28} className="mt-6">
+          <p className="flex items-start gap-2.5 t-caption">
+            <span className="mt-[0.45rem] w-1.5 h-1.5 shrink-0 bg-status-ok" aria-hidden="true" />
+            <span>
+              <span className="sr-only">Availability: </span>
+              {AVAILABILITY}
+            </span>
+          </p>
+        </Reveal>
 
-          <Reveal delay={0.12} className="py-10 md:py-12 md:pl-12 border-t md:border-t-0 md:border-l border-border">
-            <h3 className="t-heading text-foreground">Have a project in mind?</h3>
-            <p className="mt-4 t-body max-w-[30rem]">
-              Data pipelines, payment reconciliation, analytics platforms and the backends behind them. Tell me
-              where it stands today and when you need it.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-              {/* Same weight as the hiring door: one ink action, one quiet one. */}
-              <button type="button" onClick={() => requestIntent("project")} className="btn-ink tap group">
-                Describe your project
-                <ArrowRight className="nudge w-4 h-4" aria-hidden="true" />
-              </button>
-              <a
-                href="#projects"
-                onClick={(e) => {
-                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-                  e.preventDefault();
-                  scrollToSection("projects");
-                }}
-                className="tap group inline-flex items-center gap-2 text-[15px] text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <span className="link-draw">See what I have built</span>
-                <ArrowRight className="nudge w-4 h-4" aria-hidden="true" />
-              </a>
-            </div>
-          </Reveal>
-        </div>
+        {/* ── The doors, and the form behind each ── */}
+        <Reveal className="mt-14 md:mt-20">
+          <ContactForm email={EMAIL} />
+        </Reveal>
 
-        {/* ── Address, profiles, and the form ── */}
-        <div className="mt-16 md:mt-24 grid grid-cols-12 gap-x-6 gap-y-14">
-          <Reveal className="col-span-12 lg:col-span-5">
-            <p className="t-caption">Email</p>
+        {/* ── Address, profiles, time ── */}
+        <Reveal className="mt-16 md:mt-24 pt-10 md:pt-12 border-t border-border grid grid-cols-12 gap-x-6 gap-y-12">
+          <div className="col-span-12 lg:col-span-7">
+            <p className="t-caption">Or email me directly</p>
             <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-3">
               <a
                 href={`mailto:${EMAIL}`}
@@ -191,10 +209,17 @@ const Contact: React.FC = () => {
                   )}
                 </AnimatePresence>
               </button>
+              <button
+                type="button"
+                onClick={saveContact}
+                className="tap group inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ContactIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="link-draw">Save contact</span>
+              </button>
             </div>
 
-            <p className="mt-12 t-caption">Find me on</p>
-            <ul className="mt-3 flex flex-wrap gap-x-7 gap-y-2">
+            <ul className="mt-8 flex flex-wrap gap-x-7 gap-y-2" aria-label="Profiles">
               {SOCIAL_LINKS.map((link) => (
                 <li key={link.id}>
                   <a
@@ -210,20 +235,16 @@ const Contact: React.FC = () => {
                 </li>
               ))}
             </ul>
+          </div>
 
-            {/* The first practical question anyone writing has is when they
-                will hear back. Rather than promise a turnaround, say what
-                time it is where the reply will be written. */}
-            <p className="mt-12 t-caption max-w-[24rem]">
-              It&rsquo;s <time className="text-foreground tabular-nums">{clock.time}</time> in Abuja (UTC+1),{" "}
-              {relativeZone(clock.ahead)}. {statusSentence} Open to remote and hybrid work.
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.1} className="col-span-12 lg:col-span-7">
-            <ContactForm email={EMAIL} />
-          </Reveal>
-        </div>
+          {/* "When will I hear back" has a promise above it; this is the
+              detail: the time where the reply is written, and how much of a
+              working day the two of you share. */}
+          <p className="col-span-12 lg:col-span-5 t-caption max-w-[26rem] lg:justify-self-end">
+            It&rsquo;s <time className="text-foreground tabular-nums">{clock.time}</time> in Abuja (UTC+1),{" "}
+            {relativeZone(clock.ahead)}. {statusSentence} <span className="text-foreground">{overlap}</span>
+          </p>
+        </Reveal>
       </div>
     </section>
   );

@@ -3,7 +3,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
 import { MAX_QUESTION_CHARS as AI_MAX_QUESTION_CHARS } from '@/lib/aiHistory';
-import { useTerminalSession } from './useTerminalSession';
+import { comboboxProps, useTerminalSession } from './useTerminalSession';
+import ShellLog, { CompletionList } from '@/components/shell/ShellLog';
 import { useAsk } from '@/components/ai/AskProvider';
 import AiTranscript, { AI_SUGGESTIONS } from './AiTranscript';
 import SuggestionMarquee from '@/components/ai/SuggestionMarquee';
@@ -36,11 +37,8 @@ import { emitCircuitSignal } from '@/lib/circuitBus';
    flag failed to flip.
    ========================================================================== */
 
-const PROMPT = 'em@builtbyem:~/$';
 /** The session, named once in the caption strip. */
 const SESSION = 'em@builtbyem';
-/** The line itself carries only the shell's own glyph. */
-const LINE_PROMPT = '~ $';
 
 /* Shell or Ask: the prompt takes both, and this says so out loud.
    It used to be discoverable only by typing a question and noticing the
@@ -194,6 +192,12 @@ interface TerminalHeroProps {
 export default function TerminalHero({ live }: TerminalHeroProps) {
   const prefersReduced = useReducedMotion();
 
+  /* The session moves the caret itself (Ctrl+W, Ctrl+U, a completion);
+     this is how it tells the block caret, which is measured further down. */
+  const caretSink = useRef<((index: number) => void) | null>(null);
+  const onCaret = useCallback((index: number) => caretSink.current?.(index), []);
+
+  const session = useTerminalSession({ enabled: live, onCaret, idPrefix: 'hero' });
   const {
     sessionLog,
     inputValue,
@@ -207,10 +211,16 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
     unlocked,
     inputRef,
     focusInput,
-  } = useTerminalSession({ enabled: live });
+    linePrompt,
+    menu,
+    acceptCandidate,
+    hint,
+  } = session;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
+  /* How many exchanges were on screen last time: a new one always scrolls. */
+  const anchorCount = useRef(0);
   const [inputFocused, setInputFocused] = useState(false);
 
   const hasOutput = sessionLog.length > 0;
@@ -232,7 +242,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
 
   /* The empty prompt types its examples while nothing else is happening. */
   const example = useTypedExample(live && !aiMode && inputValue === '' && !running, Boolean(prefersReduced));
-  const typedQuestion = !aiMode && looksLikeQuestion(inputValue);
+  const typedQuestion = !aiMode && !/^\s*\?\s/.test(inputValue) && looksLikeQuestion(inputValue);
 
   /* The background listens. An answer in progress spins the disk up, the
      same way a running command does (useTerminalSession emits that one). */
@@ -322,6 +332,13 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
      two cells right of an empty prompt. Deriving it costs nothing and cannot
      drift, where an effect syncing the two would be the cascading-render
      pattern React's rules flag. */
+  useEffect(() => {
+    caretSink.current = (index: number) => {
+      setCaretIndex(index);
+      syncScroll();
+    };
+  }, [syncScroll]);
+
   const caret = Math.min(caretIndex, inputValue.length);
 
   /* Where the block actually goes, in the field's visible coordinates.
@@ -387,6 +404,12 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+
+    const count = el.querySelectorAll('[data-line-type="cmd"], [data-anchor]').length;
+    if (count !== anchorCount.current) {
+      anchorCount.current = count;
+      stickToBottom.current = true;
+    }
 
     if (running || ai.busy || !stickToBottom.current) {
       if (stickToBottom.current) el.scrollTop = el.scrollHeight;
@@ -486,10 +509,15 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
   // tab-completion knows it; it signals back here through this event rather
   // than the registry needing a reference to this component's state.
   useEffect(() => {
-    const onEnter = () => enterAi();
+    const onEnter = (event: Event) => {
+      enterAi();
+      // `ai <question>` arrives with the question, and asks it straight away.
+      const question = (event as CustomEvent<string | undefined>).detail;
+      if (typeof question === 'string' && question.trim()) void ai.send(question.trim());
+    };
     window.addEventListener('emc:enter-ai', onEnter);
     return () => window.removeEventListener('emc:enter-ai', onEnter);
-  }, [enterAi]);
+  }, [ai, enterAi]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -505,6 +533,11 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
            question word and runs to three words), so nothing a command
            user types is taken from them. */
         const question = inputValue.trim();
+        // `? words` asks the shell's own helper for a command, not the assistant.
+        if (/^\?\s+\S/.test(question)) {
+          submit(inputValue);
+          return;
+        }
         if (looksLikeQuestion(question)) {
           if (question.length > AI_MAX_QUESTION_CHARS) {
             ai.reject(`That question is ${question.length} characters long. Please keep it under ${AI_MAX_QUESTION_CHARS}.`);
@@ -712,27 +745,8 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           </motion.div>
 
           {hasOutput && (
-            <div
-              className={`w-full max-w-2xl mx-auto border-l border-primary/20 pl-4 leading-[1.75] ${compact ? '' : 'mt-5'}`}
-              role="log"
-              aria-live="polite"
-              aria-relevant="additions"
-              aria-label="Terminal output"
-            >
-              {sessionLog.map((line) => (
-                <div key={line.id} className="w-full min-w-0" data-line-type={line.type}>
-                  {line.type === 'cmd' ? (
-                    <span className="text-foreground font-medium whitespace-pre-wrap break-all">
-                      <span className="text-primary/80">{PROMPT} </span>
-                      {line.content}
-                    </span>
-                  ) : (
-                    <div className="text-muted-foreground whitespace-pre-wrap break-words mb-1">
-                      {line.content}
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className={`w-full max-w-2xl mx-auto border-l border-primary/20 pl-4 leading-[1.75] ${compact ? '' : 'mt-5'}`}>
+              <ShellLog session={session} />
 
               <button
                 type="button"
@@ -805,14 +819,14 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                 <span className="font-mono text-[11.5px] text-foreground/85">{SESSION}</span>
                 <span className="hidden sm:inline text-muted-ghost" aria-hidden="true">·</span>
                 <span className="hidden sm:inline truncate" aria-live="polite">
-                  {running ? `running ${running.name}` : ai.busy ? 'thinking' : aiMode ? 'talking to the assistant' : 'ready'}
+                  {running ? (running.name === '?' ? 'asking the helper' : `running ${running.name}`) : ai.busy ? 'thinking' : aiMode ? 'talking to the assistant' : 'ready'}
                 </span>
               </span>
               <ModeSwitch ai={aiMode} disabled={running !== null} onShell={exitAi} onAsk={enterAi} reduced={Boolean(prefersReduced)} />
             </div>
 
             {/* The line */}
-            <div className="flex items-center gap-2.5 px-4 md:px-5 py-4 md:py-[18px]">
+            <div className="relative flex items-center gap-2.5 px-4 md:px-5 py-4 md:py-[18px]">
                 {running ? (
                   /* Tappable as well as Ctrl+C — a phone has no Ctrl key, so a
                      keyboard-only cancel would strand a streaming command. */
@@ -844,7 +858,11 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                           <span className="text-muted-quiet">?</span>
                         </>
                       ) : (
-                        LINE_PROMPT
+                        /* The working directory, kept short: the full path is in
+                           the log above, and on a phone every cell counts. */
+                        <span className="max-w-[11ch] sm:max-w-[22ch] truncate [direction:rtl] text-left">
+                          <bdi>{linePrompt}</bdi>
+                        </span>
                       )}
                     </span>
 
@@ -893,7 +911,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                             ? "Ask a question about Emmanuel's work"
                             : 'Terminal command input. Type help for available commands.'
                         }
-                        aria-autocomplete="inline"
+                        {...(aiMode ? { 'aria-autocomplete': 'inline' as const } : comboboxProps(session))}
                         aria-busy={running !== null}
                         /* caret-transparent hides only the painted hairline — the
                            block below stands in for it. The global focus-visible
@@ -951,7 +969,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
 
                       {/* The typed example — offset past the block caret so the
                           caret never sits on its first letter. */}
-                      {!aiMode && inputValue === '' && !running && example && charWidth > 0 && (
+                      {!aiMode && inputValue === '' && !ghost && !running && example && charWidth > 0 && (
                         <span
                           aria-hidden="true"
                           className={`pointer-events-none absolute inset-y-0 z-0 font-mono ${TERMINAL_TEXT} whitespace-pre text-muted-ghost flex items-center truncate`}
@@ -1014,12 +1032,26 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
                     )}
                   </>
                 )}
+
+                {/* The completion menu: Tab opens it, the arrows walk it. */}
+                {!aiMode && menu && (
+                  <CompletionList
+                    menu={menu}
+                    onPick={acceptCandidate}
+                    className="absolute left-3 right-3 md:left-4 md:right-4 top-full mt-px z-30"
+                  />
+                )}
             </div>
 
             {/* Key strip: what Enter will do, said as it changes. */}
             <div className="flex items-center justify-between gap-4 px-4 md:px-5 min-h-10 py-2 border-t border-border font-sans text-[12px] text-muted-quiet">
               <span className="min-w-0">
-                {typedQuestion ? (
+                {!aiMode && hint ? (
+                  /* Usage of the command being typed, a correction, or why a
+                     proposal was made: the line under the prompt speaks for
+                     whatever is on it. */
+                  <span className="font-mono text-[11.5px] text-muted-foreground block truncate">{hint}</span>
+                ) : typedQuestion ? (
                   <>Enter asks the assistant. Its answers show where each fact comes from.</>
                 ) : aiMode ? (
                   <>Answers are written by AI and show their sources.</>

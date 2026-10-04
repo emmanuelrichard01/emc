@@ -40,17 +40,17 @@ export async function admitQuestion(ip: string): Promise<string | null> {
     ['GET', `ask:calls:${today()}`],
   ]);
   if (shared) {
-    if (Number(shared[2] ?? 0) >= DAILY_CALL_BUDGET) return 'daily question budget reached — try again tomorrow.';
-    if (Number(shared[0]) > QUESTIONS_PER_MIN) return 'too many questions — wait a minute.';
+    if (Number(shared[2] ?? 0) >= DAILY_CALL_BUDGET) return "Today's question budget is used up. Try again tomorrow.";
+    if (Number(shared[0]) > QUESTIONS_PER_MIN) return 'Too many questions. Wait a minute and try again.';
     return null;
   }
 
   rolloverMemoryDay();
-  if (memorySpend >= DAILY_CALL_BUDGET) return 'daily question budget reached — try again tomorrow.';
+  if (memorySpend >= DAILY_CALL_BUDGET) return "Today's question budget is used up. Try again tomorrow.";
 
   const now = Date.now();
   const recent = (memoryHits.get(visitor) ?? []).filter((t) => now - t < 60_000);
-  if (recent.length >= QUESTIONS_PER_MIN) return 'too many questions — wait a minute.';
+  if (recent.length >= QUESTIONS_PER_MIN) return 'Too many questions. Wait a minute and try again.';
   recent.push(now);
   memoryHits.set(visitor, recent);
 

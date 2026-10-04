@@ -3,7 +3,8 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search, ArrowRight, Boxes, CornerDownLeft,
-  Github, Linkedin, Copy, ExternalLink, Sparkles, Palette, Download
+  Github, Linkedin, Copy, ExternalLink, Sparkles, Palette, Download,
+  Terminal, ClipboardCheck, FileText, Map as MapIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import { XLogo } from "@/components/ui/XLogo";
@@ -18,6 +19,8 @@ import { navigateWithTransition } from "@/lib/viewTransition";
 import { looksLikeQuestion, rankItem } from "@/lib/fuzzy";
 import { MODIFIER_KEY } from "@/lib/platform";
 import { useAsk } from "@/components/ai/AskProvider";
+import type { DockMode } from "@/components/ai/modes";
+import { OPEN_CONSOLE_EVENT } from "@/components/shell/sessionStore";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES & DATA                                                               */
@@ -122,6 +125,21 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     [onClose, openAsk]
   );
 
+  const openMode = useCallback(
+    (mode: DockMode) => {
+      onClose();
+      openAsk({ mode });
+    },
+    [onClose, openAsk]
+  );
+
+  /* The drop-down console. Opened after the palette has closed, so its
+     focus trap is not fighting the palette's for the same keystroke. */
+  const openTerminal = useCallback(() => {
+    onClose();
+    setTimeout(() => window.dispatchEvent(new Event(OPEN_CONSOLE_EVENT)), 0);
+  }, [onClose]);
+
   const copyEmail = useCallback(() => {
     navigator.clipboard.writeText("emma.moghalu@gmail.com");
     toast.success("Email address copied", {
@@ -163,6 +181,33 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         keywords: ["ai", "ask", "assistant", "question", "chat", "help"],
         meta: `${MODIFIER_KEY}+J`,
       },
+      {
+        id: "ask-fit",
+        title: "Check a role against his work",
+        subtitle: "Paste a job description; each requirement is checked against evidence",
+        icon: ClipboardCheck,
+        action: () => openMode("fit"),
+        category: "Ask",
+        keywords: ["fit", "role", "job", "description", "jd", "hiring", "requirements"],
+      },
+      {
+        id: "ask-brief",
+        title: "Describe a project",
+        subtitle: "Turn what you need into a brief you can send him",
+        icon: FileText,
+        action: () => openMode("brief"),
+        category: "Ask",
+        keywords: ["brief", "project", "hire", "freelance", "quote", "scope"],
+      },
+      {
+        id: "ask-tour",
+        title: "Take the guided tour",
+        subtitle: "The work, one step at a time, moving only when you say",
+        icon: MapIcon,
+        action: () => openMode("tour"),
+        category: "Ask",
+        keywords: ["tour", "guide", "walkthrough", "overview", "show me"],
+      },
       /* Every case study, reachable by name, stack or category. The palette
          could previously go to "Work" and no further — a visitor who knew
          they wanted the rate limiter still had to scroll a list to find it. */
@@ -177,6 +222,16 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         meta: STATUS_LABEL[projectStatus(project)],
       })),
       // Actions
+      {
+        id: "open-terminal",
+        title: "Open terminal",
+        subtitle: "The site as a shell: ls, cd, cat, grep, from any page",
+        icon: Terminal,
+        action: openTerminal,
+        category: "Actions",
+        keywords: ["terminal", "shell", "console", "command", "cli", "ls", "cd"],
+        meta: "`",
+      },
       {
         id: "copy-email",
         title: "Copy email address",
@@ -273,7 +328,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         keywords: ["secret", "konami", "easter", "hidden", "cheat"],
       },
     ],
-    [projects, scrollToSection, openProject, askAbout, copyEmail, triggerCVDownload, onClose, setTheme, unlock, unlocked]
+    [projects, scrollToSection, openProject, askAbout, openMode, openTerminal, copyEmail, triggerCVDownload, onClose, setTheme, unlock, unlocked]
   );
 
   /* Ranked rather than filtered. With a query, results are ordered by how

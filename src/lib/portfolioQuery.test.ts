@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { PROJECTS } from '@/data/projects';
-import { describeSchema, isQueryError, runQuery, TABLES } from '@/lib/portfolioQuery';
+import { describeSchema, describeTable, isQueryError, listTables, runQuery, TABLES } from '@/lib/portfolioQuery';
 import type { QueryResult } from '@/lib/portfolioQuery';
 
 /* ==========================================================================
@@ -243,5 +243,116 @@ describe('schema', () => {
       const result = ok(`SELECT ${table.columns.map((c) => c.name).join(', ')} FROM ${table.name}`);
       expect(result.columns).toHaveLength(table.columns.length);
     }
+  });
+});
+
+/* ── Additions: counts, groups, OR, DISTINCT, multi-column order, OFFSET ──
+   Each is checked against the data computed directly, so a test cannot pass
+   on a coincidence of counts. */
+
+describe('counting and grouping', () => {
+  it('counts every row with COUNT(*)', () => {
+    const result = ok('SELECT COUNT(*) FROM projects');
+    expect(result.columns).toEqual(['count(*)']);
+    expect(result.rows).toEqual([[PROJECTS.length]]);
+  });
+
+  it('counts filtered rows, and returns 0 rather than no row when nothing matches', () => {
+    expect(ok("SELECT COUNT(*) FROM projects WHERE tier = 'design'").rows).toEqual([[2]]);
+    expect(ok("SELECT COUNT(*) FROM projects WHERE tier = 'nope'").rows).toEqual([[0]]);
+  });
+
+  it('counts non-empty values with COUNT(col) and honours AS', () => {
+    const result = ok('SELECT COUNT(id) AS n FROM projects');
+    expect(result.columns).toEqual(['n']);
+    expect(result.rows[0][0]).toBe(PROJECTS.length);
+  });
+
+  it('groups by one column, one row per value, counts summing to the table', () => {
+    const result = ok('SELECT tier, COUNT(*) FROM projects GROUP BY tier');
+    const tiers = [...new Set(PROJECTS.map((p) => p.tier))];
+    expect(result.rowCount).toBe(tiers.length);
+    for (const [tier, n] of result.rows) {
+      expect(n).toBe(PROJECTS.filter((p) => p.tier === tier).length);
+    }
+  });
+
+  it('orders groups by their count', () => {
+    const counts = ok('SELECT tier, COUNT(*) AS n FROM projects GROUP BY tier ORDER BY n DESC').rows.map((r) => Number(r[1]));
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
+  });
+
+  it('refuses a plain column beside a count without GROUP BY, rather than guessing', () => {
+    expect(err('SELECT tier, COUNT(*) FROM projects')).toMatch(/GROUP BY/);
+    expect(err('SELECT title, COUNT(*) FROM projects GROUP BY tier')).toMatch(/GROUP BY/);
+  });
+
+  it('names the functions it does not have', () => {
+    expect(err('SELECT SUM(decisions) FROM projects')).toMatch(/only COUNT/i);
+    expect(err('SELECT tier FROM projects GROUP BY tier HAVING COUNT(*) > 1')).toMatch(/HAVING/);
+  });
+});
+
+describe('OR and parentheses', () => {
+  it('unions with OR', () => {
+    const either = ids(ok("SELECT id FROM projects WHERE tier = 'design' OR tier = 'flagship'")).sort();
+    const expected = PROJECTS.filter((p) => p.tier === 'design' || p.tier === 'flagship').map((p) => p.id).sort();
+    expect(either).toEqual(expected);
+  });
+
+  it('binds AND tighter than OR', () => {
+    // a OR (b AND c), not (a OR b) AND c.
+    const result = ids(ok("SELECT id FROM projects WHERE tier = 'design' OR tier = 'system' AND case_study = true")).sort();
+    const expected = PROJECTS.filter((p) => p.tier === 'design' || (p.tier === 'system' && Boolean(p.caseStudy)))
+      .map((p) => p.id)
+      .sort();
+    expect(result).toEqual(expected);
+  });
+
+  it('lets parentheses override precedence', () => {
+    const result = ids(ok("SELECT id FROM projects WHERE (tier = 'design' OR tier = 'system') AND case_study = true")).sort();
+    const expected = PROJECTS.filter((p) => (p.tier === 'design' || p.tier === 'system') && Boolean(p.caseStudy))
+      .map((p) => p.id)
+      .sort();
+    expect(result).toEqual(expected);
+  });
+
+  it('keeps OR inside a literal as text', () => {
+    expect(isQueryError(runQuery("SELECT id FROM projects WHERE title LIKE '%this or that%'"))).toBe(false);
+  });
+
+  it('reports an unbalanced parenthesis', () => {
+    expect(err("SELECT id FROM projects WHERE (tier = 'design'")).toMatch(/parenthesis/);
+  });
+});
+
+describe('DISTINCT, ordering by several columns, OFFSET', () => {
+  it('drops repeated rows with DISTINCT', () => {
+    const tiers = ok('SELECT DISTINCT tier FROM projects').rows.map((r) => r[0]);
+    expect(tiers).toEqual([...new Set(PROJECTS.map((p) => p.tier))]);
+  });
+
+  it('orders by a second column inside ties of the first', () => {
+    const rows = ok('SELECT tier, id FROM projects ORDER BY tier ASC, id DESC').rows.map((r) => [String(r[0]), String(r[1])]);
+    for (let i = 1; i < rows.length; i++) {
+      const [prevTier, prevId] = rows[i - 1];
+      const [tier, id] = rows[i];
+      expect(prevTier.localeCompare(tier)).toBeLessThanOrEqual(0);
+      if (prevTier === tier) expect(prevId.localeCompare(id)).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('pages with LIMIT and OFFSET', () => {
+    const all = ids(ok('SELECT id FROM projects'));
+    expect(ids(ok('SELECT id FROM projects LIMIT 3 OFFSET 2'))).toEqual(all.slice(2, 5));
+    expect(err('SELECT id FROM projects OFFSET x')).toMatch(/whole number/);
+  });
+});
+
+describe('table descriptions', () => {
+  it('describes one table and lists all of them', () => {
+    expect(describeTable('projects')).toContain('Table "projects"');
+    expect(describeTable('nope')).toBeNull();
+    for (const table of TABLES) expect(listTables()).toContain(table.name);
   });
 });

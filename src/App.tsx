@@ -15,6 +15,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Navbar from "./components/DynamicNavigation";
 import Footer from "./components/Footer";
 import CommandPalette from "./components/CommandPalette";
+import ConsoleLauncher from "./components/shell/ConsoleLauncher";
 import SmoothScroll from "./components/SmoothScroll";
 import { BootProvider, RouteReadyBeacon } from "./components/hero/BootOverlay";
 import { AskProvider } from "./components/ai/AskProvider";
@@ -41,6 +42,8 @@ const ProjectDetail = () => {
   return Page ? <Page /> : <LazyProjectDetail />;
 };
 const NotFound = lazy(() => import("./pages/NotFound"));
+// Private and unlinked: unanswered questions, for deciding what to write next.
+const Insights = lazy(() => import("./pages/Insights"));
 
 /* Warm the home chunk while this module is still evaluating.
 
@@ -156,6 +159,7 @@ const AnimatedRoutes = () => {
           <Routes location={location}>
             <Route path="/" element={<Index />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/insights" element={<Insights />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
@@ -181,6 +185,7 @@ const AnimatedRoutes = () => {
           <Routes location={location}>
             <Route path="/" element={<Index />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/insights" element={<Insights />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
@@ -206,6 +211,8 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       <SmoothScroll />
       <Navbar onOpenCommandPalette={open} />
       <CommandPalette isOpen={isOpen} onClose={close} />
+      {/* The terminal on every page: backtick opens it (shares the hero's session). */}
+      <ConsoleLauncher />
 
       <main id="main-content" className="flex-1 relative" aria-label="Portfolio content">
         {children}

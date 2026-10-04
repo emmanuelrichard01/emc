@@ -9,6 +9,7 @@ import type { Project } from '@/types';
 import { useBooted } from '@/components/hero/BootOverlay';
 import { useAiSession, type AiSession } from '@/components/hero/useAiSession';
 import SelectionAsk from './SelectionAsk';
+import type { DockMode } from './modes';
 
 /* ==========================================================================
    ASK — one assistant, many doors
@@ -46,6 +47,13 @@ const AskDock = lazy(() => import('./AskDock'));
 interface OpenOptions {
   /** Asked as soon as the dock is open. */
   question?: string;
+  /** Which mode to open on: Ask (default), Role fit, Project or Tour. */
+  mode?: DockMode;
+}
+
+interface AskOptions {
+  /** Scope this one question to a project (an @mention), whatever page is open. */
+  projectId?: string;
 }
 
 export interface AskState {
@@ -54,7 +62,10 @@ export interface AskState {
   closeAsk: () => void;
   toggleAsk: () => void;
   /** Validate and send. Refusals appear in the transcript, not as exceptions. */
-  ask: (question: string) => void;
+  ask: (question: string, options?: AskOptions) => void;
+  /** The dock's current mode. */
+  mode: DockMode;
+  setMode: (mode: DockMode) => void;
   session: AiSession;
   audience: Audience;
   setAudience: (audience: Audience) => void;
@@ -97,6 +108,7 @@ export function AskProvider({ children }: { children: React.ReactNode }) {
   const session = useAiSession({ projectId: project?.id, audience, persistKey: SESSION_KEY });
 
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<DockMode>('ask');
   /* Mounted from the first open onwards, then kept: unmounting on close
      would throw away scroll position and a half-typed question. */
   const [dockLoaded, setDockLoaded] = useState(false);
@@ -112,7 +124,7 @@ export function AskProvider({ children }: { children: React.ReactNode }) {
 
   const { send, reject, busy } = session;
   const ask = useCallback(
-    (question: string) => {
+    (question: string, options: AskOptions = {}) => {
       const trimmed = question.trim();
       if (!trimmed || busy) return;
       // Caught here rather than as a 400 — the endpoint keeps its own cap as
@@ -121,7 +133,7 @@ export function AskProvider({ children }: { children: React.ReactNode }) {
         reject(`That question is ${trimmed.length} characters long. Please keep it under ${MAX_QUESTION_CHARS}.`);
         return;
       }
-      void send(trimmed);
+      void send(trimmed, options.projectId ? { projectId: options.projectId } : undefined);
     },
     [busy, reject, send]
   );
@@ -130,6 +142,9 @@ export function AskProvider({ children }: { children: React.ReactNode }) {
     (options: OpenOptions = {}) => {
       setDockLoaded(true);
       setOpen(true);
+      // A question always lands in Ask; otherwise the requested mode, or stay put.
+      if (options.question) setMode('ask');
+      else if (options.mode) setMode(options.mode);
       if (options.question) ask(options.question);
     },
     [ask]
@@ -181,8 +196,8 @@ export function AskProvider({ children }: { children: React.ReactNode }) {
   const starters = useMemo(() => startersFor({ project, audience }, AI_SUGGESTIONS), [project, audience]);
 
   const value = useMemo<AskState>(
-    () => ({ open, openAsk, closeAsk, toggleAsk, ask, session, audience, setAudience, project, starters }),
-    [open, openAsk, closeAsk, toggleAsk, ask, session, audience, setAudience, project, starters]
+    () => ({ open, openAsk, closeAsk, toggleAsk, ask, mode, setMode, session, audience, setAudience, project, starters }),
+    [open, openAsk, closeAsk, toggleAsk, ask, mode, session, audience, setAudience, project, starters]
   );
 
   return (

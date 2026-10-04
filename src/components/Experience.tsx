@@ -1,4 +1,4 @@
-import React, { useCallback, useId, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Plus } from "lucide-react";
 
@@ -206,6 +206,16 @@ const Experience: React.FC = () => {
     if (index >= RECENT) setShowEarlier(true);
     void scrollToElementAndLand(`role-${id}`);
   }, []);
+
+  /* The assistant and the guided tour open a role by event (lib/aiActions). */
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (EXPERIENCE.some((role) => role.id === id)) openRole(id);
+    };
+    window.addEventListener("emc:open-role", onOpen);
+    return () => window.removeEventListener("emc:open-role", onOpen);
+  }, [openRole]);
 
   // Derived, so the header cannot claim a range the rows below contradict.
   const startYear = axis ? Math.floor(axis.from / 12) : null;

@@ -1,7 +1,8 @@
 import type { ToolCall } from '../../src/lib/aiTools.js';
 
 /* ==========================================================================
-   PROVIDERS — streaming clients for Gemini and Groq.
+   PROVIDERS: streaming clients for Gemini and Groq, the fallbacks (Claude,
+   the primary, is in claude.ts; the order is in chain.ts).
 
    Each takes the provider-neutral history the loop keeps, translates it into
    that provider's wire format, and streams text back through `onText` as it
@@ -16,12 +17,34 @@ import type { ToolCall } from '../../src/lib/aiTools.js';
  */
 export type Msg =
   | { role: 'user'; content: string }
-  | { role: 'assistant'; content: string; toolCalls?: ToolCall[] }
+  | {
+      role: 'assistant';
+      content: string;
+      toolCalls?: ToolCall[];
+      /** The provider's own record of this turn (Claude's content blocks, thinking included), replayed unchanged to that provider. */
+      raw?: ProviderRaw;
+    }
   | { role: 'tool'; content: string; toolName: string; toolCallId: string };
+
+/** Opaque provider state for one assistant turn, tagged with who can read it back. */
+export interface ProviderRaw {
+  provider: string;
+  content: unknown;
+}
 
 export interface RoundResult {
   calls: ToolCall[];
   text: string;
+  /** See Msg.raw: kept so the next round can hand this turn back exactly as it was. */
+  raw?: ProviderRaw;
+  /** The model declined to answer (a safety refusal, not a missing fact). */
+  refused?: boolean;
+}
+
+/** The system prompt in two parts: one shared by every request, one per page and lens. */
+export interface SystemPrompt {
+  stable: string;
+  variable: string;
 }
 
 export interface ToolSpec {
@@ -32,13 +55,28 @@ export interface ToolSpec {
 
 export interface RoundRequest {
   messages: Msg[];
-  system: string;
+  system: SystemPrompt;
   tools: ToolSpec[];
-  /** Final round: tools are withheld so the model has to answer. */
+  /** Final round: tools are withheld so the model has to answer (or, with `onlyTool`, has to call that one). */
   finalize: boolean;
+  /** Said to the model on the final round only. */
+  finalNote?: string;
+  /** On the final round, the one tool the model must call (a structured result, like submit_fit). */
+  onlyTool?: string;
+  /** How hard Claude should think: low for a lookup, medium for a role fit. Other providers ignore it. */
+  effort?: 'low' | 'medium';
+  /** Output ceiling for Claude, thinking included. */
+  maxTokens?: number;
   onText: (chunk: string) => void;
   signal: AbortSignal;
   round: number;
+}
+
+/** The system prompt as one string, for providers without prompt caching. */
+export function flatSystem(req: RoundRequest): string {
+  return [req.system.stable, req.system.variable, req.finalize ? req.finalNote : '']
+    .filter((part): part is string => Boolean(part && part.trim()))
+    .join('\n\n');
 }
 
 /** A provider's non-2xx answer, with the status kept for retry and health decisions. */
@@ -118,10 +156,16 @@ export async function streamGemini(key: string, model: string, req: RoundRequest
       // into any intermediary that records URLs.
       headers: { 'Content-Type': 'application/json', 'X-goog-api-key': key },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: req.system }] },
+        systemInstruction: { parts: [{ text: flatSystem(req) }] },
         contents,
         tools: [{ functionDeclarations: req.tools }],
-        ...(req.finalize ? { toolConfig: { functionCallingConfig: { mode: 'NONE' } } } : {}),
+        ...(req.finalize
+          ? {
+              toolConfig: {
+                functionCallingConfig: req.onlyTool ? { mode: 'ANY', allowedFunctionNames: [req.onlyTool] } : { mode: 'NONE' },
+              },
+            }
+          : {}),
         generationConfig: {
           temperature: 0.3,
           ...(thinks
@@ -197,7 +241,7 @@ export async function streamGroq(key: string, model: string, req: RoundRequest):
       ? { reasoning_effort: 'low', include_reasoning: false, max_completion_tokens: THINKING_OUTPUT_TOKENS }
       : { temperature: 0.3, max_completion_tokens: MAX_OUTPUT_TOKENS }),
     messages: [
-      { role: 'system', content: req.system },
+      { role: 'system', content: flatSystem(req) },
       ...req.messages.map((m) => {
         if (m.role === 'tool') return { role: 'tool' as const, content: m.content, tool_call_id: m.toolCallId };
         if (m.role === 'assistant' && m.toolCalls?.length) {
@@ -215,7 +259,7 @@ export async function streamGroq(key: string, model: string, req: RoundRequest):
       }),
     ],
     tools: req.tools.map((t) => ({ type: 'function', function: t })),
-    tool_choice: req.finalize ? 'none' : 'auto',
+    tool_choice: req.finalize ? (req.onlyTool ? { type: 'function', function: { name: req.onlyTool } } : 'none') : 'auto',
   };
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {

@@ -10,17 +10,19 @@ import { STATUS_LABEL, projectStatus } from './project.js';
    `PROJECTS` and `EXPERIENCE`, so a result can never disagree with the page.
 
    Supported:
-     SELECT <cols|*> FROM <table>
-       [WHERE <col> <op> <value> [AND ...]]
-       [ORDER BY <col> [ASC|DESC]]
-       [LIMIT <n>]
+     SELECT [DISTINCT] <cols|*|COUNT(*)|COUNT(col) [AS name]> FROM <table>
+       [WHERE <condition> [AND|OR ...], with ( ) for grouping]
+       [GROUP BY <col>]
+       [ORDER BY <col> [ASC|DESC] [, <col> ...]]
+       [LIMIT <n>] [OFFSET <n>]
 
      ops: =  !=  <>  >  <  >=  <=  LIKE  NOT LIKE  IN (a, b)  NOT IN (a, b)
+     AND binds tighter than OR, as in standard SQL.
 
-   Not supported, deliberately: JOIN, GROUP BY, OR, subqueries, functions.
-   The point is a small surface implemented correctly rather than a large one
-   implemented approximately — an engine that silently mis-evaluates a query
-   is worse than one that says it cannot.
+   Not supported, deliberately: JOIN, HAVING, subqueries, functions other
+   than COUNT. The point is a small surface implemented correctly rather
+   than a large one implemented approximately: an engine that silently
+   mis-evaluates a query is worse than one that says it cannot.
    ========================================================================== */
 
 export type Cell = string | number | boolean;
@@ -201,17 +203,6 @@ function parseScalar(raw: string): Cell {
   return value;
 }
 
-function parseValue(raw: string): Cell | Cell[] {
-  const value = raw.trim();
-  if (value.startsWith('(') && value.endsWith(')')) {
-    return value
-      .slice(1, -1)
-      .split(',')
-      .map((part) => parseScalar(part));
-  }
-  return parseScalar(value);
-}
-
 function likeToRegExp(pattern: string): RegExp {
   // Escape regex metacharacters first, then translate the SQL wildcards.
   // Neither % nor _ is in the escaped set, so the order is safe.
@@ -259,11 +250,263 @@ function compare(cell: Cell, op: string, value: Cell | Cell[]): boolean {
   }
 }
 
-/* The negated forms must precede the bare ones — regex alternation is
-   first-match, so `\blike\b` placed earlier would match the LIKE inside
-   `NOT LIKE` and silently invert the meaning of the condition. */
-const CONDITION =
-  /^\s*(\w+)\s*(>=|<=|!=|<>|=|>|<|\bnot\s+like\b|\bnot\s+in\b|\blike\b|\bin\b)\s*([\s\S]+?)\s*$/i;
+/* ── WHERE ──────────────────────────────────────────────────────────────────
+   Read with a tokenizer and a small recursive descent rather than by
+   splitting on AND, so OR, parentheses and precedence come out right:
+   AND binds tighter than OR, exactly as in SQL, and parentheses override
+   both. `a OR b AND c` is `a OR (b AND c)`. */
+
+type WhereToken =
+  | { t: 'lp' | 'rp' | 'comma'; start: number; end: number }
+  | { t: 'op' | 'str' | 'dq' | 'word'; v: string; start: number; end: number };
+
+function lexWhere(text: string): WhereToken[] {
+  const tokens: WhereToken[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (/\s/.test(ch)) {
+      i++;
+      continue;
+    }
+    if (ch === '(' || ch === ')' || ch === ',') {
+      tokens.push({ t: ch === '(' ? 'lp' : ch === ')' ? 'rp' : 'comma', start: i, end: i + 1 });
+      i++;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      let j = i + 1;
+      let value = '';
+      while (j < text.length) {
+        // SQL escapes a quote inside a literal by doubling it: 'it''s'.
+        if (text[j] === ch && text[j + 1] === ch) {
+          value += ch;
+          j += 2;
+          continue;
+        }
+        if (text[j] === ch) break;
+        value += text[j++];
+      }
+      if (j >= text.length) throw new QueryInputError(`unterminated quote in: ${text.slice(i).trim()}`);
+      tokens.push({ t: ch === "'" ? 'str' : 'dq', v: value, start: i, end: j + 1 });
+      i = j + 1;
+      continue;
+    }
+    const op = /^(>=|<=|!=|<>|=|>|<)/.exec(text.slice(i));
+    if (op) {
+      tokens.push({ t: 'op', v: op[0], start: i, end: i + op[0].length });
+      i += op[0].length;
+      continue;
+    }
+    const word = /^[^\s(),'"=<>!]+/.exec(text.slice(i));
+    if (!word) throw new QueryInputError(`could not parse condition: ${text.slice(i).trim()}`);
+    tokens.push({ t: 'word', v: word[0], start: i, end: i + word[0].length });
+    i += word[0].length;
+  }
+  return tokens;
+}
+
+type WhereNode =
+  | { type: 'and' | 'or'; left: WhereNode; right: WhereNode }
+  | { type: 'cond'; column: string; op: string; value: Cell | Cell[] };
+
+function parseWhere(text: string, table: TableSpec): WhereNode {
+  const tokens = lexWhere(text);
+  let pos = 0;
+
+  const isWord = (offset: number, ...words: string[]) => {
+    const token = tokens[pos + offset];
+    return token?.t === 'word' && words.includes(token.v.toLowerCase());
+  };
+  const conditionText = (from: number) => {
+    // Up to the next AND/OR at this level, for an error that quotes what was typed.
+    let to = from;
+    while (to < tokens.length && !(tokens[to].t === 'word' && /^(and|or)$/i.test((tokens[to] as { v: string }).v))) to++;
+    const last = tokens[Math.max(from, to - 1)];
+    return last ? text.slice(tokens[from]?.start ?? 0, last.end).trim() : text.trim();
+  };
+  const unable = (from: number) => new QueryInputError(`could not parse condition: ${conditionText(from)}`);
+
+  const scalarOf = (token: WhereToken): Cell => {
+    if (token.t === 'str') return token.v;
+    if (token.t === 'dq') return parseScalar(`"${token.v}"`);
+    if (token.t === 'word') return parseScalar(token.v);
+    throw unable(pos);
+  };
+
+  const condition = (): WhereNode => {
+    const from = pos;
+    const column = tokens[pos];
+    if (column?.t !== 'word' || !/^\w+$/.test(column.v)) throw unable(from);
+    const key = column.v.toLowerCase();
+    if (!table.columns.some((c) => c.name === key)) {
+      throw new QueryInputError(`unknown column: ${key}. run 'schema' to see ${table.name}`);
+    }
+    pos++;
+
+    let op: string;
+    const next = tokens[pos];
+    if (next?.t === 'op') {
+      op = next.v;
+      pos++;
+    } else if (isWord(0, 'not') && isWord(1, 'like', 'in')) {
+      op = `not ${(tokens[pos + 1] as { v: string }).v.toLowerCase()}`;
+      pos += 2;
+    } else if (isWord(0, 'like', 'in')) {
+      op = (next as { v: string }).v.toLowerCase();
+      pos++;
+    } else {
+      throw unable(from);
+    }
+
+    if (op === 'in' || op === 'not in') {
+      if (tokens[pos]?.t !== 'lp') {
+        // A single bare value is accepted: `tier IN design`.
+        if (!tokens[pos]) throw unable(from);
+        return { type: 'cond', column: key, op, value: [scalarOf(tokens[pos++])] };
+      }
+      pos++;
+      const list: Cell[] = [];
+      while (tokens[pos] && tokens[pos].t !== 'rp') {
+        // Bare words inside a list may run together: `IN (Data Engineering, design)`.
+        if (tokens[pos].t === 'comma') {
+          pos++;
+          continue;
+        }
+        const parts: WhereToken[] = [];
+        while (tokens[pos] && tokens[pos].t !== 'comma' && tokens[pos].t !== 'rp') parts.push(tokens[pos++]);
+        list.push(
+          parts.length === 1 ? scalarOf(parts[0]) : parseScalar(text.slice(parts[0].start, parts[parts.length - 1].end))
+        );
+      }
+      if (tokens[pos]?.t !== 'rp') throw unable(from);
+      pos++;
+      return { type: 'cond', column: key, op, value: list };
+    }
+
+    const first = tokens[pos];
+    if (!first) throw unable(from);
+    if (first.t === 'str' || first.t === 'dq') {
+      pos++;
+      return { type: 'cond', column: key, op, value: scalarOf(first) };
+    }
+    // An unquoted value may be several words: `category = Data Engineering`.
+    const startAt = pos;
+    while (tokens[pos]?.t === 'word' && !isWord(0, 'and', 'or')) pos++;
+    if (pos === startAt) throw unable(from);
+    return { type: 'cond', column: key, op, value: parseScalar(text.slice(tokens[startAt].start, tokens[pos - 1].end)) };
+  };
+
+  const primary = (): WhereNode => {
+    if (tokens[pos]?.t === 'lp') {
+      pos++;
+      const inner = or();
+      if (tokens[pos]?.t !== 'rp') throw new QueryInputError('a parenthesis in WHERE is never closed');
+      pos++;
+      return inner;
+    }
+    return condition();
+  };
+  const and = (): WhereNode => {
+    let node = primary();
+    while (isWord(0, 'and')) {
+      pos++;
+      node = { type: 'and', left: node, right: primary() };
+    }
+    return node;
+  };
+  const or = (): WhereNode => {
+    let node = and();
+    while (isWord(0, 'or')) {
+      pos++;
+      node = { type: 'or', left: node, right: and() };
+    }
+    return node;
+  };
+
+  const tree = or();
+  if (pos < tokens.length) {
+    if (tokens[pos].t === 'rp') throw new QueryInputError('a closing parenthesis in WHERE has no opening one');
+    throw unable(pos);
+  }
+  return tree;
+}
+
+function matches(node: WhereNode, row: Record<string, Cell>): boolean {
+  if (node.type === 'cond') return compare(row[node.column], node.op, node.value);
+  if (node.type === 'and') return matches(node.left, row) && matches(node.right, row);
+  return matches(node.left, row) || matches(node.right, row);
+}
+
+/* ── Projection ─────────────────────────────────────────────────────────── */
+
+type SelectItem =
+  | { kind: 'column'; column: string; label: string }
+  | { kind: 'count'; column: string | null; label: string };
+
+/** Splits on commas that are not inside parentheses, so COUNT(x) stays whole. */
+function splitTopLevel(text: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of text) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth--;
+    if (ch === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return parts.map((p) => p.trim());
+}
+
+function parseSelect(text: string, table: TableSpec): SelectItem[] {
+  if (text === '*') return table.columns.map((c) => ({ kind: 'column', column: c.name, label: c.name }));
+
+  return splitTopLevel(text).map((raw) => {
+    const known = (name: string) => {
+      if (!table.columns.some((c) => c.name === name)) {
+        throw new QueryInputError(`unknown column: ${name}. run 'schema' to see ${table.name}`);
+      }
+    };
+    const count = /^count\s*\(\s*(\*|\w+)\s*\)(?:\s+as\s+(\w+))?$/i.exec(raw);
+    if (count) {
+      const column = count[1] === '*' ? null : count[1].toLowerCase();
+      if (column) known(column);
+      return { kind: 'count', column, label: count[2]?.toLowerCase() ?? `count(${column ?? '*'})` };
+    }
+    const plain = /^(\w+)(?:\s+as\s+(\w+))?$/i.exec(raw);
+    if (!plain) {
+      if (raw === '*') throw new QueryInputError('* cannot be mixed with other columns');
+      if (/^\w+\s*\(/.test(raw)) throw new QueryInputError(`only COUNT is supported, not ${raw.split('(')[0].toUpperCase()}`);
+      throw new QueryInputError(`could not read column: ${raw}`);
+    }
+    const column = plain[1].toLowerCase();
+    known(column);
+    return { kind: 'column', column, label: plain[2]?.toLowerCase() ?? column };
+  });
+}
+
+function parseOrder(text: string): { key: string; direction: 1 | -1 }[] {
+  return splitTopLevel(text).map((part) => {
+    const match = /^([\w]+(?:\s*\(\s*(?:\*|\w+)\s*\))?)(?:\s+(asc|desc))?$/i.exec(part);
+    if (!match) throw new QueryInputError(`could not read ORDER BY: ${part}`);
+    return { key: match[1].replace(/\s+/g, '').toLowerCase(), direction: match[2]?.toLowerCase() === 'desc' ? -1 : 1 };
+  });
+}
+
+function compareValues(left: Cell, right: Cell): number {
+  if (typeof left === 'number' && typeof right === 'number') return left - right;
+  return String(left).localeCompare(String(right));
+}
+
+function wholeNumber(text: string, clause: string): number {
+  if (!/^\d+$/.test(text)) throw new QueryInputError(`${clause} expects a whole number, got: ${text}`);
+  return Number(text);
+}
 
 /* ── Query ──────────────────────────────────────────────────────────────── */
 
@@ -290,14 +533,15 @@ function evaluate(input: string): QueryResult | QueryError {
   const from = locate(masked, 'from');
   if (!from) return { error: 'missing FROM clause' };
 
-  const whereM = locate(masked, 'where');
-  const orderM = locate(masked, 'order\\s+by');
-  const limitM = locate(masked, 'limit');
+  if (locate(masked, 'join')) return { error: 'JOIN is not supported: each query reads one table' };
+  if (locate(masked, 'having')) return { error: 'HAVING is not supported. filter with WHERE, or sort the counts with ORDER BY' };
 
   const clauses = [
-    { key: 'where', match: whereM },
-    { key: 'order', match: orderM },
-    { key: 'limit', match: limitM },
+    { key: 'where', match: locate(masked, 'where') },
+    { key: 'group', match: locate(masked, 'group\\s+by') },
+    { key: 'order', match: locate(masked, 'order\\s+by') },
+    { key: 'limit', match: locate(masked, 'limit') },
+    { key: 'offset', match: locate(masked, 'offset') },
   ]
     .filter((c): c is { key: string; match: Match } => c.match !== null)
     .sort((a, b) => a.match.start - b.match.start);
@@ -319,90 +563,118 @@ function evaluate(input: string): QueryResult | QueryError {
   }
 
   // Projection
-  const selectPart = sql.slice('select'.length, from.start).trim();
+  let selectPart = sql.slice('select'.length, from.start).trim();
+  const distinct = /^distinct\s+/i.test(selectPart);
+  if (distinct) selectPart = selectPart.replace(/^distinct\s+/i, '');
   if (!selectPart) return { error: 'no columns selected' };
-
-  let columns: string[];
-  if (selectPart === '*') {
-    columns = table.columns.map((c) => c.name);
-  } else {
-    columns = selectPart.split(',').map((c) => c.trim().toLowerCase());
-    const unknown = columns.find((c) => !table.columns.some((tc) => tc.name === c));
-    if (unknown) {
-      return { error: `unknown column: ${unknown}. run 'schema' to see ${table.name}` };
-    }
-  }
+  const items = parseSelect(selectPart, table);
+  const labels = items.map((item) => item.label);
 
   // Filter
   let rows = table.rows;
   const wherePart = sliceOf('where');
-
   if (wherePart) {
-    // Split on AND using the mask, so a literal containing " and " stays intact.
-    const maskedWhere = maskLiterals(wherePart);
-    const boundaries: [number, number][] = [];
-    const andRe = /\s+and\s+/g;
-    let andMatch: RegExpExecArray | null;
-    while ((andMatch = andRe.exec(maskedWhere)) !== null) {
-      boundaries.push([andMatch.index, andMatch.index + andMatch[0].length]);
-    }
-
-    const conditions: string[] = [];
-    let cursor = 0;
-    for (const [start, end] of boundaries) {
-      conditions.push(wherePart.slice(cursor, start));
-      cursor = end;
-    }
-    conditions.push(wherePart.slice(cursor));
-
-    for (const raw of conditions) {
-      const parsed = CONDITION.exec(raw);
-      if (!parsed) return { error: `could not parse condition: ${raw.trim()}` };
-
-      const [, column, op, valueRaw] = parsed;
-      const key = column.toLowerCase();
-      if (!table.columns.some((tc) => tc.name === key)) {
-        return { error: `unknown column: ${key}. run 'schema' to see ${table.name}` };
-      }
-
-      const value = parseValue(valueRaw);
-      rows = rows.filter((row) => compare(row[key], op, value));
-    }
+    const tree = parseWhere(wherePart, table);
+    rows = rows.filter((row) => matches(tree, row));
   }
 
-  // Sort
   const orderPart = sliceOf('order');
-  if (orderPart) {
-    const [rawColumn, rawDir = 'asc'] = orderPart.split(/\s+/);
-    const key = rawColumn.toLowerCase();
-    if (!table.columns.some((tc) => tc.name === key)) {
-      return { error: `cannot order by unknown column: ${key}` };
+  const order = orderPart ? parseOrder(orderPart) : [];
+
+  const groupPart = sliceOf('group').toLowerCase();
+  const aggregate = items.some((item) => item.kind === 'count');
+  let out: Cell[][];
+
+  if (groupPart || aggregate) {
+    // Grouped or counted: one output row per group (one in all, with no GROUP BY).
+    if (groupPart && !/^\w+$/.test(groupPart)) return { error: 'GROUP BY takes one column' };
+    if (groupPart && !table.columns.some((c) => c.name === groupPart)) {
+      return { error: `unknown column: ${groupPart}. run 'schema' to see ${table.name}` };
+    }
+    for (const item of items) {
+      if (item.kind === 'column' && item.column !== groupPart) {
+        return {
+          error: groupPart
+            ? `${item.column} must be the GROUP BY column, or counted with COUNT(${item.column})`
+            : `${item.column} needs GROUP BY ${item.column} to sit beside a count`,
+        };
+      }
     }
 
-    const direction = rawDir.toLowerCase() === 'desc' ? -1 : 1;
-    // Copied before sorting — `rows` may still be the table's own array when
-    // no WHERE clause narrowed it, and sorting in place would permanently
-    // reorder the source data behind the rendered page.
-    rows = [...rows].sort((a, b) => {
-      const left = a[key];
-      const right = b[key];
-      if (typeof left === 'number' && typeof right === 'number') return (left - right) * direction;
-      return String(left).localeCompare(String(right)) * direction;
+    const groups = new Map<string, Record<string, Cell>[]>();
+    if (!groupPart) groups.set('', rows);
+    for (const row of groupPart ? rows : []) {
+      const key = String(row[groupPart]);
+      groups.set(key, [...(groups.get(key) ?? []), row]);
+    }
+
+    out = [...groups.values()].map((members) =>
+      items.map((item) =>
+        item.kind === 'column'
+          ? members[0][item.column]
+          : item.column === null
+            ? members.length
+            : members.filter((m) => String(m[item.column as string]) !== '').length
+      )
+    );
+
+    // Ordered by what the result shows: a label, an alias or the grouped column.
+    const keys = order.map(({ key, direction }) => {
+      const index = labels.findIndex((label, i) => label === key || (items[i].kind === 'column' && (items[i] as { column: string }).column === key));
+      if (index === -1) throw new QueryInputError(`cannot order by unknown column: ${key}`);
+      return { index, direction };
+    });
+    if (keys.length) {
+      out = [...out].sort((a, b) => {
+        for (const { index, direction } of keys) {
+          const diff = compareValues(a[index], b[index]);
+          if (diff) return diff * direction;
+        }
+        return 0;
+      });
+    }
+  } else {
+    // Sorted on the full rows, so a query can order by a column it does not show.
+    const keys = order.map(({ key, direction }) => {
+      const alias = items.find((item) => item.label === key);
+      const column = alias && alias.kind === 'column' ? alias.column : key;
+      if (!table.columns.some((tc) => tc.name === column)) {
+        throw new QueryInputError(`cannot order by unknown column: ${key}`);
+      }
+      return { column, direction };
+    });
+    if (keys.length) {
+      // Copied before sorting: `rows` may still be the table's own array when
+      // no WHERE clause narrowed it, and sorting in place would permanently
+      // reorder the source data behind the rendered page.
+      rows = [...rows].sort((a, b) => {
+        for (const { column, direction } of keys) {
+          const diff = compareValues(a[column], b[column]);
+          if (diff) return diff * direction;
+        }
+        return 0;
+      });
+    }
+    out = rows.map((row) => items.map((item) => row[(item as { column: string }).column]));
+  }
+
+  if (distinct) {
+    const seen = new Set<string>();
+    out = out.filter((row) => {
+      const key = JSON.stringify(row);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
   }
 
-  // Limit
+  // Offset, then limit
+  const offsetPart = sliceOf('offset');
+  if (offsetPart) out = out.slice(wholeNumber(offsetPart, 'OFFSET'));
   const limitPart = sliceOf('limit');
-  if (limitPart) {
-    if (!/^\d+$/.test(limitPart)) return { error: `LIMIT expects a whole number, got: ${limitPart}` };
-    rows = rows.slice(0, Number(limitPart));
-  }
+  if (limitPart) out = out.slice(0, wholeNumber(limitPart, 'LIMIT'));
 
-  return {
-    columns,
-    rows: rows.map((row) => columns.map((c) => row[c])),
-    rowCount: rows.length,
-  };
+  return { columns: labels, rows: out, rowCount: out.length };
 }
 
 /** Human-readable schema dump for the `schema` command. */
@@ -416,4 +688,26 @@ export function describeSchema(): string {
     );
     return [header, ...body].join('\n');
   }).join('\n\n');
+}
+
+/** One table's columns, for `\d projects`. Null when there is no such table. */
+export function describeTable(name: string): string | null {
+  const table = TABLES.find((t) => t.name === name.trim().toLowerCase());
+  if (!table) return null;
+  const width = Math.max(...table.columns.map((c) => c.name.length)) + 2;
+  return [
+    `Table "${table.name}"  (${table.rows.length} rows)`,
+    '',
+    `  ${'Column'.padEnd(width)}${'Type'.padEnd(9)}Note`,
+    ...table.columns.map((c) => `  ${c.name.padEnd(width)}${c.type.padEnd(9)}${c.note}`),
+  ].join('\n');
+}
+
+/** The table list, for a bare `\d`. */
+export function listTables(): string {
+  const width = Math.max(...TABLES.map((t) => t.name.length)) + 2;
+  return [
+    `  ${'Name'.padEnd(width)}${'Rows'.padEnd(7)}Columns`,
+    ...TABLES.map((t) => `  ${t.name.padEnd(width)}${String(t.rows.length).padEnd(7)}${t.columns.length}`),
+  ].join('\n');
 }
