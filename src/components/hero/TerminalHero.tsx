@@ -681,30 +681,28 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             transition={{ duration: prefersReduced ? 0 : 0.4, ease: EASE }}
             className="overflow-hidden text-center font-sans"
           >
-            {/* The page's h1: who and what, as one line at one size in the
-                display face. Rank comes from tone alone (the name in ink, the
-                title in grey) and a hairline between them, so the line reads
-                as a single statement rather than a heading and a subtitle.
-                Held small, so the prompt below stays the thing in the middle
-                of the screen. Below a laptop's width the two halves stack, same size. */}
+            {/* A masthead: the name on its own line in the display face (the
+                page's h1), then one quieter dateline that says what he does,
+                where he is, and whether he is free. The time zone sits inside
+                the place, so it is one fact rather than two, and availability
+                ends the line in ink behind its live square, because it is the
+                one item a visitor acts on. On a phone the dateline breaks on
+                purpose: the title, the place, then availability. */}
             <motion.h1
               {...reveal(0.15)}
-              className="flex flex-wrap lg:flex-nowrap items-center justify-center gap-x-5 gap-y-1 font-display text-[1.375rem] sm:text-[1.625rem] lg:text-[1.875rem] font-[560] leading-[1.1] tracking-[-0.02em]"
+              className="font-display text-[2rem] sm:text-[2.25rem] lg:text-[2.5rem] font-[560] leading-[1.05] tracking-[-0.025em] text-foreground"
             >
-              <span className="text-foreground whitespace-nowrap">Emmanuel Moghalu</span>
-              <span aria-hidden="true" className="hidden lg:block w-px h-[0.9em] bg-rule-strong" />
-              <span className="text-muted-foreground whitespace-nowrap">
-                <span className="sr-only">, </span>
-                Software &amp; Data Engineer
-              </span>
+              Emmanuel Moghalu
             </motion.h1>
             <motion.p
               {...reveal(0.24)}
-              className="mt-4 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[13px] text-muted-foreground"
+              className="mt-3.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[14px] md:text-[15px] text-muted-foreground"
             >
-              <span>Abuja, Nigeria</span>
-              <span aria-hidden="true" className="text-muted-ghost">·</span>
-              <span className="tabular-nums">UTC+1</span>
+              <span className="basis-full md:basis-auto">Software &amp; Data Engineer</span>
+              <span aria-hidden="true" className="hidden md:inline text-muted-ghost">·</span>
+              <span>
+                Abuja, Nigeria <span className="tabular-nums">(UTC+1)</span>
+              </span>
               <span aria-hidden="true" className="hidden sm:inline text-muted-ghost">·</span>
               <span className="basis-full sm:basis-auto inline-flex items-center justify-center gap-2 text-foreground">
                 <span className="w-1.5 h-1.5 bg-status-ok status-live" aria-hidden="true" />
