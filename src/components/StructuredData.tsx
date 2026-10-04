@@ -21,10 +21,10 @@ const StructuredData = () => {
     "alternateName": "Emmanuel Richard Moghalu",
     // "Lead" was not supported by any role on the CV; the title now matches
     // the positioning used everywhere else on the site.
-    "jobTitle": "Data Engineer & Backend Systems Engineer",
+    "jobTitle": "Software & Data Engineer",
     "url": origin,
     "image": `${origin}/profile.webp`,
-    "description": "Data and backend engineer who has been building live APIs, data pipelines and analytics systems since 2018, each backed by automated tests. Knows the Nigerian and wider African fintech world well, including working with several payment providers at once, CBN rules and NDPR data protection.",
+    "description": "Software and data engineer who has been building live APIs, data pipelines and analytics systems since 2018, each backed by automated tests. Knows the Nigerian and wider African fintech world well, including working with several payment providers at once, CBN rules and NDPR data protection.",
     "knowsAbout": [
       "Data Engineering",
       "Backend Engineering",
@@ -118,7 +118,7 @@ const StructuredData = () => {
     "@type": "ProfilePage",
     "name": "Emmanuel Moghalu, engineering portfolio",
     "url": origin,
-    "description": "The work and case studies of Emmanuel Moghalu, data and backend engineer.",
+    "description": "The work and case studies of Emmanuel Moghalu, software and data engineer.",
     "mainEntity": {
       "@type": "Person",
       "name": "Emmanuel Moghalu",
@@ -146,9 +146,9 @@ const StructuredData = () => {
   const websiteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Emmanuel Moghalu, data and backend engineer",
+    "name": "Emmanuel Moghalu, software and data engineer",
     "url": origin,
-    "description": "The work and case studies of Emmanuel Moghalu, data and backend engineer.",
+    "description": "The work and case studies of Emmanuel Moghalu, software and data engineer.",
     "author": {
       "@type": "Person",
       "name": "Emmanuel Moghalu"

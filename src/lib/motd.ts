@@ -33,7 +33,7 @@ export interface MotdLine {
 }
 
 const NAME = 'emmanuel moghalu';
-const ROLE = 'data & backend engineer';
+const ROLE = 'software & data engineer';
 
 /** Where he is, and the offset a caller actually needs to schedule a call. */
 const LOCATION = 'abuja, nigeria · utc+1';
