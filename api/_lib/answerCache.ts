@@ -1,9 +1,10 @@
 import type { ToolResult } from '../../src/lib/aiTools.js';
 import type { AiSource } from '../../src/lib/aiSources.js';
+import type { AiAction, AnswerChecks } from '../../src/lib/aiProtocol.js';
 import { digest, pipeline } from './store.js';
 
 /* ==========================================================================
-   ANSWER CACHE — the opening question, answered once per deploy.
+   ANSWER CACHE: the opening question, answered once per deploy.
 
    Most sessions start with one of six starter questions, so most first
    questions are asked word for word by many visitors. Each one cost up to
@@ -29,6 +30,9 @@ export interface CachedAnswer {
   text: string;
   provider: string;
   sources: AiSource[];
+  /** Buttons the answer offered (answers cached before actions existed have none). */
+  actions?: AiAction[];
+  checks?: AnswerChecks;
 }
 
 const memory = new Map<string, { expires: number; answer: CachedAnswer }>();

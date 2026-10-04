@@ -14,10 +14,11 @@
     "preview": "vite preview",
     "update-screenshots": "node scripts/fetch-screenshots.mjs",
     "update-fonts": "node scripts/fetch-fonts.mjs",
-    "prebuild": "node scripts/build-ai-context.mjs",
+    "prebuild": "node scripts/build-ai-context.mjs && node scripts/fetch-github.mjs",
     "build:context": "node scripts/build-ai-context.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.3.1",

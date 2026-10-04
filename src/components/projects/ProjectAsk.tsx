@@ -101,6 +101,7 @@ export default function ProjectAsk({ project }: { project: Project }) {
             canRetry={ai.canRetry}
             onAsk={ask}
             suggestions={starters}
+            register="reading"
           />
         )}
       </div>

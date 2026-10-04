@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { dropUnanswered, trimHistory, type WireMessage } from '@/lib/aiHistory';
+import type { AiAction, AnswerChecks } from '@/lib/aiProtocol';
 import type { AiSource } from '@/lib/aiSources';
 import type { Audience } from '@/lib/aiStarters';
 import { readEvents, type AiEvent } from '@/lib/aiStream';
@@ -38,6 +39,14 @@ export interface AiTurn {
   provider?: string;
   /** Figures in the answer the grounding check could not find in the site's data. */
   unverified?: string[];
+  /** What the server checked: figures and names found, and any not found. */
+  checks?: AnswerChecks;
+  /** Things the assistant offered to do on the page, rendered as buttons. */
+  actions?: AiAction[];
+  /** The latest plain-language progress line while the answer is being built. */
+  status?: string;
+  /** The project the question was scoped to with an @mention, if any. */
+  scope?: string;
   /** Replayed from the per-deploy answer cache rather than generated for this visitor. */
   cached?: boolean;
   /** No model could answer; this is the site's own search, standing in. */
@@ -68,7 +77,8 @@ export interface AiSession {
   busy: boolean;
   /** Set once the endpoint reports no key is configured. */
   unconfigured: boolean;
-  send: (question: string) => Promise<void>;
+  /** Ask. `projectId` scopes this one question to a project (an @mention), overriding the page. */
+  send: (question: string, options?: { projectId?: string }) => Promise<void>;
   /** Refuse a question locally, without spending a request to be told why. */
   reject: (reason: string) => void;
   reset: () => void;
@@ -115,6 +125,38 @@ function loadPersisted(key: string | undefined): Persisted | null {
   } catch {
     return null;
   }
+}
+
+/* ── Applying stream events to the answer turn ───────────────────────────
+   Pure, so the protocol's effect on a turn is tested without a browser. */
+
+/** An offered action, added once: the same offer twice (a model calling the tool again) is one button. */
+export function withAction(turn: AiTurn, action: AiAction): AiTurn {
+  const key = JSON.stringify(action);
+  return turn.actions?.some((a) => JSON.stringify(a) === key) ? turn : { ...turn, actions: [...(turn.actions ?? []), action] };
+}
+
+/** The answer's final text: the server's validated copy when it sends one, else what streamed. */
+export function finalText(streamed: string, event: Extract<AiEvent, { type: 'done' }>): string {
+  return (typeof event.text === 'string' && event.text.trim() ? event.text : streamed).trim();
+}
+
+/** The turn once its answer is complete. */
+export function finishTurn(turn: AiTurn, text: string, event: Extract<AiEvent, { type: 'done' }>): AiTurn {
+  return {
+    ...turn,
+    text,
+    streaming: false,
+    status: undefined,
+    checks: event.checks,
+    provider: event.provider,
+    sources: event.sources?.length ? event.sources : undefined,
+    unverified: event.unverified?.length ? event.unverified : undefined,
+    cached: event.cached || undefined,
+    degraded: event.degraded || undefined,
+    // A stand-in answer is worth asking again for once a model is back.
+    retryable: event.degraded || undefined,
+  };
 }
 
 export function useAiSession(options: AiSessionOptions = {}): AiSession {
@@ -193,11 +235,12 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
   }, [settleStreaming]);
 
   const send = useCallback(
-    async (question: string) => {
+    async (question: string, sendOptions: { projectId?: string } = {}) => {
       const trimmed = question.trim();
       if (!trimmed || busy) return;
+      const scopedProject = sendOptions.projectId ?? projectId;
 
-      push({ role: 'user', text: trimmed });
+      push({ role: 'user', text: trimmed, ...(sendOptions.projectId ? { scope: sendOptions.projectId } : {}) });
       lastQuestionRef.current = trimmed;
       historyRef.current = [
         ...trimHistory(dropUnanswered(historyRef.current), MAX_HISTORY),
@@ -217,7 +260,7 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
         const response = await fetch(ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: historyRef.current, ...requestContext(projectId, audience) }),
+          body: JSON.stringify({ messages: historyRef.current, ...requestContext(scopedProject, audience) }),
           signal: controller.signal,
         });
 
@@ -268,6 +311,12 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
             case 'step':
               patch(answerId, (turn) => ({ ...turn, evidence: [...(turn.evidence ?? []), event.result] }));
               break;
+            case 'status':
+              patch(answerId, (turn) => ({ ...turn, status: event.text }));
+              break;
+            case 'action':
+              patch(answerId, (turn) => withAction(turn, event.action));
+              break;
             case 'delta':
               answer += event.text;
               patch(answerId, (turn) => ({ ...turn, text: answer }));
@@ -278,19 +327,11 @@ export function useAiSession(options: AiSessionOptions = {}): AiSession {
               break;
             case 'done':
               finished = true;
-              historyRef.current = [...historyRef.current, { role: 'assistant', content: answer.trim() }];
-              patch(answerId, (turn) => ({
-                ...turn,
-                text: answer.trim(),
-                streaming: false,
-                provider: event.provider,
-                sources: event.sources?.length ? event.sources : undefined,
-                unverified: event.unverified?.length ? event.unverified : undefined,
-                cached: event.cached || undefined,
-                degraded: event.degraded || undefined,
-                // A stand-in answer is worth asking again for once a model is back.
-                retryable: event.degraded || undefined,
-              }));
+              /* The server may send the answer back validated (references to
+                 things that do not exist removed); that text is the answer. */
+              answer = finalText(answer, event);
+              historyRef.current = [...historyRef.current, { role: 'assistant', content: answer }];
+              patch(answerId, (turn) => finishTurn(turn, answer, event));
               break;
             case 'error':
               finished = true;

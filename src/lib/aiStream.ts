@@ -1,19 +1,14 @@
-import type { ToolResult } from './aiTools';
-import type { AiSource } from './aiSources';
+import type { StreamEvent } from './aiProtocol';
 
 /* ==========================================================================
    AI STREAM
 
-   The wire format /api/ask streams, and the reader for it. One JSON object
-   per line — see the header of api/ask.ts for what each event means.
+   The reader for the NDJSON the answering endpoints stream (/api/ask,
+   /api/fit, /api/brief). The events themselves are defined once, in
+   aiProtocol.ts.
    ========================================================================== */
 
-export type AiEvent =
-  | { type: 'step'; result: ToolResult }
-  | { type: 'delta'; text: string }
-  | { type: 'reset' }
-  | { type: 'done'; provider?: string; sources?: AiSource[]; unverified?: string[]; cached?: boolean; degraded?: boolean }
-  | { type: 'error'; error: string; retryable?: boolean };
+export type AiEvent = StreamEvent;
 
 /**
  * Calls `onEvent` for every complete line in `body`, in order.

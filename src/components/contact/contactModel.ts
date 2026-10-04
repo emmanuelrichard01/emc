@@ -10,7 +10,12 @@
      suggestEmail  "gmial.com" caught before it becomes a reply that bounces
      mailtoHref  the way out when the form cannot send: the same message,
                  handed to the visitor's own mail app
+     overlap     how much of a working day the visitor shares with Abuja,
+                 worked out from real time zones so daylight saving holds
+     vCard       "Save contact": the address book entry, built here
    ========================================================================== */
+
+import type { Topic } from './contactSchema';
 
 export interface Intent {
   id: 'role' | 'project' | 'collab' | 'other';
@@ -32,9 +37,29 @@ export const INTENTS: readonly Intent[] = [
    need nothing but an id. */
 export const INTENT_EVENT = 'emc:contact-intent';
 
+export interface IntentRequest {
+  id: Intent['id'];
+  /** Something the assistant drafted: a role-fit summary, a project brief, a conversation. Attached as a card, never pasted into what was typed. */
+  draft?: string;
+}
+
 /** Picks what the message is about; the form brings itself into view and focuses the message. */
-export function requestIntent(id: Intent['id']): void {
-  window.dispatchEvent(new CustomEvent<Intent['id']>(INTENT_EVENT, { detail: id }));
+export function requestIntent(id: Intent['id'], draft?: string): void {
+  window.dispatchEvent(new CustomEvent<IntentRequest>(INTENT_EVENT, { detail: { id, ...(draft ? { draft } : {}) } }));
+}
+
+/** The form has three doors; a collaboration is "something else". */
+export function topicFor(id: Intent['id']): Topic {
+  return id === 'collab' ? 'other' : id;
+}
+
+/** What an attached draft is, named from how each of the assistant's builders starts its text. */
+export function attachmentLabel(draft: string): string {
+  const head = draft.trimStart();
+  if (head.startsWith('Project brief')) return 'Project brief';
+  if (head.startsWith('From my conversation with the assistant')) return 'Conversation with the assistant';
+  if (/^I checked a role\b/.test(head) || /^Role fit\b/i.test(head)) return 'Role fit summary';
+  return 'From the assistant';
 }
 
 /** The subject a message arrives under: sortable before it is opened. */
@@ -104,4 +129,97 @@ export function suggestEmail(email: string): string | null {
 
 export function mailtoHref(to: string, subject: string, body: string): string {
   return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/* ── Availability and working hours ─────────────────────────────────────── */
+
+export { AVAILABILITY } from '@/data/availability';
+
+/** Abuja is on Africa/Lagos time: UTC+1 all year. */
+export const HOME_ZONE = 'Africa/Lagos';
+/** A working day, 09:00 to 17:00, on each side. */
+const DAY_START_MIN = 9 * 60;
+const DAY_END_MIN = 17 * 60;
+
+/**
+ * A zone's offset east of UTC, in minutes, at a given moment: the wall
+ * clock there (as Intl reads it) minus the wall clock in UTC. Daylight
+ * saving is whatever that zone's rules say on that date.
+ */
+export function zoneOffsetMinutes(timeZone: string, at: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+  }).formatToParts(at);
+  const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const wall = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'));
+  const utc = Math.floor(at.getTime() / 60_000) * 60_000;
+  return Math.round((wall - utc) / 60_000);
+}
+
+/**
+ * Minutes of a 09:00 to 17:00 day two zones share, given each one's offset
+ * east of UTC. A day on one side can line up with the previous or next day
+ * on the other, so all three alignments are tried.
+ */
+export function workdayOverlapMinutes(visitorOffsetMin: number, homeOffsetMin = 60): number {
+  const homeStart = DAY_START_MIN - homeOffsetMin;
+  const homeEnd = DAY_END_MIN - homeOffsetMin;
+  let best = 0;
+  for (const shift of [-1440, 0, 1440]) {
+    const start = DAY_START_MIN - visitorOffsetMin + shift;
+    const end = DAY_END_MIN - visitorOffsetMin + shift;
+    best = Math.max(best, Math.min(homeEnd, end) - Math.max(homeStart, start));
+  }
+  return best;
+}
+
+/** One plain sentence about the shared part of the working day. */
+export function overlapSentence(overlapMin: number): string {
+  if (overlapMin >= DAY_END_MIN - DAY_START_MIN) return 'We share the whole working day.';
+  if (overlapMin <= 0) return 'Our working days don’t overlap, so I’ll reply in your morning.';
+  if (overlapMin < 60) return `Our working days overlap by ${overlapMin} minutes.`;
+  const hours = Math.round(overlapMin / 30) / 2;
+  return `Our working days overlap by ${hours} ${hours === 1 ? 'hour' : 'hours'}.`;
+}
+
+/* ── Save contact ───────────────────────────────────────────────────────── */
+
+export interface Card {
+  name: string;
+  family: string;
+  given: string;
+  title: string;
+  email: string;
+  url: string;
+  city: string;
+  country: string;
+  links: string[];
+}
+
+/** RFC 6350 escaping for a text value: backslash, newline, comma, semicolon. */
+function vText(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/([,;])/g, '\\$1');
+}
+
+/** A vCard 3.0 entry (the version every address book reads), lines ending CRLF. */
+export function buildVCard(card: Card): string {
+  const lines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `N:${vText(card.family)};${vText(card.given)};;;`,
+    `FN:${vText(card.name)}`,
+    `TITLE:${vText(card.title)}`,
+    `EMAIL;TYPE=INTERNET:${card.email}`,
+    `URL:${card.url}`,
+    `ADR;TYPE=WORK:;;;${vText(card.city)};;;${vText(card.country)}`,
+    ...card.links.map((link) => `X-SOCIALPROFILE:${link}`),
+    'END:VCARD',
+  ];
+  return `${lines.join('\r\n')}\r\n`;
 }

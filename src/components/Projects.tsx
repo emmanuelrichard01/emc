@@ -106,9 +106,17 @@ const Projects: React.FC = () => {
      and the career ledger's tenure strip do, on click — without reaching into this section's state: they
      dispatch an event, and the filter becomes that one technology. */
   React.useEffect(() => {
+    /* The assistant sends richer filters than one technology (several, a
+       tier, a search), so the detail accepts all three; anything it names
+       that the catalogue does not have is ignored rather than producing an
+       empty list. */
     const onFilter = (e: Event) => {
-      const tech = (e as CustomEvent<{ stack?: string }>).detail?.stack;
-      if (tech && STACK.some((t) => t.name === tech)) update({ query: "", tier: null, stack: [tech] });
+      const detail = (e as CustomEvent<{ stack?: string | string[]; tier?: string; query?: string }>).detail ?? {};
+      const wanted = Array.isArray(detail.stack) ? detail.stack : detail.stack ? [detail.stack] : [];
+      const stack = wanted.filter((tech) => STACK.some((t) => t.name === tech));
+      const tier = detail.tier && (TIERS as readonly string[]).includes(detail.tier) ? (detail.tier as Tier) : null;
+      const query = typeof detail.query === "string" ? detail.query.slice(0, 80) : "";
+      if (stack.length || tier || query) update({ query, tier, stack });
     };
     window.addEventListener("emc:work-filter", onFilter);
     return () => window.removeEventListener("emc:work-filter", onFilter);

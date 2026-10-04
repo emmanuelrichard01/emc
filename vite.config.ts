@@ -8,7 +8,8 @@ import { PROJECTS } from "./src/data/projects";
 const SITE_URL = "https://www.builtbyem.dev";
 
 /**
- * Mounts api/ask.ts at /api/ask during `npm run dev`.
+ * Mounts the AI endpoints (api/ask.ts, fit, brief, insights, command) at
+ * /api/<name> during `npm run dev`.
  *
  * Vercel runs that file as an Edge Function in preview and production, but
  * the Vite dev server knows nothing about it: every request fell through to
@@ -43,56 +44,68 @@ function devApiPlugin(mode: string): Plugin {
         "KV_REST_API_URL",
         "KV_REST_API_TOKEN",
         "ASK_ANSWER_CACHE",
+        "ANTHROPIC_API_KEY",
+        "CLAUDE_MODEL",
+        "INSIGHTS_TOKEN",
+        "AI_MOCK",
+        "AI_GAP_LOG",
+        "AI_SEARCH_EMBED",
+        "RESEND_API_KEY",
+        "RESEND_FROM",
+        "CONTACT_TO",
       ]) {
         if (!process.env[key] && env[key]) process.env[key] = env[key];
       }
 
-      server.middlewares.use("/api/ask", async (req, res) => {
-        try {
-          const chunks: Buffer[] = [];
-          for await (const chunk of req) chunks.push(chunk as Buffer);
+      // Every endpoint, mounted the same way: /api/<name> → api/<name>.ts.
+      for (const name of ["ask", "fit", "brief", "insights", "command", "contact"]) {
+        server.middlewares.use(`/api/${name}`, async (req, res) => {
+          try {
+            const chunks: Buffer[] = [];
+            for await (const chunk of req) chunks.push(chunk as Buffer);
 
-          const { default: handler } = await server.ssrLoadModule("/api/ask.ts");
+            const { default: handler } = await server.ssrLoadModule(`/api/${name}.ts`);
 
-          const response: Response = await handler(
-            new Request(`http://localhost${req.url ?? "/"}`, {
-              method: req.method,
-              headers: req.headers as Record<string, string>,
-              body: chunks.length ? Buffer.concat(chunks) : undefined,
-            }),
-          );
+            const response: Response = await handler(
+              new Request(`http://localhost${req.url ?? "/"}`, {
+                method: req.method,
+                headers: req.headers as Record<string, string>,
+                body: chunks.length ? Buffer.concat(chunks) : undefined,
+              }),
+            );
 
-          res.statusCode = response.status;
-          response.headers.forEach((value, key) => res.setHeader(key, value));
+            res.statusCode = response.status;
+            response.headers.forEach((value, key) => res.setHeader(key, value));
 
-          // Piped, not buffered: answers stream, and a dev server that
-          // collected the whole body first would hide exactly the behaviour
-          // being developed.
-          if (!response.body) {
+            // Piped, not buffered: answers stream, and a dev server that
+            // collected the whole body first would hide exactly the behaviour
+            // being developed.
+            if (!response.body) {
+              res.end();
+              return;
+            }
+            const reader = response.body.getReader();
+            req.on("close", () => void reader.cancel());
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              res.write(Buffer.from(value));
+            }
             res.end();
-            return;
+          } catch (error) {
+            // Answer in the shape the client parses, so a dev-server fault
+            // surfaces as a readable message instead of another empty 404.
+            res.statusCode = 500;
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({
+                type: "error",
+                error: `dev api: ${error instanceof Error ? error.message : String(error)}`,
+              }),
+            );
           }
-          const reader = response.body.getReader();
-          req.on("close", () => void reader.cancel());
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            res.write(Buffer.from(value));
-          }
-          res.end();
-        } catch (error) {
-          // Answer in the shape the client parses, so a dev-server fault
-          // surfaces as a readable message instead of another empty 404.
-          res.statusCode = 500;
-          res.setHeader("Content-Type", "application/json");
-          res.end(
-            JSON.stringify({
-              type: "error",
-              error: `dev api: ${error instanceof Error ? error.message : String(error)}`,
-            }),
-          );
-        }
-      });
+        });
+      }
     },
   };
 }

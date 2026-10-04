@@ -341,6 +341,15 @@ The full body of work as a numbered list on hairline rules: a Quiet Grey folio, 
 ### Floating layers
 The command palette (640px, query in the title face), the assistant dock (460px side sheet on desktop, 88dvh bottom sheet on phones), the compare dock and toasts: popover surface, square, hairline ring plus a floating shadow. They are the only places a shadow appears.
 
+### The assistant dock
+From 1280px the dock sits beside the page instead of over it (`html[data-ask-docked]` narrows the page); from 768px it floats over the right edge without locking the page, and on phones it is a bottom sheet that snaps to a peek (the page still readable above it), half or full height. Four text tabs with an ink hairline under the current one: Ask, Role fit, Project, Tour. An answer is set in the reading face: paragraphs, bullets, bold, and citations as small square numbered chips in Caption Grey that turn ink on hover and open the exact case-study section. Blocks inside an answer (a project, a comparison, a role, a code excerpt, a diagram) are hairline-framed plates, never cards with shadows. Anything the server could not check has a dotted Status Warning underline and a plain note in the footer. Actions the assistant offers are quiet text buttons with an arrow; nothing runs until pressed. Role fit marks each requirement with a word (strong, partial, not shown), never a score or a colour bar.
+
+### The drop-down console
+The backtick key drops the hero's shell from the top of any page: page stock, a Strong Rule along the bottom edge, the same caption strip and prompt as the hero instrument, a draggable bottom edge between 30% and 85% of the screen. It slides down over 280ms on the house ease (appears in place under reduced motion). Commands wrap at word boundaries; wide tables scroll sideways inside the log, as a terminal does.
+
+### Contact
+One headline in the Display voice ("Let's work together."), a lede promising a reply within 1 working day, and one availability line behind a green square. Two paths side by side on a hairline rule (hiring for a role, or a project in mind), each opening the form already set for it. The form keeps the Inputs style above; attachments from the assistant (a conversation, a fit report, a brief) show as small hairline cards that can be removed.
+
 ### The Hero (signature)
 The first viewport is a fixed composition. These placements are user-confirmed and binding:
 - **Terminal always centre.** The identity block and the terminal instrument share one centred column (max 56rem; the terminal, its output and the Ask suggestions keep 42rem inside it), vertically centred in the space between the top bar and the baseline. Nothing else competes for the middle of the screen; a soft dark pool sits behind the column so text never lands on disk light or a bright star.

@@ -24,6 +24,7 @@ export const PROJECTS: Project[] = [
     liveUrl: "https://vscanva.vercel.app",
     image: "/images/vega-canva.png",
     captureScreenshot: false,
+    testCount: { value: 4076, source: "3,883 frontend and 193 server tests" },
     metrics: [
       { label: "Automated Tests", value: "4,076" },
       { label: "Move @500 Objects", value: "~5.7ms" },
@@ -186,6 +187,7 @@ export const PROJECTS: Project[] = [
     // demo-fixture mode: there is no live deployment to capture.
     image: "/images/mmr-engine.png",
     captureScreenshot: false,
+    testCount: { value: 276, source: "23 of them run against a real PostgreSQL database" },
     metrics: [
       // The repository's own "verified against this repository" table at
       // v1.0.0. The earlier 99.5% auto-match and <10s latency were design
@@ -431,6 +433,7 @@ if len(scored) > 1 and best_score - scored[1][0] < config.ambiguity_margin:
     timeline: "2025",
     github: "https://github.com/emmanuelrichard01/modern-warehouse",
     liveUrl: null,
+    testCount: { value: 21, source: "Schema tests in dbt (its 9 Dagster checks are not counted)" },
     metrics: [
       { label: "Records", value: "1.5M+" },
       { label: "dbt Tests", value: "21" },
@@ -551,6 +554,7 @@ if len(scored) > 1 and best_score - scored[1][0] < config.ambiguity_margin:
     github: "https://github.com/emmanuelrichard01/ULTRA-NEWS",
     liveUrl: "https://ultra-news.vercel.app/",
     image: "/images/ultra-news.png",
+    testCount: { value: 180, source: "as recorded in its README, on a live stack" },
     metrics: [
       { label: "Corroboration", value: "Publishers" },
       { label: "Ingestion", value: "41 Feeds" },
@@ -830,6 +834,7 @@ if len(scored) > 1 and best_score - scored[1][0] < config.ambiguity_margin:
     timeline: "2026",
     github: null,
     liveUrl: null,
+    testCount: { value: 36, source: "across 7 suites, against real Redis and Postgres" },
     metrics: [
       { label: "Admission", value: "Exactly 50/300" },
       { label: "Check Latency", value: "p99 <15ms" },

@@ -121,6 +121,13 @@ export interface Project {
    */
   captureScreenshot?: boolean;
   metrics: ProjectMetric[];
+  /**
+   * Automated tests the project states, counted once. Only set where the
+   * figure appears in the project's own text (a test checks it does), so
+   * About can sum them without anything being typed twice. The source says
+   * what was counted, in a few plain words.
+   */
+  testCount?: { value: number; source: string };
   description: string;
   decisions: Decision[];
   stack: string[];

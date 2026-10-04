@@ -40,6 +40,11 @@ function numbersIn(text: string): string[] {
   return [...text.matchAll(NUMBER)].map((m) => m[0].replace(/,+$/, ''));
 }
 
+/** Every figure in `answer` (list numbering aside), each once, as written. */
+export function figuresIn(answer: string): string[] {
+  return [...new Set(numbersIn(answer.replace(LIST_MARKER, '')))];
+}
+
 /**
  * The figures in `answer` that appear nowhere in `evidence`, as they are
  * written in the answer (so the UI can find and mark them), each once.

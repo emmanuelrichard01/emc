@@ -7,6 +7,7 @@ import { PROJECTS } from "@/data/projects";
 import SEOHead from "@/components/SEOHead";
 import { CaseBlocks } from "@/components/projects/CaseBlocks";
 import ProjectAsk from "@/components/projects/ProjectAsk";
+import { useArrivalHighlight } from "@/components/ai/answer/highlight";
 import { CaseContents, MobileContents, ReadingProgress } from "@/components/case/CaseContents";
 import { CaseHero } from "@/components/case/CaseHero";
 import { toParagraphs } from "@/components/case/caseModel";
@@ -16,6 +17,7 @@ import { readingMinutes, sectionsFor, type CaseSection as Section } from "@/comp
 import { MissingPage } from "@/pages/NotFound";
 import { Reveal } from "@/components/ui/Reveal";
 import { scrollToY } from "@/lib/smoothScroll";
+import { recordCaseVisit } from "@/lib/visits";
 import { VIEW_TRANSITIONS } from "@/lib/viewTransition";
 import type { Project, SEOMetadata } from "@/types";
 
@@ -149,6 +151,14 @@ const ProjectDetail = () => {
     }
     scrollToY(0, { immediate: true });
   }, [id]);
+
+  /* Arriving from the assistant: show the sentence or section it cited. */
+  useArrivalHighlight(project?.id);
+
+  /* Remembered for this tab only, so the contact form can offer "Mention what you read". */
+  useEffect(() => {
+    if (project) recordCaseVisit(project.id);
+  }, [project]);
 
   const seo = useMemo(() => {
     if (!project) return null;

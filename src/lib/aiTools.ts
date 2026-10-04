@@ -7,6 +7,7 @@ import { PROJECTS } from '../data/projects.js';
 import { EXPERIENCE } from '../data/experience.js';
 import { STATUS_LABEL, projectStatus } from './project.js';
 import { isQueryError, runQuery } from './portfolioQuery.js';
+import { buildPassages, type Passage } from './aiPassages.js';
 
 /* ==========================================================================
    AI TOOLS
@@ -199,58 +200,28 @@ function toolGetTradeoffs(call: ToolCall): ToolResult {
 /* ── search_site ──────────────────────────────────────────────────────────
    Ranked full-text search over every sentence the site says.
 
-   The SQL tool answers questions about *fields* — tier, status, stack. It
+   The SQL tool answers questions about *fields*: tier, status, stack. It
    cannot answer "has he worked with websockets?" when the word only appears
    inside an approach paragraph, or "any bugs about coordinates?" when the
-   answer is a field note. This indexes the prose: summaries, case studies,
-   highlights, trade-offs, field notes, roles. Each hit comes back as a
-   snippet around the match, labelled with where it came from and the id to
-   fetch for more, so the model can cite a passage rather than paraphrase a
-   memory of one. */
+   answer is a field note. This indexes the prose (aiPassages.ts). Each hit
+   comes back as a snippet around the match, labelled with where it came
+   from and the id to fetch for more, so the model can cite a passage rather
+   than paraphrase a memory of one.
 
-export interface Passage {
-  kind: 'project' | 'role';
-  id: string;
-  title: string;
-  where: string;
-  text: string;
-}
+   Ranking is BM25 over word-start matches, so a rare word ("idempotency")
+   outweighs a common one ("pipeline") and a long passage does not win by
+   being long. A small synonym map widens a query the way a person would:
+   "failure" also finds retries, outages and dead-letter queues, at half the
+   weight of the word that was actually asked for. The endpoint may blend in
+   semantic similarity on top (api/_lib/hybrid.ts); this is the part that
+   always works, with no key and no network. */
 
-const PASSAGES: Passage[] = [
-  ...PROJECTS.flatMap((p): Passage[] => {
-    const at = (where: string, text: string): Passage => ({ kind: 'project', id: p.id, title: p.title, where, text });
-    const study = p.caseStudy;
-    return [
-      at('summary', `${p.title}. ${p.subtitle}. ${p.category}. ${p.description}`),
-      at('stack', p.stack.join(', ')),
-      ...(study
-        ? [
-            at('problem', study.problem),
-            at('approach', study.approach),
-            at('outcome', study.outcome),
-            ...(study.highlights ?? []).map((h) => at('highlight', h)),
-            ...(study.tradeoffs ?? []).map((t) => at('trade-off', `${t.decision}: chose ${t.chose} over ${t.rejected}. ${t.why}`)),
-            ...(study.fieldNotes ?? []).map((n) =>
-              at('field note', `${n.title}. ${n.symptom} ${n.rootCause} ${n.fix} ${n.guard ?? ''}`)
-            ),
-            ...(study.notice ? [at('scope notice', study.notice)] : []),
-          ]
-        : []),
-      ...p.decisions.map((d) => at('decision', `${d.title}: ${d.detail}`)),
-    ];
-  }),
-  ...EXPERIENCE.flatMap((e): Passage[] => {
-    const at = (where: string, text: string): Passage => ({ kind: 'role', id: e.id, title: e.company, where, text });
-    return [
-      at('role', `${e.company}, ${e.role} (${e.type}, ${e.period}). ${e.summary}`),
-      ...e.highlights.map((h) => at('role highlight', h)),
-      at('stack', e.stack.join(', ')),
-    ];
-  }),
-];
+export type { Passage } from './aiPassages.js';
+
+export const PASSAGES: readonly Passage[] = buildPassages(PROJECTS, EXPERIENCE);
 
 const STOPWORDS = new Set(
-  // Question words, and the verbs every portfolio passage contains — "built",
+  // Question words, and the verbs every portfolio passage contains: "built",
   // "used", "work" match almost everything and so rank nothing.
   [
     'a an and any are as at be by did does do for from has have he his how in is it its of on or that the this to was what when where which who why with',
@@ -262,67 +233,158 @@ const STOPWORDS = new Set(
 
 /* Plurals folded to their stem, because matching is word-*start*: "websocket"
    finds "websockets" but not the other way round, and the site says
-   "WebSocket". Crude on purpose — "ss" words are left alone ("process"). */
+   "WebSocket". Crude on purpose: "ss" words are left alone ("process"). */
 const stem = (term: string) => (term.length > 4 && term.endsWith('s') && !term.endsWith('ss') ? term.slice(0, -1) : term);
 
+const tokenize = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/[^a-z0-9+#.]+/)
+    .map((t) => t.replace(/^\.+|\.+$/g, ''))
+    .filter(Boolean);
+
 function terms(query: string): string[] {
-  return [
-    ...new Set(
-      query
-        .toLowerCase()
-        .split(/[^a-z0-9+#.]+/)
-        .filter((t) => t.length > 1 && !STOPWORDS.has(t))
-        .map(stem)
-    ),
-  ];
+  return [...new Set(tokenize(query).filter((t) => t.length > 1 && !STOPWORDS.has(t)).map(stem))];
 }
+
+/* Stems on the left, extra words to look for on the right. Small and
+   hand-made: each line is a way a visitor phrases something the site says
+   in other words. */
+const SYNONYMS: Record<string, string[]> = {
+  failure: ['retry', 'outage', 'idempotency', 'idempotent', 'dead-letter', 'dlq', 'rollback', 'fallback', 'recover'],
+  fail: ['retry', 'outage', 'idempotency', 'dead-letter', 'rollback', 'fallback'],
+  error: ['exception', 'retry', 'fail', 'bug'],
+  bug: ['symptom', 'root', 'fix', 'regression'],
+  resilience: ['retry', 'idempotency', 'fallback', 'circuit', 'backoff'],
+  reliable: ['retry', 'idempotency', 'idempotent', 'replay'],
+  realtime: ['websocket', 'stream', 'live', 'sse'],
+  offline: ['local', 'indexeddb', 'crdt', 'sync'],
+  sync: ['crdt', 'yjs', 'replication'],
+  fast: ['latency', 'throughput', 'p95', 'cache'],
+  performance: ['latency', 'throughput', 'p95', 'cache', 'benchmark'],
+  speed: ['latency', 'throughput'],
+  scale: ['throughput', 'partition', 'concurrency', 'shard'],
+  scaling: ['throughput', 'partition', 'concurrency', 'shard'],
+  security: ['auth', 'pii', 'encryption', 'compliance', 'rbac'],
+  privacy: ['pii', 'ndpr', 'gdpr', 'redact'],
+  payment: ['psp', 'reconciliation', 'ledger', 'settlement'],
+  money: ['payment', 'ledger', 'reconciliation'],
+  test: ['testing', 'coverage', 'vitest', 'pytest', 'property'],
+  queue: ['kafka', 'redpanda', 'rabbitmq', 'sqs', 'broker'],
+  messaging: ['kafka', 'redpanda', 'broker', 'event'],
+  database: ['postgres', 'postgresql', 'sql', 'mysql', 'mongodb', 'redis', 'duckdb'],
+  db: ['postgres', 'postgresql', 'sql', 'mongodb', 'redis'],
+  warehouse: ['dbt', 'bigquery', 'snowflake', 'duckdb'],
+  deploy: ['docker', 'kubernetes', 'ci', 'vercel'],
+  ai: ['llm', 'model', 'embedding', 'gemini', 'openai'],
+  ml: ['model', 'classifier', 'training', 'embedding'],
+  frontend: ['react', 'ui', 'typescript', 'css'],
+  backend: ['api', 'server', 'fastapi', 'node', 'database'],
+};
+
+interface Indexed {
+  passage: Passage;
+  tokens: string[];
+}
+
+/* What a kind of passage IS, indexed with its words: a field note is a bug
+   story even when it never says "bug", a trade-off is a decision. */
+const KIND_TERMS: Record<string, string> = {
+  'field note': 'bug debugging fix',
+  'trade-off': 'trade-off decision alternative',
+  'scope notice': 'scope caveat limitation',
+  decision: 'decision',
+};
+
+const INDEX: Indexed[] = PASSAGES.map((passage) => ({
+  passage,
+  tokens: tokenize(`${KIND_TERMS[passage.where] ?? ''} ${passage.text}`),
+}));
+const AVG_LENGTH = INDEX.reduce((sum, d) => sum + d.tokens.length, 0) / Math.max(1, INDEX.length);
+const K1 = 1.2;
+const B = 0.75;
+
+/** How often `term` starts a word in a passage. "rust" must not hit "trust"; "websocket" hits "websockets". */
+const frequency = (doc: Indexed, term: string) => doc.tokens.reduce((n, t) => n + (t.startsWith(term) ? 1 : 0), 0);
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** A window of text around the first matching term, so the hit reads in context. */
-function snippet(text: string, words: string[], width = 240): string {
+export function passageSnippet(text: string, words: string[], width = 240): string {
   const lower = text.toLowerCase();
-  const positions = words.map((w) => lower.indexOf(w)).filter((i) => i >= 0);
-  if (!positions.length || text.length <= width) return text.slice(0, width);
-  const start = Math.max(0, Math.min(...positions) - 60);
+  const positions = words
+    .map((w) => lower.search(new RegExp(`(^|[^a-z0-9])${escapeRegExp(w)}`)))
+    .filter((i) => i >= 0);
+  if (text.length <= width) return text;
+  const start = positions.length ? Math.max(0, Math.min(...positions) - 60) : 0;
   return `${start > 0 ? '…' : ''}${text.slice(start, start + width).trim()}${start + width < text.length ? '…' : ''}`;
 }
 
-export function searchSite(query: string, limit = 6): { passage: Passage; score: number; snippet: string }[] {
-  const words = terms(query);
-  if (!words.length) return [];
-  const patterns = words.map((word) => new RegExp(`(^|[^a-z0-9])${escapeRegExp(word)}`, 'g'));
-
-  return PASSAGES.map((passage) => {
-    const lower = passage.text.toLowerCase();
-    let score = 0;
-    let matched = 0;
-    for (const pattern of patterns) {
-      // Word-start matches only: "rust" must not hit "trust".
-      const hits = lower.match(pattern)?.length ?? 0;
-      if (hits) matched += 1;
-      score += Math.min(hits, 3);
-    }
-    // Every term present beats one term repeated, and a hit in a short
-    // passage says more than the same hit in a long one.
-    const coverage = matched / words.length;
-    return { passage, score: score * (0.5 + coverage) * (1 + 60 / (passage.text.length + 60)), snippet: '' };
-  })
-    .filter((hit) => hit.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((hit) => ({ ...hit, snippet: snippet(hit.passage.text, words) }));
+export interface SearchHit {
+  passage: Passage;
+  score: number;
+  snippet: string;
 }
 
-function toolSearchSite(call: ToolCall): ToolResult {
-  const query = str(call.args.query).trim();
-  if (!query) return { callId: call.id, name: call.name, content: 'error: no query supplied' };
+/** The words, synonyms included, that a query is matched on. */
+export function searchTerms(query: string): { term: string; weight: number; source: string }[] {
+  const words = terms(query);
+  // Each asked-for word, then its synonyms at half weight, remembering which
+  // asked-for word a synonym stands in for (coverage counts that word).
+  const weighted: { term: string; weight: number; source: string }[] = [];
+  for (const word of words) {
+    if (!weighted.some((w) => w.term === word)) weighted.push({ term: word, weight: 1, source: word });
+    for (const alt of SYNONYMS[word] ?? []) {
+      for (const part of terms(alt)) {
+        if (!weighted.some((w) => w.term === part)) weighted.push({ term: part, weight: 0.5, source: word });
+      }
+    }
+  }
+  return weighted;
+}
 
-  const hits = searchSite(query);
+/** Keyword search (BM25 with synonyms). Synchronous and always available. */
+export function searchSite(query: string, limit = 6): SearchHit[] {
+  const words = terms(query);
+  if (!words.length) return [];
+  const weighted = searchTerms(query);
+
+  const n = INDEX.length;
+  const idf = new Map(
+    weighted.map(({ term }) => {
+      const df = INDEX.reduce((count, doc) => count + (frequency(doc, term) ? 1 : 0), 0);
+      return [term, Math.log(1 + (n - df + 0.5) / (df + 0.5))];
+    })
+  );
+
+  const hits: SearchHit[] = [];
+  for (const doc of INDEX) {
+    let score = 0;
+    const covered = new Set<string>();
+    for (const { term, weight, source } of weighted) {
+      const tf = frequency(doc, term);
+      if (!tf) continue;
+      covered.add(source);
+      const norm = (tf * (K1 + 1)) / (tf + K1 * (1 - B + (B * doc.tokens.length) / AVG_LENGTH));
+      score += weight * idf.get(term)! * norm;
+    }
+    if (!score) continue;
+    // Every asked-for word present beats one word repeated.
+    hits.push({ passage: doc.passage, score: score * (0.5 + covered.size / words.length), snippet: '' });
+  }
+
+  const matchWords = weighted.map((w) => w.term);
+  return hits
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((hit) => ({ ...hit, snippet: passageSnippet(hit.passage.text, matchWords) }));
+}
+
+/** A search_site result, from hits however they were ranked. */
+export function searchResult(call: ToolCall, query: string, hits: SearchHit[]): ToolResult {
   if (!hits.length) {
     return { callId: call.id, name: call.name, content: `no passages match "${query}". the site does not mention it.` };
   }
-
   return {
     callId: call.id,
     name: call.name,
@@ -335,6 +397,13 @@ function toolSearchSite(call: ToolCall): ToolResult {
     },
   };
 }
+
+function toolSearchSite(call: ToolCall): ToolResult {
+  const query = str(call.args.query).trim();
+  if (!query) return { callId: call.id, name: call.name, content: 'error: no query supplied' };
+  return searchResult(call, query, searchSite(query));
+}
+
 
 /* ── compare_projects ─────────────────────────────────────────────────────
    The same facts for several projects, side by side. "How do the two
@@ -363,8 +432,8 @@ function toolCompareProjects(call: ToolCall): ToolResult {
     p!.tier,
     STATUS_LABEL[projectStatus(p!)],
     p!.timeline,
-    p!.stack.join(', ') || '—',
-    p!.metrics.map((m) => `${m.label}: ${m.value}`).join('; ') || '—',
+    p!.stack.join(', ') || 'none',
+    p!.metrics.map((m) => `${m.label}: ${m.value}`).join('; ') || 'none',
     String(p!.caseStudy?.tradeoffs?.length ?? 0),
     String(p!.caseStudy?.fieldNotes?.length ?? 0),
   ]);
@@ -410,7 +479,7 @@ export function extractiveAnswer(question: string): string {
     .split(/[^a-z0-9+#.]+/)
     .filter((word) => word.length > 2);
 
-  if (!terms.length) return "ask about a project, a technology, or his experience — e.g. 'what uses redis?'";
+  if (!terms.length) return "ask about a project, a technology, or his experience, for example: what uses redis?";
 
   const scored = PROJECTS.map((project) => {
     const haystack = [
@@ -436,7 +505,7 @@ export function extractiveAnswer(question: string): string {
   }
 
   const body = scored
-    .map(({ project }) => `- ${project.id} — ${project.title}: ${project.subtitle} [${project.stack.slice(0, 4).join(', ')}]`)
+    .map(({ project }) => `- ${project.title} (${project.id}): ${project.subtitle} [${project.stack.slice(0, 4).join(', ')}]`)
     .join('\n');
 
   return [
