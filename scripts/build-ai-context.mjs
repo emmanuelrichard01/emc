@@ -83,7 +83,7 @@ const context = {
   generatedAt: new Date().toISOString(),
   person: {
     name: 'Emmanuel Moghalu',
-    role: 'Data & Backend Engineer',
+    role: 'Software & Data Engineer',
     location: 'Abuja, Nigeria',
     timezone: 'UTC+1',
     availability: 'open to opportunities, remote or hybrid',

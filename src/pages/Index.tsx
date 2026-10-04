@@ -46,9 +46,9 @@ const Index = () => {
   }, []);
 
   const seoMetadata: SEOMetadata = {
-    title: "Emmanuel Moghalu | Data Engineer & Backend Systems",
+    title: "Emmanuel Moghalu | Software & Data Engineer",
     description:
-      "Data and backend engineer in Abuja, Nigeria. I build data pipelines, payment reconciliation and analytics systems, and ship them with the tests that prove they work. Nigerian fintech experience with Paystack, Flutterwave, CBN and NDPR rules.",
+      "Software and data engineer in Abuja, Nigeria. I build data pipelines, payment reconciliation and analytics systems, and ship them with the tests that prove they work. Nigerian fintech experience with Paystack, Flutterwave, CBN and NDPR rules.",
     // Weighted toward the specific, searchable things this work actually
     // involves. Generic cloud keywords ("Azure", "GCP") competed against
     // millions of pages and described none of the projects on this site.
@@ -68,7 +68,7 @@ const Index = () => {
        clean one — the exact duplicate-content split canonical exists to fix. */
     canonical: `${SITE_ORIGIN}/`,
     openGraph: {
-      title: "Emmanuel Moghalu | Data Engineer & Backend Systems",
+      title: "Emmanuel Moghalu | Software & Data Engineer",
       description: "Data pipelines, payment reconciliation and analytics systems, shipped with the tests that prove they work.",
       image: `${SITE_ORIGIN}/og-image.jpg`,
       url: SITE_ORIGIN,
@@ -78,7 +78,7 @@ const Index = () => {
       card: "summary_large_image",
       site: "@mrebr",
       creator: "@mrebr",
-      title: "Emmanuel Moghalu, data and backend engineer",
+      title: "Emmanuel Moghalu, software and data engineer",
       description: "Payment reconciliation, live data pipelines and analytics systems, with the decisions and trade-offs behind each one."
     }
   };

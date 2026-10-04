@@ -295,7 +295,7 @@ export function useConsoleCommands(deps: CommandDeps): CommandSpec[] {
         name: 'whoami',
         summary: 'who runs this terminal',
         run: () => ({
-          output: 'emmanuel moghalu, data and backend engineer. he builds systems that keep working when things go wrong, and writes the tests that prove it.',
+          output: 'emmanuel moghalu, software and data engineer. he builds systems that keep working when things go wrong, and writes the tests that prove it.',
         }),
       },
       {

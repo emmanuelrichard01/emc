@@ -642,7 +642,9 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
     <div className="relative flex-1 flex flex-col min-h-0">
       {/* Centred at rest — the one thing in the middle of the screen; in
           use, the column fills it for output. */}
-      <div className="w-full max-w-2xl mx-auto px-1 flex-1 flex flex-col justify-center min-h-0 py-2">
+      {/* Wide enough for the one-line title; the terminal, its output and
+          the Ask suggestions keep the narrower measure inside it. */}
+      <div className="w-full max-w-4xl mx-auto px-1 flex-1 flex flex-col justify-center min-h-0 py-2">
         {/* ── Scrollback ──
             The banner and the session share one scroll region, because on a
             real login that is what they are: the MOTD is simply the first
@@ -679,22 +681,26 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             transition={{ duration: prefersReduced ? 0 : 0.4, ease: EASE }}
             className="overflow-hidden text-center font-sans"
           >
-            {/* The page's h1, in the same display face as every section title
-                on the site, held small so the prompt below stays the thing in
-                the middle of the screen. Then what he does, and where and
-                whether he is free, each a step quieter than the line above. */}
+            {/* The page's h1: who and what, as one line at one size in the
+                display face. Rank comes from tone alone (the name in ink, the
+                title in grey) and a hairline between them, so the line reads
+                as a single statement rather than a heading and a subtitle.
+                Held small, so the prompt below stays the thing in the middle
+                of the screen. Below a laptop's width the two halves stack, same size. */}
             <motion.h1
               {...reveal(0.15)}
-              className="font-display text-[1.75rem] md:text-[2.25rem] font-[560] leading-[1.05] tracking-[-0.025em] text-foreground"
+              className="flex flex-wrap lg:flex-nowrap items-center justify-center gap-x-5 gap-y-1 font-display text-[1.375rem] sm:text-[1.625rem] lg:text-[1.875rem] font-[560] leading-[1.1] tracking-[-0.02em]"
             >
-              Emmanuel Moghalu
+              <span className="text-foreground whitespace-nowrap">Emmanuel Moghalu</span>
+              <span aria-hidden="true" className="hidden lg:block w-px h-[0.9em] bg-rule-strong" />
+              <span className="text-muted-foreground whitespace-nowrap">
+                <span className="sr-only">, </span>
+                Software &amp; Data Engineer
+              </span>
             </motion.h1>
-            <motion.p {...reveal(0.21)} className="mt-2.5 text-[15px] md:text-[17px] text-muted-foreground">
-              Data and backend engineer
-            </motion.p>
             <motion.p
-              {...reveal(0.27)}
-              className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[13px] text-muted-foreground"
+              {...reveal(0.24)}
+              className="mt-4 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[13px] text-muted-foreground"
             >
               <span>Abuja, Nigeria</span>
               <span aria-hidden="true" className="text-muted-ghost">·</span>
@@ -709,7 +715,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
 
           {hasOutput && (
             <div
-              className={`border-l border-primary/20 pl-4 leading-[1.75] ${compact ? '' : 'mt-5'}`}
+              className={`w-full max-w-2xl mx-auto border-l border-primary/20 pl-4 leading-[1.75] ${compact ? '' : 'mt-5'}`}
               role="log"
               aria-live="polite"
               aria-relevant="additions"
@@ -744,7 +750,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
           )}
 
           {aiMode && (
-            <div className={compact ? '' : 'mt-5'}>
+            <div className={`w-full max-w-2xl mx-auto ${compact ? '' : 'mt-5'}`}>
               {/* Shorter and legible, where this was three lines at 50%
                   opacity — about 2.4:1 — restating both the placeholder above
                   it ("ask anything about his work") and the hint below it
@@ -1057,7 +1063,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
         {/* In AI mode the starters run as one slow ticker instead of a wall of
             chips — one row at any width, paused under the pointer. */}
         {aiMode && ai.turns.length === 0 && (
-          <motion.div {...reveal(0.1)} className={`shrink-0 -mx-1 ${compact ? 'mt-4' : 'mt-8'}`}>
+          <motion.div {...reveal(0.1)} className={`shrink-0 w-full max-w-2xl mx-auto ${compact ? 'mt-4' : 'mt-8'}`}>
             <SuggestionMarquee
               items={AI_SUGGESTIONS}
               disabled={ai.busy}

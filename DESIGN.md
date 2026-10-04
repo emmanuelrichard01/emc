@@ -50,10 +50,10 @@ typography:
     fontVariation: "'wdth' 112"
   identity:
     fontFamily: "Archivo, Inter, system-ui, sans-serif"
-    fontSize: "2.25rem"
+    fontSize: "1.875rem"
     fontWeight: 560
-    lineHeight: 1.05
-    letterSpacing: "-0.025em"
+    lineHeight: 1.1
+    letterSpacing: "-0.02em"
     fontVariation: "'wdth' 118"
   lede:
     fontFamily: "Inter, system-ui, -apple-system, sans-serif"
@@ -244,7 +244,7 @@ The type is organised as four voices. A component picks a voice; it does not ass
    - **Headline** (540, `clamp(2.125rem, 1.25rem + 2.9vw, 4rem)`, 1, -0.03em): a section's title ("Selected systems", "Career").
    - **Title** (560, `clamp(1.375rem, 1.1rem + 0.9vw, 1.875rem)`, 1.1, -0.02em): a plate's or a block's title.
    - **Subhead** (560, 1.0625rem, 1.25, -0.01em, width 112%): index row titles, small heads, the running-head name.
-   - **Identity** (560, 1.75rem on phones, 2.25rem from md, 1.05, -0.025em): the hero's h1 only, held small so the prompt stays the thing in the middle.
+   - **Identity** (560, 1.375rem on phones, 1.625rem from sm, 1.875rem from lg, 1.1, -0.02em): the hero's h1 only, name and title at one size, held small so the prompt stays the thing in the middle.
 2. **The reading voice** (Inter):
    - **Lede** (400, `clamp(1.125rem, 1rem + 0.45vw, 1.375rem)`, 1.5, -0.011em): a section's opening paragraph, set in ink because it is read.
    - **Body** (400, 1rem, 1.7): running text in Caption Grey, measure held at 30 to 60ch.
@@ -343,9 +343,9 @@ The command palette (640px, query in the title face), the assistant dock (460px 
 
 ### The Hero (signature)
 The first viewport is a fixed composition. These placements are user-confirmed and binding:
-- **Terminal always centre.** The identity block and the terminal instrument share one centred column, max 42rem, vertically centred in the space between the top bar and the baseline. Nothing else competes for the middle of the screen; a soft dark pool sits behind the column so text never lands on disk light or a bright star.
+- **Terminal always centre.** The identity block and the terminal instrument share one centred column (max 56rem; the terminal, its output and the Ask suggestions keep 42rem inside it), vertically centred in the space between the top bar and the baseline. Nothing else competes for the middle of the screen; a soft dark pool sits behind the column so text never lands on disk light or a bright star.
 - **Black hole bottom-right.** The ray-traced event horizon rises out of the bottom-right corner (centre at 92% across and 98% down, radius 31% of the screen, the disk rolled to a cinematic diagonal), at 72% opacity at rest, feathered into the stock by a radial mask. One shared position drives the shader, the mask and the starfield, so they never drift apart.
-- **Identity block, three lines, each a step quieter.** The name in the Identity voice (the page's h1); "Data and backend engineer" in 15 to 17px Caption Grey; then "Abuja, Nigeria · UTC+1 · Open to new roles and projects" in 13px, the availability in ink behind a green live square. The block folds away (height and opacity, text kept in the DOM) once the shell is in use.
+- **Identity block: one title line, then the whereabouts.** "Emmanuel Moghalu | Software & Data Engineer" is one line in the Identity voice at one size, the name in Ink and the title in Caption Grey with a Strong Rule hairline between them (from lg; below that the two halves stack at the same size). Then "Abuja, Nigeria · UTC+1 · Open to new roles and projects" in 13px, the availability in ink behind a green live square. The block folds away (height and opacity, text kept in the DOM) once the shell is in use.
 - **The instrument.** A hairline-framed panel on 85% stock: a 40px caption strip (status square, the session name in 11.5px mono, the Shell/Ask switch with an amber underline under the live mode), the prompt line in the Terminal voice with an amber `~ $` and a stepped block caret, and a key strip of kbd hints. Focus raises the frame to Strong Rule with the amber halo; Ask mode replaces the frame with the rotating amber border.
 - **Four actions below.** Ask the assistant (amber, with its sparkle), See the work, Download CV, Get in touch: dot-separated text with drawn underlines from md up, bordered square tap tiles on phones.
 - **The edges.** Top: the amber mark and "E·MC", section links, Ask, ⌘K. Bottom: socials; a derived proof line at the centre from lg (systems built, live now, written up in full, numbers in the Figure voice); a Scroll cue whose hairline carries a travelling amber light; the Abuja clock behind a green live square; the build SHA in 11px mono.
@@ -379,7 +379,7 @@ The motion grammar is print gestures plus one authored moment. All entrances use
 - **Do** mount images as square plates with a caption, and set built work solid and design-stage work in hairline outline under a dashed rule.
 - **Do** use the shared page margin, the 1440px page-max and the section rhythm (`{spacing.section-top}` above, `{spacing.section-bottom}` below) for every section.
 - **Do** enter with RevealText, Reveal, Plate and Rule only, once, on the house ease.
-- **Do** keep the hero's composition: terminal always at the centre, the black hole rising from the bottom-right corner, the three-line identity block above the instrument (user-confirmed).
+- **Do** keep the hero's composition: terminal always at the centre, the black hole rising from the bottom-right corner, the identity block above the instrument: name and title on one line, then the whereabouts line (user-confirmed).
 - **Do** keep text at or above Quiet Grey (4.9:1 on stock, 4.7:1 on a plate); Ghost Grey is only for aria-hidden, not-yet-typed text and separators.
 - **Do** give every primary control on a coarse pointer a minimum 44px height, and every control a visible 2px amber focus outline with a 2px offset.
 - **Do** honour reduced motion with no transition at all, including the WebGL hero.
