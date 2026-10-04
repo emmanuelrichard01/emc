@@ -696,7 +696,7 @@ export default function TerminalHero({ live }: TerminalHeroProps) {
             </motion.h1>
             <motion.p
               {...reveal(0.24)}
-              className="mt-3.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[14px] md:text-[15px] text-muted-foreground"
+              className="mt-3.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[13px] md:text-[14px] text-muted-foreground"
             >
               <span className="basis-full md:basis-auto">Software &amp; Data Engineer</span>
               <span aria-hidden="true" className="hidden md:inline text-muted-ghost">·</span>
